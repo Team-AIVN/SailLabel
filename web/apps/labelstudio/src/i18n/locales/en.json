@@ -4,6 +4,10 @@
     "english": "English",
     "korean": "한국어"
   },
+  "app": {
+    "brand": "SailLabel",
+    "logoAlt": "SailLabel Logo"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -29,6 +33,35 @@
     "slackCommunity": "Slack Community",
     "pinMenu": "Pin menu",
     "unpinMenu": "Unpin menu"
+  },
+  "home": {
+    "pageTitle": "Home",
+    "welcome": "Welcome 👋",
+    "getStarted": "Let's get you started.",
+    "actions": {
+      "createProject": "Create Project",
+      "inviteMembers": "Invite Members"
+    },
+    "recentProjects": "Recent Projects",
+    "viewAll": "View All",
+    "loadError": "Can't load projects",
+    "empty": {
+      "title": "Create your first project",
+      "description": "Import your data and set up the labeling interface to start annotating",
+      "cta": "Create Project",
+      "createProjectAriaLabel": "Create new project"
+    },
+    "tasksProgress": "{{finished}} of {{total}} Tasks ({{percent}}%)",
+    "resources": {
+      "title": "Resources",
+      "description": "Learn, explore and get help",
+      "documentation": "Documentation",
+      "apiDocumentation": "API Documentation",
+      "releaseNotes": "Release Notes",
+      "blog": "LabelStud.io Blog",
+      "slackCommunity": "Slack Community"
+    },
+    "versionLabel": "SailLabel Version: {{edition}}"
   },
   "projects": {
     "pageTitle": "Projects",

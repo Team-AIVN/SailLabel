@@ -4,6 +4,10 @@
     "english": "English",
     "korean": "한국어"
   },
+  "app": {
+    "brand": "SailLabel",
+    "logoAlt": "SailLabel 로고"
+  },
   "common": {
     "save": "저장",
     "cancel": "취소",
@@ -29,6 +33,35 @@
     "slackCommunity": "Slack 커뮤니티",
     "pinMenu": "메뉴 고정",
     "unpinMenu": "메뉴 고정 해제"
+  },
+  "home": {
+    "pageTitle": "홈",
+    "welcome": "환영합니다 👋",
+    "getStarted": "지금 바로 시작해 보세요.",
+    "actions": {
+      "createProject": "프로젝트 생성",
+      "inviteMembers": "멤버 초대"
+    },
+    "recentProjects": "최근 프로젝트",
+    "viewAll": "전체 보기",
+    "loadError": "프로젝트를 불러올 수 없습니다",
+    "empty": {
+      "title": "첫 프로젝트를 만들어 보세요",
+      "description": "데이터를 가져오고 레이블링 인터페이스를 설정해 어노테이션을 시작하세요",
+      "cta": "프로젝트 생성",
+      "createProjectAriaLabel": "새 프로젝트 생성"
+    },
+    "tasksProgress": "{{total}}개 중 {{finished}}개 작업 완료 ({{percent}}%)",
+    "resources": {
+      "title": "리소스",
+      "description": "학습·탐색 및 도움말을 확인하세요",
+      "documentation": "문서",
+      "apiDocumentation": "API 문서",
+      "releaseNotes": "릴리스 노트",
+      "blog": "LabelStud.io 블로그",
+      "slackCommunity": "Slack 커뮤니티"
+    },
+    "versionLabel": "SailLabel 버전: {{edition}}"
   },
   "projects": {
     "pageTitle": "프로젝트",
