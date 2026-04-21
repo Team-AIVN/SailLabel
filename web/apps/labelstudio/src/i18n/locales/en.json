@@ -1,0 +1,158 @@
+{
+  "locale": {
+    "label": "Language",
+    "english": "English",
+    "korean": "한국어"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "create": "Create",
+    "close": "Close",
+    "loading": "Loading",
+    "or": "or",
+    "learnMore": "Learn more",
+    "optional": "Optional"
+  },
+  "menubar": {
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "accountSettings": "Account & Settings",
+    "logOut": "Log Out",
+    "newsletterNotice": "Please check new notification settings in the Account & Settings page",
+    "home": "Home",
+    "projects": "Projects",
+    "organization": "Organization",
+    "api": "API",
+    "docs": "Docs",
+    "github": "GitHub",
+    "slackCommunity": "Slack Community",
+    "pinMenu": "Pin menu",
+    "unpinMenu": "Unpin menu"
+  },
+  "projects": {
+    "pageTitle": "Projects",
+    "createButton": "Create",
+    "createProjectAriaLabel": "Create new project",
+    "projectOptions": "Project options",
+    "newProject": "New project",
+    "card": {
+      "settings": "Settings",
+      "label": "Label"
+    },
+    "empty": {
+      "heading": "Heidi doesn't see any projects here!",
+      "description": "Create one and start labeling your data.",
+      "cta": "Create Project",
+      "imageAlt": "Heidi looking for projects"
+    }
+  },
+  "createProject": {
+    "title": "Create Project",
+    "steps": {
+      "name": "Project Name",
+      "import": "Data Import",
+      "config": "Labeling Setup"
+    },
+    "name": {
+      "projectName": "Project Name",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional description of your project",
+      "workspace": "Workspace",
+      "workspacePlaceholder": "Select an option",
+      "workspaceHint": "Simplify project management by organizing projects into workspaces."
+    },
+    "import": {
+      "datasetUrl": "Dataset URL",
+      "addUrl": "Add URL",
+      "uploadFiles": "Upload Files",
+      "uploadMoreFiles": "Upload More Files",
+      "uploadFileAriaLabel": "Upload file",
+      "filesUploaded": "{{count}} files uploaded",
+      "treatCsv": "Treat CSV/TSV as",
+      "listOfTasks": "List of tasks",
+      "timeSeries": "Time Series or Whole Text File",
+      "dropHere": "Drag & drop files here",
+      "orClickToBrowse": "or click to browse",
+      "images": "Images",
+      "audio": "Audio",
+      "video": "Video",
+      "videoTooltip": "Video format support depends on your browser. Click to learn more.",
+      "videoAriaLabel": "Learn more about video format support (opens in a new tab)",
+      "html": "HTML / HyperText",
+      "text": "Text",
+      "structuredData": "Structured data",
+      "pdf": "PDF",
+      "important": "Important:",
+      "tipCloudStorageLead": "We recommend ",
+      "tipCloudStorageLink": "Cloud Storage",
+      "tipCloudStorageMiddle": " over direct uploads due to ",
+      "tipUploadLimitsLink": "upload limitations",
+      "tipCloudStorageTrailing": ".",
+      "tipPdfLead": "For PDFs, use ",
+      "tipPdfLink": "multi-image labeling",
+      "tipPdfTrailing": ". JSONL or Parquet (Enterprise only) files require cloud storage.",
+      "tipPreannotatedLead": "Check the documentation to ",
+      "tipPreannotatedLink": "import preannotated data",
+      "tipPreannotatedTrailing": ".",
+      "filesCard": "Files",
+      "sampleBadge": "Sample",
+      "fileTooBig": "Imported file is too big",
+      "filetypeNotSupported": "The filetype of file \"{{name}}\" is not supported.",
+      "expectedInputPreview": "Expected Input Preview",
+      "sampleLoadError": "Something went wrong, the sample data could not be loaded.",
+      "viewJsonFormat": "View JSON input format",
+      "setupLabelingLead": "Setup your ",
+      "labelingConfigurationLink": "labeling configuration",
+      "setupLabelingTrailing": " first to preview the expected JSON data format"
+    },
+    "cancelAriaLabel": "Cancel project creation"
+  },
+  "accountSettings": {
+    "pageTitle": "My Account",
+    "sections": {
+      "personalInfo": "Personal Info",
+      "hotkeys": "Hotkeys",
+      "hotkeysDescription": "Customize your keyboard shortcuts to speed up your workflow. Click on any hotkey below to assign a new key combination that works best for you.",
+      "emailPreferences": "Email Preferences",
+      "membershipInfo": "Membership Info",
+      "personalAccessToken": "Personal Access Token",
+      "legacyToken": "Legacy Token",
+      "accessToken": "Access Token"
+    },
+    "personalInfo": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "E-mail",
+      "phone": "Phone",
+      "save": "Save",
+      "deleteAvatar": "Delete",
+      "errorUpdatingAvatar": "Error updating avatar",
+      "errorUpdatingUser": "Error updating user"
+    },
+    "email": {
+      "subscribeGeneric": "Subscribe for news and tips",
+      "subscribeHumanSignal": "Subscribe to HumanSignal news and tips from Heidi"
+    },
+    "membership": {
+      "userId": "User ID",
+      "registrationDate": "Registration date",
+      "annotationsSubmitted": "Annotations Submitted",
+      "projectsContributed": "Projects contributed to",
+      "organization": "Organization",
+      "myRole": "My role",
+      "organizationId": "Organization ID",
+      "owner": "Owner",
+      "created": "Created",
+      "roles": {
+        "owner": "Owner",
+        "deactivated": "Deactivated",
+        "administrator": "Administrator",
+        "manager": "Manager",
+        "annotator": "Annotator",
+        "reviewer": "Reviewer",
+        "pending": "Pending"
+      }
+    }
+  }
+}
