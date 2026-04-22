@@ -964,16 +964,13 @@ if CI:
         'sql-analyser': 'postgresql',
     }
 
-if KEYCLOAK_ENABLED:
-    _post_logout = (HOSTNAME or '').rstrip('/') + '/'
-    _default_logout = (
-        f'{KEYCLOAK_REALM_URL}/protocol/openid-connect/logout'
-        f'?client_id={KEYCLOAK_CLIENT_ID}'
-        f'&post_logout_redirect_uri={_post_logout}'
-    )
-    LOGOUT_REDIRECT_URL = get_env('LOGOUT_REDIRECT_URL', _default_logout)
-else:
+if not KEYCLOAK_ENABLED:
     LOGOUT_REDIRECT_URL = get_env('LOGOUT_REDIRECT_URL', None)
+# NOTE: when KEYCLOAK_ENABLED, LOGOUT_REDIRECT_URL is the *local* path the browser
+# lands on after Keycloak ends the SSO session (see `OIDC_LOGOUT_REDIRECT_URL`
+# near the OIDC block above). Do NOT overwrite it with a full Keycloak logout URL
+# — `users.auth_backends.keycloak_logout_url` wraps it as `post_logout_redirect_uri`,
+# and double-wrapping produces an invalid redirect URI.
 
 # Enable legacy tokens (useful for running with a pre-existing token via `LABEL_STUDIO_USER_TOKEN`)
 LABEL_STUDIO_ENABLE_LEGACY_API_TOKEN = get_bool_env('LABEL_STUDIO_ENABLE_LEGACY_API_TOKEN', False)
