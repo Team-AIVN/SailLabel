@@ -103,6 +103,13 @@ urlpatterns = [
     path('__lsa/', views.collect_metrics, name='collect_metrics'),
     re_path(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     re_path(r'^', include('jwt_auth.urls')),
+]
+
+if settings.KEYCLOAK_ENABLED:
+    # mozilla-django-oidc RP endpoints: /oidc/authenticate/, /oidc/callback/, /oidc/logout/
+    urlpatterns.append(path('oidc/', include('mozilla_django_oidc.urls')))
+
+urlpatterns += [
     re_path(r'^', include('session_policy.urls')),
     path('docs/api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

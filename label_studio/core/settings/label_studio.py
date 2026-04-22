@@ -1,12 +1,27 @@
 """This file and its contents are licensed under the Apache License 2.0. Please see the included NOTICE for copyright information and LICENSE for a copy of the license."""
 
 import json
+import os
+
+import environ
+
+# Load the project-root `.env` file BEFORE `core.settings.base` executes;
+# otherwise all `get_env(...)` calls in base.py resolve against a pristine
+# os.environ and anything declared only in `.env` (Keycloak, DB, HOST, …) is
+# ignored. `environ.Env.read_env` uses `os.environ.setdefault`, so shell-
+# exported values still take precedence over `.env` entries.
+_PROJECT_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+environ.Env.read_env(os.path.join(_PROJECT_ROOT, '.env'))
 
 from core.settings.base import *  # noqa
 from core.utils.secret_key import generate_secret_key_if_missing
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = generate_secret_key_if_missing(BASE_DATA_DIR)
+# Secret is persisted next to the project-root `.env` so it stays under version
+# control boundary (and gitignored) alongside other environment config.
+SECRET_KEY = generate_secret_key_if_missing(_PROJECT_ROOT)
 
 DJANGO_DB = get_env('DJANGO_DB', DJANGO_DB_SQLITE)
 DATABASES = {'default': DATABASES_ALL[DJANGO_DB]}
@@ -26,7 +41,14 @@ DEBUG_PROPAGATE_EXCEPTIONS = get_bool_env('DEBUG_PROPAGATE_EXCEPTIONS', False)
 
 SESSION_COOKIE_SECURE = get_bool_env('SESSION_COOKIE_SECURE', False)
 
-SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+if KEYCLOAK_ENABLED:
+    # OIDC flow stores state/nonce/code_verifier + id_token + access_token in
+    # session; that combined payload easily exceeds the 4KB signed-cookie limit,
+    # which causes the browser to drop the auth cookie and the redirect loop
+    # between /oidc/callback/ and /oidc/authenticate/.
+    SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+else:
+    SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
 SENTRY_DSN = get_env('SENTRY_DSN', 'https://68b045ab408a4d32a910d339be8591a4@o227124.ingest.sentry.io/5820521')
 SENTRY_ENVIRONMENT = get_env('SENTRY_ENVIRONMENT', 'opensource')

@@ -1,7 +1,7 @@
 """This file and its contents are licensed under the Apache License 2.0. Please see the included NOTICE for copyright information and LICENSE for a copy of the license."""
 
 import logging
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from core.feature_flags import flag_set
 from core.middleware import enforce_csrf_checks
@@ -23,6 +23,11 @@ logger = logging.getLogger()
 
 @login_required
 def logout(request):
+    # In Keycloak mode, hand off to mozilla-django-oidc so the SSO session
+    # (id_token) is terminated upstream, not just the local Django session.
+    if settings.KEYCLOAK_ENABLED:
+        return redirect(reverse('oidc_logout'))
+
     auth.logout(request)
 
     if settings.LOGOUT_REDIRECT_URL:
@@ -49,6 +54,15 @@ def user_signup(request):
             next_page = reverse('main')
         else:
             next_page = reverse('projects:project-index')
+
+    # In Keycloak mode, local signup is disabled — the IdP owns identity.
+    # Send the user through the OIDC login flow; the Keycloak login page
+    # exposes its own "Register" link when realm registration is enabled.
+    if settings.KEYCLOAK_ENABLED:
+        if user.is_authenticated:
+            return redirect(next_page)
+        oidc_url = reverse('oidc_authentication_init')
+        return redirect(f'{oidc_url}?{urlencode({"next": next_page})}')
 
     user_form = forms.UserSignupForm()
     organization_form = OrganizationSignupForm()
@@ -112,6 +126,20 @@ def user_login(request):
             next_page = reverse('main')
         else:
             next_page = reverse('projects:project-index')
+
+    # In Keycloak mode, render a SailLabel-branded landing page with a button
+    # that hands off to the OIDC authorization code + PKCE flow when clicked,
+    # instead of forcing an immediate upstream redirect on every visit.
+    if settings.KEYCLOAK_ENABLED:
+        if user.is_authenticated:
+            return redirect(next_page)
+        oidc_url = reverse('oidc_authentication_init')
+        oidc_login_url = f'{oidc_url}?{urlencode({"next": next_page})}'
+        return render(
+            request,
+            'users/sail_landing.html',
+            {'oidc_login_url': oidc_login_url, 'next': quote(next_page)},
+        )
 
     login_form = load_func(settings.USER_LOGIN_FORM)
     form = login_form()
