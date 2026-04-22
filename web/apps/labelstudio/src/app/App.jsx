@@ -25,6 +25,8 @@ import { ff } from "@humansignal/core";
 import "@humansignal/ui/src/tailwind.css";
 import "./App.prefix.css";
 import { AuthProvider } from "@humansignal/core/providers/AuthProvider";
+import "../i18n";
+import { LocaleSync } from "../i18n/LocaleSync";
 
 const baseURL = new URL(APP_SETTINGS.hostname || location.origin);
 export const UNBLOCK_HISTORY_MESSAGE = "UNBLOCK_HISTORY";
@@ -75,6 +77,7 @@ const App = ({ content }) => {
           ].filter(Boolean)}
         >
           <AsyncPage>
+            <LocaleSync />
             <DraftGuard />
             <RootPage content={content} />
             <ToastViewport />

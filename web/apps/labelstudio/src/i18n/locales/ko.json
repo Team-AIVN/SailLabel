@@ -1,0 +1,191 @@
+{
+  "locale": {
+    "label": "언어",
+    "english": "English",
+    "korean": "한국어"
+  },
+  "app": {
+    "brand": "SailLabel",
+    "logoAlt": "SailLabel 로고"
+  },
+  "common": {
+    "save": "저장",
+    "cancel": "취소",
+    "delete": "삭제",
+    "create": "생성",
+    "close": "닫기",
+    "loading": "불러오는 중",
+    "or": "또는",
+    "learnMore": "자세히 보기",
+    "optional": "선택 사항"
+  },
+  "menubar": {
+    "keyboardShortcuts": "키보드 단축키",
+    "accountSettings": "계정 및 설정",
+    "logOut": "로그아웃",
+    "newsletterNotice": "계정 및 설정 페이지에서 새 알림 설정을 확인해 주세요",
+    "home": "홈",
+    "projects": "프로젝트",
+    "organization": "조직",
+    "api": "API",
+    "docs": "문서",
+    "github": "GitHub",
+    "slackCommunity": "Slack 커뮤니티",
+    "pinMenu": "메뉴 고정",
+    "unpinMenu": "메뉴 고정 해제"
+  },
+  "home": {
+    "pageTitle": "홈",
+    "welcome": "환영합니다 👋",
+    "getStarted": "지금 바로 시작해 보세요.",
+    "actions": {
+      "createProject": "프로젝트 생성",
+      "inviteMembers": "멤버 초대"
+    },
+    "recentProjects": "최근 프로젝트",
+    "viewAll": "전체 보기",
+    "loadError": "프로젝트를 불러올 수 없습니다",
+    "empty": {
+      "title": "첫 프로젝트를 만들어 보세요",
+      "description": "데이터를 가져오고 레이블링 인터페이스를 설정해 어노테이션을 시작하세요",
+      "cta": "프로젝트 생성",
+      "createProjectAriaLabel": "새 프로젝트 생성"
+    },
+    "tasksProgress": "{{total}}개 중 {{finished}}개 작업 완료 ({{percent}}%)",
+    "resources": {
+      "title": "리소스",
+      "description": "학습·탐색 및 도움말을 확인하세요",
+      "documentation": "문서",
+      "apiDocumentation": "API 문서",
+      "releaseNotes": "릴리스 노트",
+      "blog": "LabelStud.io 블로그",
+      "slackCommunity": "Slack 커뮤니티"
+    },
+    "versionLabel": "SailLabel 버전: {{edition}}"
+  },
+  "projects": {
+    "pageTitle": "프로젝트",
+    "createButton": "생성",
+    "createProjectAriaLabel": "새 프로젝트 생성",
+    "projectOptions": "프로젝트 옵션",
+    "newProject": "새 프로젝트",
+    "card": {
+      "settings": "설정",
+      "label": "레이블링"
+    },
+    "empty": {
+      "heading": "아직 프로젝트가 없습니다",
+      "description": "프로젝트를 생성하고 데이터 레이블링을 시작해 보세요.",
+      "cta": "프로젝트 생성",
+      "imageAlt": "프로젝트를 찾고 있는 Heidi"
+    }
+  },
+  "createProject": {
+    "title": "프로젝트 생성",
+    "steps": {
+      "name": "프로젝트 이름",
+      "import": "데이터 가져오기",
+      "config": "레이블링 설정"
+    },
+    "name": {
+      "projectName": "프로젝트 이름",
+      "description": "설명",
+      "descriptionPlaceholder": "프로젝트 설명을 입력하세요 (선택)",
+      "workspace": "워크스페이스",
+      "workspacePlaceholder": "옵션 선택",
+      "workspaceHint": "프로젝트를 워크스페이스로 묶어 관리해 보세요."
+    },
+    "import": {
+      "datasetUrl": "데이터셋 URL",
+      "addUrl": "URL 추가",
+      "uploadFiles": "파일 업로드",
+      "uploadMoreFiles": "파일 추가 업로드",
+      "uploadFileAriaLabel": "파일 업로드",
+      "filesUploaded": "{{count}}개 파일 업로드됨",
+      "treatCsv": "CSV/TSV 처리 방식",
+      "listOfTasks": "작업 목록",
+      "timeSeries": "시계열 또는 전체 텍스트 파일",
+      "dropHere": "여기에 파일을 끌어다 놓으세요",
+      "orClickToBrowse": "또는 클릭하여 선택",
+      "images": "이미지",
+      "audio": "오디오",
+      "video": "비디오",
+      "videoTooltip": "비디오 포맷 지원은 브라우저에 따라 다릅니다. 자세히 보려면 클릭하세요.",
+      "videoAriaLabel": "비디오 포맷 지원 자세히 보기 (새 탭에서 열림)",
+      "html": "HTML / HyperText",
+      "text": "텍스트",
+      "structuredData": "정형 데이터",
+      "pdf": "PDF",
+      "important": "중요:",
+      "tipCloudStorageLead": "직접 업로드보다 ",
+      "tipCloudStorageLink": "클라우드 스토리지",
+      "tipCloudStorageMiddle": " 사용을 권장합니다. ",
+      "tipUploadLimitsLink": "업로드 제한",
+      "tipCloudStorageTrailing": " 때문입니다.",
+      "tipPdfLead": "PDF는 ",
+      "tipPdfLink": "다중 이미지 레이블링",
+      "tipPdfTrailing": "을 사용하세요. JSONL 또는 Parquet(Enterprise 전용) 파일은 클라우드 스토리지가 필요합니다.",
+      "tipPreannotatedLead": "문서에서 ",
+      "tipPreannotatedLink": "사전 어노테이션 데이터 가져오기",
+      "tipPreannotatedTrailing": " 방법을 확인하세요.",
+      "filesCard": "파일",
+      "sampleBadge": "샘플",
+      "fileTooBig": "가져오려는 파일이 너무 큽니다",
+      "filetypeNotSupported": "\"{{name}}\" 파일 형식은 지원되지 않습니다.",
+      "expectedInputPreview": "예상 입력 미리보기",
+      "sampleLoadError": "샘플 데이터를 불러오지 못했습니다.",
+      "viewJsonFormat": "JSON 입력 형식 보기",
+      "setupLabelingLead": "먼저 ",
+      "labelingConfigurationLink": "레이블링 구성",
+      "setupLabelingTrailing": "을 설정하면 예상 JSON 데이터 형식을 미리 볼 수 있습니다"
+    },
+    "cancelAriaLabel": "프로젝트 생성 취소"
+  },
+  "accountSettings": {
+    "pageTitle": "내 계정",
+    "sections": {
+      "personalInfo": "개인 정보",
+      "hotkeys": "단축키",
+      "hotkeysDescription": "작업 속도를 높이기 위해 키보드 단축키를 원하는 대로 설정할 수 있습니다. 아래 단축키를 클릭해 새 키 조합을 지정하세요.",
+      "emailPreferences": "이메일 설정",
+      "membershipInfo": "멤버십 정보",
+      "personalAccessToken": "개인 액세스 토큰",
+      "legacyToken": "레거시 토큰",
+      "accessToken": "액세스 토큰"
+    },
+    "personalInfo": {
+      "firstName": "이름",
+      "lastName": "성",
+      "email": "이메일",
+      "phone": "전화번호",
+      "save": "저장",
+      "deleteAvatar": "삭제",
+      "errorUpdatingAvatar": "프로필 사진을 업데이트하지 못했습니다",
+      "errorUpdatingUser": "사용자 정보를 업데이트하지 못했습니다"
+    },
+    "email": {
+      "subscribeGeneric": "뉴스 및 팁 구독",
+      "subscribeHumanSignal": "HumanSignal의 Heidi가 보내는 뉴스와 팁 구독"
+    },
+    "membership": {
+      "userId": "사용자 ID",
+      "registrationDate": "가입일",
+      "annotationsSubmitted": "제출한 어노테이션 수",
+      "projectsContributed": "참여한 프로젝트 수",
+      "organization": "조직",
+      "myRole": "내 역할",
+      "organizationId": "조직 ID",
+      "owner": "소유자",
+      "created": "생성일",
+      "roles": {
+        "owner": "소유자",
+        "deactivated": "비활성",
+        "administrator": "관리자",
+        "manager": "매니저",
+        "annotator": "어노테이터",
+        "reviewer": "검수자",
+        "pending": "대기중"
+      }
+    }
+  }
+}

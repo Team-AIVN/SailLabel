@@ -1,5 +1,6 @@
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@humansignal/ui/lib/card-new/card";
 import { useMemo, isValidElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Redirect, Route, Switch, useParams, useRouteMatch } from "react-router-dom";
 import { useUpdatePageTitle, createTitleFromSegments } from "@humansignal/core";
 import styles from "./AccountSettings.module.css";
@@ -17,6 +18,7 @@ import { useAuth } from "@humansignal/core/providers/AuthProvider";
 import { SidebarMenu } from "apps/labelstudio/src/components/SidebarMenu/SidebarMenu";
 
 const AccountSettingsSection = () => {
+  const { t } = useTranslation();
   const { user, permissions } = useAuth();
   const { sectionId } = useParams<{ sectionId: string }>();
   const settings = useAtomValue(settingsAtom);
@@ -25,8 +27,8 @@ const AccountSettingsSection = () => {
   });
 
   const resolvedSections = useMemo(() => {
-    return settings.data && !("error" in settings.data) ? accountSettingsSections(settings.data, permissions) : [];
-  }, [settings.data, user]);
+    return settings.data && !("error" in settings.data) ? accountSettingsSections(settings.data, permissions, t) : [];
+  }, [settings.data, user, t]);
 
   const currentSection = useMemo(
     () => resolvedSections.find((section) => section.id === sectionId),
@@ -35,21 +37,20 @@ const AccountSettingsSection = () => {
 
   // Update page title to reflect the current section
   const pageTitleText = useMemo(() => {
-    if (!currentSection) return "My Account";
+    const pageTitle = t("accountSettings.pageTitle");
+    if (!currentSection) return pageTitle;
 
-    // If title is a string, use it directly
     if (typeof currentSection.title === "string") {
-      return createTitleFromSegments([currentSection.title, "My Account"]);
+      return createTitleFromSegments([currentSection.title, pageTitle]);
     }
 
-    // For non-string titles (like JSX elements), derive from the section ID
     const titleFromId = currentSection.id
       .split("-")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
 
-    return createTitleFromSegments([titleFromId, "My Account"]);
-  }, [currentSection]);
+    return createTitleFromSegments([titleFromId, pageTitle]);
+  }, [currentSection, t]);
 
   useUpdatePageTitle(pageTitleText);
 
@@ -90,13 +91,14 @@ const AccountSettingsSection = () => {
 };
 
 const AccountSettingsPage = () => {
+  const { t } = useTranslation();
   const settings = useAtomValue(settingsAtom);
   const match = useRouteMatch();
   const { sectionId } = useParams<{ sectionId: string }>();
   const { user, permissions } = useAuth();
   const resolvedSections = useMemo(() => {
-    return settings.data && !("error" in settings.data) ? accountSettingsSections(settings.data, permissions) : [];
-  }, [settings.data, user]);
+    return settings.data && !("error" in settings.data) ? accountSettingsSections(settings.data, permissions, t) : [];
+  }, [settings.data, user, t]);
 
   const menuItems = useMemo(
     () =>
@@ -128,7 +130,7 @@ AccountSettingsPage.path = "/user/account";
 AccountSettingsPage.exact = false;
 AccountSettingsPage.routes = () => [
   {
-    title: () => "My Account",
+    title: () => AccountSettingsPage.title,
     path: "/account",
     component: () => <Redirect to={AccountSettingsPage.path} />,
   },
