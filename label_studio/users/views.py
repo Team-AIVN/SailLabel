@@ -127,14 +127,19 @@ def user_login(request):
         else:
             next_page = reverse('projects:project-index')
 
-    # In Keycloak mode, bypass the local form and send the browser through
-    # the OIDC authorization code + PKCE flow. The RP view preserves ?next
-    # via the session and redirects there after callback.
+    # In Keycloak mode, render a SailLabel-branded landing page with a button
+    # that hands off to the OIDC authorization code + PKCE flow when clicked,
+    # instead of forcing an immediate upstream redirect on every visit.
     if settings.KEYCLOAK_ENABLED:
         if user.is_authenticated:
             return redirect(next_page)
         oidc_url = reverse('oidc_authentication_init')
-        return redirect(f'{oidc_url}?{urlencode({"next": next_page})}')
+        oidc_login_url = f'{oidc_url}?{urlencode({"next": next_page})}'
+        return render(
+            request,
+            'users/sail_landing.html',
+            {'oidc_login_url': oidc_login_url, 'next': quote(next_page)},
+        )
 
     login_form = load_func(settings.USER_LOGIN_FORM)
     form = login_form()
