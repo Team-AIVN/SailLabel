@@ -262,3 +262,34 @@ class UserReviewsAPITests(APITestCase):
     def test_unauthenticated_returns_401_or_403(self):
         response = self.client.get('/api/current-user/reviews/')
         assert response.status_code in (401, 403)
+
+    def test_users_me_alias_mirrors_current_user_route(self):
+        """instructions.md §3.6.2 lists the endpoint as `/api/users/me/reviews/`.
+        Both URL shapes must return the same payload for the authenticated user."""
+        mine = self._make_reviewed(
+            reviewer=self.reviewer, project=self.project, transition='accept_annotation'
+        )
+        self.client.force_authenticate(user=self.reviewer)
+
+        current = self.client.get('/api/current-user/reviews/')
+        alias = self.client.get('/api/users/me/reviews/')
+
+        assert current.status_code == 200
+        assert alias.status_code == 200
+        assert current.json() == alias.json()
+        assert {row['annotation_id'] for row in alias.json()} == {mine.id}
+
+    def test_users_me_alias_honors_filters(self):
+        accepted = self._make_reviewed(
+            reviewer=self.reviewer, project=self.project, transition='accept_annotation'
+        )
+        self._make_reviewed(
+            reviewer=self.reviewer, project=self.project,
+            transition='reject_annotation', comment='nope',
+        )
+        self.client.force_authenticate(user=self.reviewer)
+
+        body = self.client.get(
+            f'/api/users/me/reviews/?state={AnnotationStateChoices.ACCEPTED}'
+        ).json()
+        assert {row['annotation_id'] for row in body} == {accepted.id}
