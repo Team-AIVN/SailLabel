@@ -1,0 +1,212 @@
+"""This file and its contents are licensed under the Apache License 2.0. Please see the included NOTICE for copyright information and LICENSE for a copy of the license."""
+
+import logging
+
+from core.mixins import GetParentObjectMixin
+from core.permissions import ViewClassPermission, all_permissions
+from django.db import transaction
+from django.utils.decorators import method_decorator
+from drf_spectacular.utils import extend_schema
+from rest_framework import generics, status
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
+
+from .models import Workspace, WorkspaceMember
+from .rules import is_workspace_manager, is_workspace_member
+from .serializers import WorkspaceMemberSerializer, WorkspaceSerializer
+
+logger = logging.getLogger(__name__)
+
+
+def _active_org_or_400(user):
+    org = getattr(user, 'active_organization', None)
+    if org is None:
+        raise ValidationError('User has no active organization; cannot access workspaces.')
+    return org
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(
+        tags=['Workspaces'],
+        summary='List workspaces',
+        description='List workspaces in the user\'s active organization.',
+    ),
+)
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Workspaces'],
+        summary='Create workspace',
+        description='Create a workspace in the user\'s active organization. The creator is '
+        'automatically added as a workspace_manager.',
+        request=WorkspaceSerializer,
+        responses={201: WorkspaceSerializer},
+    ),
+)
+class WorkspaceListAPI(generics.ListCreateAPIView):
+    serializer_class = WorkspaceSerializer
+    permission_required = ViewClassPermission(
+        GET=all_permissions.workspaces_view,
+        POST=all_permissions.workspaces_create,
+    )
+
+    def get_queryset(self):
+        org = _active_org_or_400(self.request.user)
+        return Workspace.objects.filter(organization=org).order_by('-created_at')
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        org = _active_org_or_400(self.request.user)
+        workspace = serializer.save(organization=org, created_by=self.request.user)
+        WorkspaceMember.objects.get_or_create(
+            user=self.request.user,
+            workspace=workspace,
+            defaults={'role': WorkspaceMember.Role.WORKSPACE_MANAGER},
+        )
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(tags=['Workspaces'], summary='Get workspace by ID'),
+)
+@method_decorator(
+    name='patch',
+    decorator=extend_schema(tags=['Workspaces'], summary='Update workspace'),
+)
+@method_decorator(
+    name='delete',
+    decorator=extend_schema(tags=['Workspaces'], summary='Soft-delete workspace'),
+)
+class WorkspaceDetailAPI(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = WorkspaceSerializer
+    permission_required = ViewClassPermission(
+        GET=all_permissions.workspaces_view,
+        PATCH=all_permissions.workspaces_change,
+        PUT=all_permissions.workspaces_change,
+        DELETE=all_permissions.workspaces_delete,
+    )
+    queryset = Workspace.objects.all()
+
+    def get_queryset(self):
+        org = _active_org_or_400(self.request.user)
+        return Workspace.objects.filter(organization=org)
+
+    def _require_manager(self, workspace):
+        if not is_workspace_manager(self.request.user, workspace):
+            raise PermissionDenied('Workspace manager role is required.')
+
+    def perform_update(self, serializer):
+        self._require_manager(self.get_object())
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        self._require_manager(instance)
+        instance.soft_delete(user=self.request.user)
+
+
+class _WorkspaceScopedMixin(GetParentObjectMixin):
+    parent_queryset = Workspace.objects.all()
+    parent_lookup_url_kwarg = 'pk'
+
+    def _get_workspace(self) -> Workspace:
+        org = _active_org_or_400(self.request.user)
+        workspace = self.parent_object
+        if workspace.organization_id != org.id:
+            # Prevent cross-org enumeration via direct ID guess.
+            raise PermissionDenied('Workspace does not belong to the active organization.')
+        if not is_workspace_member(self.request.user, workspace):
+            raise PermissionDenied('Workspace membership is required.')
+        return workspace
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(tags=['Workspaces'], summary='List workspace members'),
+)
+@method_decorator(
+    name='post',
+    decorator=extend_schema(tags=['Workspaces'], summary='Invite workspace member'),
+)
+class WorkspaceMembersAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
+    serializer_class = WorkspaceMemberSerializer
+    permission_required = ViewClassPermission(
+        GET=all_permissions.workspaces_view,
+        POST=all_permissions.workspaces_invite,
+    )
+
+    def get_queryset(self):
+        workspace = self._get_workspace()
+        return workspace.members.filter(deleted_at__isnull=True).order_by('id')
+
+    def perform_create(self, serializer):
+        workspace = self._get_workspace()
+        if not is_workspace_manager(self.request.user, workspace):
+            raise PermissionDenied('Only a workspace manager can invite members.')
+        serializer.save(workspace=workspace)
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(tags=['Workspaces'], summary='Get workspace member'),
+)
+@method_decorator(
+    name='patch',
+    decorator=extend_schema(tags=['Workspaces'], summary='Update workspace member'),
+)
+@method_decorator(
+    name='delete',
+    decorator=extend_schema(tags=['Workspaces'], summary='Remove workspace member'),
+)
+class WorkspaceMemberDetailAPI(_WorkspaceScopedMixin, generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = WorkspaceMemberSerializer
+    permission_required = ViewClassPermission(
+        GET=all_permissions.workspaces_view,
+        PATCH=all_permissions.workspaces_change,
+        PUT=all_permissions.workspaces_change,
+        DELETE=all_permissions.workspaces_change,
+    )
+    lookup_url_kwarg = 'member_pk'
+
+    def get_queryset(self):
+        workspace = self._get_workspace()
+        return workspace.members.all()
+
+    def perform_update(self, serializer):
+        workspace = self._get_workspace()
+        if not is_workspace_manager(self.request.user, workspace):
+            raise PermissionDenied('Only a workspace manager can update membership.')
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        workspace = self._get_workspace()
+        if not is_workspace_manager(self.request.user, workspace):
+            raise PermissionDenied('Only a workspace manager can remove members.')
+        # Soft delete to preserve audit trail.
+        from django.utils import timezone
+        instance.deleted_at = timezone.now()
+        instance.save(update_fields=['deleted_at', 'updated_at'])
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(tags=['Workspaces'], summary='List projects in workspace'),
+)
+class WorkspaceProjectsAPI(_WorkspaceScopedMixin, generics.ListAPIView):
+    permission_required = ViewClassPermission(GET=all_permissions.projects_view)
+
+    def get_serializer_class(self):
+        # Import lazily to avoid circular import at module load time.
+        from projects.serializers import ProjectSerializer
+        return ProjectSerializer
+
+    def get_queryset(self):
+        from projects.models import Project
+
+        workspace = self._get_workspace()
+        return Project.objects.filter(workspace=workspace).order_by('-created_at')
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['created_by'] = self.request.user
+        return ctx
