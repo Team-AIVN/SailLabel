@@ -130,3 +130,8 @@ export const FF_FIT_720_LAZY_LOAD_ANNOTATIONS = "fflag_fix_all_fit_720_lazy_load
  */
 export const FF_FIT_1443_ANALYTICS_LABEL_DISTRIBUTION_PAGE =
   "fflag_feat_all_fit_1443_analytics_label_distribution_page";
+
+/**
+ * Workspace domain — enables the Workspaces page, Menubar entry, and ProjectsList workspace selector.
+ */
+export const FF_WORKSPACE = "fflag_workspace";

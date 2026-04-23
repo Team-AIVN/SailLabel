@@ -26,6 +26,7 @@
     "newsletterNotice": "계정 및 설정 페이지에서 새 알림 설정을 확인해 주세요",
     "home": "홈",
     "projects": "프로젝트",
+    "workspaces": "워크스페이스",
     "organization": "조직",
     "api": "API",
     "docs": "문서",
@@ -62,6 +63,30 @@
       "slackCommunity": "Slack 커뮤니티"
     },
     "versionLabel": "SailLabel 버전: {{edition}}"
+  },
+  "workspaces": {
+    "pageTitle": "워크스페이스",
+    "createButton": "워크스페이스 생성",
+    "createWorkspaceAriaLabel": "새 워크스페이스 생성",
+    "fields": {
+      "title": "이름",
+      "description": "설명"
+    },
+    "create": {
+      "title": "워크스페이스 생성",
+      "submit": "생성"
+    },
+    "card": {
+      "projectCount_one": "프로젝트 {{count}}개",
+      "projectCount_other": "프로젝트 {{count}}개"
+    },
+    "empty": {
+      "title": "아직 워크스페이스가 없습니다",
+      "description": "워크스페이스를 만들어 프로젝트와 팀원을 묶어 관리해 보세요."
+    },
+    "toast": {
+      "created": "워크스페이스 \"{{title}}\"을(를) 생성했습니다"
+    }
   },
   "projects": {
     "pageTitle": "프로젝트",
