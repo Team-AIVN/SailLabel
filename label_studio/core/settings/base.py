@@ -287,6 +287,7 @@ MIDDLEWARE = [
     'core.middleware.DatabaseIsLockedRetryMiddleware',
     'core.current_request.ThreadLocalMiddleware',
     'jwt_auth.middleware.JWTAuthenticationMiddleware',
+    'label_studio.core.observability.middleware.RequestMetricsMiddleware',
 ]
 
 _DRF_AUTH_CLASSES = []
@@ -517,6 +518,22 @@ CSRF_COOKIE_SAMESITE = get_env('CSRF_COOKIE_SAMESITE', 'Lax')
 # default value is from django docs: https://docs.djangoproject.com/en/5.1/ref/settings/#csrf-cookie-age
 # approximately 1 year
 CSRF_COOKIE_AGE = int(get_env('CSRF_COOKIE_AGE', 31449600))
+
+
+# ---- Transport-layer hardening (Phase 8 / instructions.md §4 NFR 보안) -----
+# These defaults stay off so dev/compose environments without TLS continue to work.
+# In production (behind nginx terminating TLS) set:
+#   SESSION_COOKIE_SECURE=1 CSRF_COOKIE_SECURE=1 SECURE_SSL_REDIRECT=1
+#   SECURE_PROXY_SSL_HEADER_NAME=HTTP_X_FORWARDED_PROTO SECURE_PROXY_SSL_HEADER_VALUE=https
+# See deploy/nginx for the reference TLS-terminating front end.
+SECURE_SSL_REDIRECT = get_bool_env('SECURE_SSL_REDIRECT', False)
+_proxy_ssl_header_name = get_env('SECURE_PROXY_SSL_HEADER_NAME', '')
+_proxy_ssl_header_value = get_env('SECURE_PROXY_SSL_HEADER_VALUE', 'https')
+if _proxy_ssl_header_name:
+    SECURE_PROXY_SSL_HEADER = (_proxy_ssl_header_name, _proxy_ssl_header_value)
+SECURE_HSTS_SECONDS = int(get_env('SECURE_HSTS_SECONDS', 0))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = get_bool_env('SECURE_HSTS_INCLUDE_SUBDOMAINS', False)
+SECURE_HSTS_PRELOAD = get_bool_env('SECURE_HSTS_PRELOAD', False)
 
 
 # Inactivity user sessions

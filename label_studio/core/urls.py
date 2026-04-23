@@ -74,6 +74,7 @@ urlpatterns = [
     re_path(r'^', include('fsm.urls')),
     re_path(r'version/', views.version_page, name='version'),  # html page
     re_path(r'api/version/', views.version_page, name='api-version'),  # json response
+    re_path(r'^health/ready/?$', views.readiness, name='readiness'),
     re_path(r'health/', views.health, name='health'),
     re_path(r'metrics/', views.metrics, name='metrics'),
     re_path(r'trigger500/', views.TriggerAPIError.as_view(), name='metrics'),

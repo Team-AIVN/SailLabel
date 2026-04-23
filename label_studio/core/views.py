@@ -71,14 +71,40 @@ def version_page(request):
 
 
 def health(request):
-    """System health info"""
+    """Liveness probe: the process is up and handling requests.
+
+    Kept deliberately cheap — no database, no Redis. Use ``/health/ready/`` to
+    verify dependencies before routing traffic.
+    """
     logger.debug('Got /health request.')
-    return HttpResponse(json.dumps({'status': 'UP'}))
+    return JsonResponse({'status': 'UP'})
+
+
+def readiness(request):
+    """Readiness probe: all hard dependencies (DB, Redis, RQ) are serving.
+
+    Returns 503 with per-dependency detail when anything is down so an
+    orchestrator can withhold traffic. Also publishes a Prometheus gauge per
+    dependency for availability dashboards.
+    """
+    from label_studio.core.observability.health import run_probes
+
+    results = run_probes()
+    all_ready = all(r.ready for r in results)
+    payload = {
+        'status': 'ready' if all_ready else 'not_ready',
+        'checks': {r.name: r.to_dict() for r in results},
+    }
+    return JsonResponse(payload, status=200 if all_ready else 503)
 
 
 def metrics(request):
-    """Empty page for metrics evaluation"""
-    return HttpResponse('')
+    """Prometheus text-format exposition for the in-process metric registry."""
+    from label_studio.core.observability import render_latest
+
+    body = render_latest()
+    # text/plain with the Prometheus version marker per the exposition format spec.
+    return HttpResponse(body, content_type='text/plain; version=0.0.4; charset=utf-8')
 
 
 class TriggerAPIError(APIView):

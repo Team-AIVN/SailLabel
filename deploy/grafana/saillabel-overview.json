@@ -1,0 +1,146 @@
+{
+  "title": "SailLabel Overview",
+  "uid": "saillabel-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "",
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "tags": ["saillabel", "observability"],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "label": "Datasource"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "HTTP error rate (5xx / total)",
+      "description": "Rolling 5-minute ratio of 5xx responses. Alert fires above 1% sustained for 5 min.",
+      "datasource": {"type": "prometheus", "uid": "$datasource"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 0.01}
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(saillabel_http_requests_total{status_class=\"5xx\"}[5m])) / clamp_min(sum(rate(saillabel_http_requests_total[5m])), 1)",
+          "legendFormat": "5xx ratio"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "HTTP latency (p50 / p95 / p99)",
+      "description": "Request latency quantiles aggregated across all views. SLO: p95 < 2s.",
+      "datasource": {"type": "prometheus", "uid": "$datasource"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "fieldConfig": {
+        "defaults": {"unit": "s"}
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(saillabel_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(saillabel_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(saillabel_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "io_storages sync — success vs failure / sec",
+      "description": "Sync jobs broken down by backend class and outcome. Alert fires when failure ratio > 5% over 30 min.",
+      "datasource": {"type": "prometheus", "uid": "$datasource"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (result) (rate(saillabel_storage_sync_total[5m]))",
+          "legendFormat": "{{result}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Settlement batch duration (p50/p95) + failure count",
+      "description": "Batch durations and failure rate. Any failure pages oncall immediately (see alerts.yml).",
+      "datasource": {"type": "prometheus", "uid": "$datasource"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(saillabel_settlement_batch_duration_seconds_bucket[30m])))",
+          "legendFormat": "p50 duration"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(saillabel_settlement_batch_duration_seconds_bucket[30m])))",
+          "legendFormat": "p95 duration"
+        },
+        {
+          "refId": "C",
+          "expr": "increase(saillabel_settlement_batch_total{result=\"failure\"}[1h])",
+          "legendFormat": "failures (last 1h)"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Readiness by dependency",
+      "description": "1 = up, 0 = down. Alert fires when any stays at 0 for 2 min.",
+      "datasource": {"type": "prometheus", "uid": "$datasource"},
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 16},
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {"options": {"0": {"text": "DOWN", "color": "red"}}, "type": "value"},
+            {"options": {"1": {"text": "UP", "color": "green"}}, "type": "value"}
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "saillabel_readiness_status",
+          "legendFormat": "{{dependency}}"
+        }
+      ]
+    }
+  ]
+}

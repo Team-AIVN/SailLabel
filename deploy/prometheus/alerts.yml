@@ -1,0 +1,78 @@
+# Alerting rules for SailLabel.
+#
+# Thresholds match instructions.md §4 (NFR observability):
+#   - error rate > 1% sustained for 5 min
+#   - HTTP p95 > 2s sustained for 10 min
+#   - io_storages sync failure rate > 5% over 30 min
+#   - settlement batch failure — fire immediately
+#   - any dependency unready for 2 min (database/redis/rq)
+
+groups:
+  - name: saillabel-slo
+    interval: 30s
+    rules:
+      - alert: SailLabelHttpErrorRateHigh
+        expr: |
+          (
+            sum(rate(saillabel_http_requests_total{status_class="5xx"}[5m]))
+            / clamp_min(sum(rate(saillabel_http_requests_total[5m])), 1)
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          service: saillabel
+        annotations:
+          summary: "SailLabel 5xx error rate above 1%"
+          description: |
+            Rolling 5-minute 5xx error ratio is {{ $value | humanizePercentage }}.
+            Investigate recent deploys and check /metrics/ for the offending view label.
+
+      - alert: SailLabelHttpP95Slow
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(saillabel_http_request_duration_seconds_bucket[5m]))
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+          service: saillabel
+        annotations:
+          summary: "SailLabel HTTP p95 latency above 2s"
+          description: "p95 latency is {{ $value }}s; dashboard SLO is 2s."
+
+      - alert: SailLabelStorageSyncFailureRateHigh
+        expr: |
+          (
+            sum(rate(saillabel_storage_sync_total{result="failure"}[30m]))
+            / clamp_min(sum(rate(saillabel_storage_sync_total[30m])), 1)
+          ) > 0.05
+        for: 15m
+        labels:
+          severity: warning
+          service: saillabel
+        annotations:
+          summary: "io_storages sync failure rate above 5%"
+          description: |
+            {{ $value | humanizePercentage }} of sync jobs are failing. Check
+            worker logs and storage credentials.
+
+      - alert: SailLabelSettlementBatchFailed
+        expr: increase(saillabel_settlement_batch_total{result="failure"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: saillabel
+        annotations:
+          summary: "Settlement batch failed"
+          description: "A settlement batch failed in the last 5 minutes — pages oncall."
+
+      - alert: SailLabelReadinessDependencyDown
+        expr: min by (dependency) (saillabel_readiness_status) < 1
+        for: 2m
+        labels:
+          severity: critical
+          service: saillabel
+        annotations:
+          summary: "SailLabel dependency {{ $labels.dependency }} is not ready"
+          description: "Readiness probe has reported {{ $labels.dependency }} down for 2 minutes."

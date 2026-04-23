@@ -771,15 +771,35 @@ class WorkspaceStorageMixin(models.Model):
 
 
 def import_sync_background(storage_class, storage_id, timeout=settings.RQ_LONG_JOB_TIMEOUT, **kwargs):
+    import time as _time
+
+    from label_studio.core.observability.instruments import (
+        STORAGE_SYNC_DURATION_SECONDS,
+        STORAGE_SYNC_TOTAL,
+    )
+
     storage = storage_class.objects.get(id=storage_id)
+    backend = storage_class.__name__
+    started = _time.monotonic()
     try:
         storage.scan_and_create_links()
     except UnsupportedFileFormatError:
         # This is an expected error when user tries to import non-JSON files without enabling blob URLs
         # We don't want to fail the job in this case, just mark the storage as failed with a clear message
         storage.info_set_failed()
+        STORAGE_SYNC_TOTAL.inc(backend=backend, result='failure')
+        STORAGE_SYNC_DURATION_SECONDS.observe(_time.monotonic() - started, backend=backend)
         # Exit gracefully without raising exception to avoid job failure
         return
+    except Exception:
+        # RQ's failure callback will also mark info_set_failed; we still want the
+        # metric even if the exception propagates to the worker.
+        STORAGE_SYNC_TOTAL.inc(backend=backend, result='failure')
+        STORAGE_SYNC_DURATION_SECONDS.observe(_time.monotonic() - started, backend=backend)
+        raise
+    else:
+        STORAGE_SYNC_TOTAL.inc(backend=backend, result='success')
+        STORAGE_SYNC_DURATION_SECONDS.observe(_time.monotonic() - started, backend=backend)
 
 
 def export_sync_background(storage_class, storage_id, **kwargs):
