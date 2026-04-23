@@ -108,3 +108,52 @@ class TaskInProgressTransition(ModelChangeTransition):
             'cancelled_annotations': task.cancelled_annotations,
             'is_labeled': task.is_labeled,
         }
+
+
+# ---------------------------------------------------------------------------
+# Phase 4B review aggregates
+# ---------------------------------------------------------------------------
+
+
+@register_state_transition('task', 'task_accepted', triggers_on_create=False, triggers_on_update=False)
+class TaskAcceptedTransition(ModelChangeTransition):
+    """Task reached its accept terminal — at least one annotation was accepted.
+
+    Driven by `AcceptAnnotationTransition.post_transition_hook`. Idempotent:
+    StateManager skips the insert if the task is already in ACCEPTED.
+    """
+
+    def get_target_state(self, context: Optional[TransitionContext] = None) -> str:
+        return TaskStateChoices.ACCEPTED
+
+    def get_reason(self, context: TransitionContext) -> str:
+        return 'Task accepted - at least one annotation accepted'
+
+    def transition(self, context: TransitionContext) -> Dict[str, Any]:
+        task = context.entity
+        return {
+            'task_id': task.id,
+            'project_id': task.project_id,
+        }
+
+
+@register_state_transition('task', 'task_rejected', triggers_on_create=False, triggers_on_update=False)
+class TaskRejectedTransition(ModelChangeTransition):
+    """Task reached its reject terminal — every annotation was rejected.
+
+    Driven by `RejectAnnotationTransition.post_transition_hook` after a
+    sibling check confirms no ACCEPTED / non-REJECTED annotations remain.
+    """
+
+    def get_target_state(self, context: Optional[TransitionContext] = None) -> str:
+        return TaskStateChoices.REJECTED
+
+    def get_reason(self, context: TransitionContext) -> str:
+        return 'Task rejected - all annotations rejected'
+
+    def transition(self, context: TransitionContext) -> Dict[str, Any]:
+        task = context.entity
+        return {
+            'task_id': task.id,
+            'project_id': task.project_id,
+        }

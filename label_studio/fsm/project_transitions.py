@@ -134,6 +134,36 @@ class ProjectInProgressFromCompletedTransition(ModelChangeTransition):
         }
 
 
+@register_state_transition(
+    'project', 'project_can_reviewed', triggers_on_create=False, triggers_on_update=False
+)
+class ProjectCanReviewedTransition(ModelChangeTransition):
+    """Project readiness gate — reviewers may start working.
+
+    Fired from `MarkAnnotatedTransition.post_transition_hook` whenever the
+    `batch_review.project_can_be_reviewed()` gate opens:
+
+    - classic mode: every task is `is_labeled=True`
+    - batch mode (`fflag_batch_review` + `review_batch_size`): enough
+      annotations in `ANNOTATED` state.
+
+    Idempotent via StateManager's same-state guard.
+    """
+
+    def get_target_state(self, context: Optional[TransitionContext] = None) -> str:
+        return ProjectStateChoices.CAN_REVIEWED
+
+    def get_reason(self, context: TransitionContext) -> str:
+        return 'Project reached review threshold'
+
+    def transition(self, context: TransitionContext) -> Dict[str, Any]:
+        project = context.entity
+        return {
+            'organization_id': project.organization_id,
+            'review_batch_size': getattr(project, 'review_batch_size', None),
+        }
+
+
 def sync_project_state(project, user=None, reason=None, context_data=None):
     current_state = StateManager.get_current_state_value(project)
     inferred_state = get_or_infer_state(project)

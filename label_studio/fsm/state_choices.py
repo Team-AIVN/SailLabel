@@ -17,12 +17,12 @@ These enums define the essential states for core Label Studio entities.
 
 @register_state_choices('task')
 class TaskStateChoices(models.TextChoices):
-    """
-    Core task states for basic Label Studio workflow.
-    Simplified states covering the essential task lifecycle:
-    - Creation and assignment
-    - Annotation work
-    - Completion
+    """Task lifecycle states.
+
+    Phase 4B adds the review-aggregation terminals `ACCEPTED` / `REJECTED` per
+    §3.4.4: "Annotation 중 하나라도 ACCEPTED → Task accepted, 모두 REJECTED →
+    Task rejected". `COMPLETED` is preserved as the pre-review "annotator
+    submitted" state since it's wired into AnnotationCreatedTransition.
     """
 
     # Initial State
@@ -31,8 +31,12 @@ class TaskStateChoices(models.TextChoices):
     # Work States
     IN_PROGRESS = 'IN_PROGRESS', _('In Progress')
 
-    # Terminal State
+    # Pre-review completion (annotator submitted at least one annotation)
     COMPLETED = 'COMPLETED', _('Completed')
+
+    # Phase 4B review aggregates
+    ACCEPTED = 'ACCEPTED', _('Accepted')
+    REJECTED = 'REJECTED', _('Rejected')
 
 
 @register_state_choices('annotation')
@@ -63,12 +67,11 @@ class AnnotationStateChoices(models.TextChoices):
 
 @register_state_choices('project')
 class ProjectStateChoices(models.TextChoices):
-    """
-    Core project states for basic Label Studio workflow.
-    Simplified states covering the essential project lifecycle:
-    - Setup and configuration
-    - Active work
-    - Completion
+    """Project lifecycle states.
+
+    Phase 4B adds `CAN_REVIEWED` — the "reviewers may start" gate fires via
+    `batch_review.project_can_be_reviewed()` once either the classic
+    all-tasks-labeled condition OR the batch-review threshold is met.
     """
 
     # Setup States
@@ -76,6 +79,9 @@ class ProjectStateChoices(models.TextChoices):
 
     # Work States
     IN_PROGRESS = 'IN_PROGRESS', _('In Progress')
+
+    # Phase 4B review gate
+    CAN_REVIEWED = 'CAN_REVIEWED', _('Can be reviewed')
 
     # Terminal State
     COMPLETED = 'COMPLETED', _('Completed')

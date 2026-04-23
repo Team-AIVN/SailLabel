@@ -13,6 +13,9 @@ from fsm.registry import register_state_transition
 from fsm.state_choices import AnnotationStateChoices
 from fsm.transitions import ModelChangeTransition, StateModelType, TransitionContext
 
+# Task / Project aggregator helpers live in sibling modules; imported lazily
+# inside hooks to avoid circular-import churn at module load time.
+
 logger = logging.getLogger(__name__)
 
 
@@ -182,12 +185,35 @@ class AssignAnnotationTransition(_PipelineTransition):
     'annotation', 'mark_annotated', triggers_on_create=False, triggers_on_update=False
 )
 class MarkAnnotatedTransition(_PipelineTransition):
-    """Annotator has finished labeling — moves `assigned → annotated`."""
+    """Annotator has finished labeling — moves `assigned → annotated`.
+
+    Post-hook opens the `project_can_reviewed` gate when
+    `batch_review.project_can_be_reviewed()` reports ready (classic all-tasks
+    mode or batch-threshold mode). StateManager's same-state guard makes the
+    project transition idempotent.
+    """
 
     target: str = AnnotationStateChoices.ANNOTATED
 
     def get_reason(self, context: TransitionContext) -> str:
         return 'Annotator submitted annotation'
+
+    def post_transition_hook(self, context: TransitionContext, state_record: StateModelType) -> None:
+        from fsm.batch_review import project_can_be_reviewed
+        from fsm.state_manager import StateManager
+
+        annotation = context.entity
+        _sync_current_state(annotation, self.target)
+
+        project = annotation.project
+        if project is None:
+            return
+        if project_can_be_reviewed(project, user=context.current_user):
+            StateManager.execute_transition(
+                entity=project,
+                transition_name='project_can_reviewed',
+                user=context.current_user,
+            )
 
 
 @register_state_transition(
@@ -219,6 +245,8 @@ class AcceptAnnotationTransition(_PipelineTransition):
         return 'Reviewer accepted annotation'
 
     def post_transition_hook(self, context: TransitionContext, state_record: StateModelType) -> None:
+        from fsm.state_manager import StateManager
+
         annotation = context.entity
         # `queryset.update()` bypasses `FsmHistoryStateModel.save()`, so flipping
         # booleans here will not recurse into `AnnotationUpdatedTransition`.
@@ -230,6 +258,13 @@ class AcceptAnnotationTransition(_PipelineTransition):
             AnnotationModel.objects.filter(pk=annotation.pk).update(ground_truth=True)
         annotation.ground_truth = True
         _sync_current_state(annotation, self.target)
+
+        # Task aggregation: at least one ACCEPTED annotation → task ACCEPTED.
+        task = annotation.task
+        if task is not None:
+            StateManager.execute_transition(
+                entity=task, transition_name='task_accepted', user=context.current_user
+            )
 
 
 @register_state_transition(
@@ -249,7 +284,60 @@ class RejectAnnotationTransition(_PipelineTransition):
         return 'Reviewer rejected annotation'
 
     def post_transition_hook(self, context: TransitionContext, state_record: StateModelType) -> None:
+        from fsm.state_manager import StateManager
+
         annotation = context.entity
         type(annotation).objects.filter(pk=annotation.pk).update(ground_truth=False)
         annotation.ground_truth = False
         _sync_current_state(annotation, self.target)
+
+        # Task aggregation: task rejects only when *every* annotation on the
+        # task is in REJECTED — a single pending / accepted sibling keeps the
+        # task alive. `current_state` is the denormalized Phase 4A column, so
+        # we can filter without a join to AnnotationState history.
+        task = annotation.task
+        if task is None:
+            return
+        AnnotationModel = type(annotation)
+        has_non_rejected = (
+            AnnotationModel.objects.filter(task_id=task.id)
+            .exclude(current_state=AnnotationStateChoices.REJECTED)
+            .exists()
+        )
+        if not has_non_rejected:
+            StateManager.execute_transition(
+                entity=task, transition_name='task_rejected', user=context.current_user
+            )
+
+
+# ---------------------------------------------------------------------------
+# Rework helper
+# ---------------------------------------------------------------------------
+
+
+def rework_annotation(parent_annotation, user):
+    """Spawn a rework child for a `REJECTED` annotation and assign it.
+
+    The review pipeline closes `annotated → will_reviewed → rejected` as a
+    terminal path for the rejected annotation itself; rework creates a *new*
+    annotation on the same task, links it back via `parent_annotation`, and
+    drives it through `assign_annotation` so it re-enters the pipeline in
+    `ASSIGNED` state.
+
+    Returns the newly created child annotation.
+    """
+    from fsm.state_manager import StateManager
+    from tasks.models import Annotation
+
+    with transaction.atomic():
+        child = Annotation.objects.create(
+            task=parent_annotation.task,
+            project=parent_annotation.project,
+            completed_by=user or parent_annotation.completed_by,
+            parent_annotation=parent_annotation,
+            result=[],
+        )
+        StateManager.execute_transition(
+            entity=child, transition_name='assign_annotation', user=user
+        )
+    return child
