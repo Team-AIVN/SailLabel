@@ -14,9 +14,19 @@ from io_storages.api import (
     ImportStorageListAPI,
     ImportStorageSyncAPI,
     ImportStorageValidateAPI,
+    WorkspaceImportStorageDetailAPI,
+    WorkspaceImportStorageListAPI,
 )
-from io_storages.localfiles.models import LocalFilesExportStorage, LocalFilesImportStorage
-from io_storages.localfiles.serializers import LocalFilesExportStorageSerializer, LocalFilesImportStorageSerializer
+from io_storages.localfiles.models import (
+    LocalFilesExportStorage,
+    LocalFilesImportStorage,
+    LocalFilesWorkspaceImportStorage,
+)
+from io_storages.localfiles.serializers import (
+    LocalFilesExportStorageSerializer,
+    LocalFilesImportStorageSerializer,
+    LocalFilesWorkspaceImportStorageSerializer,
+)
 
 from .openapi_schema import (
     _local_files_export_storage_schema,
@@ -303,3 +313,65 @@ class LocalFilesImportStorageFormLayoutAPI(ImportStorageFormLayoutAPI):
 
 class LocalFilesExportStorageFormLayoutAPI(ExportStorageFormLayoutAPI):
     pass
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(
+        tags=['Storage: Local'],
+        summary='List workspace-scope import storage',
+        description='List local-file import storage templates for a workspace.',
+        parameters=[
+            OpenApiParameter(
+                name='workspace',
+                type=OpenApiTypes.INT,
+                location='query',
+                description='Workspace ID',
+                required=True,
+            ),
+        ],
+        request=None,
+    ),
+)
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Storage: Local'],
+        summary='Create workspace-scope import storage',
+        description='Create a workspace-scope local-file import storage template.',
+    ),
+)
+class LocalFilesWorkspaceImportStorageListAPI(WorkspaceImportStorageListAPI):
+    queryset = LocalFilesWorkspaceImportStorage.objects.all()
+    serializer_class = LocalFilesWorkspaceImportStorageSerializer
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(
+        tags=['Storage: Local'],
+        summary='Get workspace-scope import storage',
+        description='Get a workspace-scope local-file import storage template.',
+        request=None,
+    ),
+)
+@method_decorator(
+    name='patch',
+    decorator=extend_schema(
+        tags=['Storage: Local'],
+        summary='Update workspace-scope import storage',
+        description='Update a workspace-scope local-file import storage template.',
+    ),
+)
+@method_decorator(
+    name='delete',
+    decorator=extend_schema(
+        tags=['Storage: Local'],
+        summary='Delete workspace-scope import storage',
+        description='Delete a workspace-scope local-file import storage template.',
+        request=None,
+    ),
+)
+class LocalFilesWorkspaceImportStorageDetailAPI(WorkspaceImportStorageDetailAPI):
+    queryset = LocalFilesWorkspaceImportStorage.objects.all()
+    serializer_class = LocalFilesWorkspaceImportStorageSerializer

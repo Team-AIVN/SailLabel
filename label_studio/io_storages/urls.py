@@ -48,6 +48,8 @@ from io_storages.localfiles.api import (
     LocalFilesImportStorageSerializer,
     LocalFilesImportStorageSyncAPI,
     LocalFilesImportStorageValidateAPI,
+    LocalFilesWorkspaceImportStorageDetailAPI,
+    LocalFilesWorkspaceImportStorageListAPI,
 )
 from io_storages.localfiles.views import localfiles_data
 from io_storages.redis.api import (
@@ -184,6 +186,17 @@ if settings.ENABLE_LOCAL_FILES_STORAGE:
             'export/localfiles/form',
             LocalFilesExportStorageFormLayoutAPI.as_view(),
             name='export-storage-localfiles-form',
+        ),
+        # Workspace-scope localfiles storage templates
+        path(
+            'localfiles/workspace/',
+            LocalFilesWorkspaceImportStorageListAPI.as_view(),
+            name='storage-localfiles-workspace-list',
+        ),
+        path(
+            'localfiles/workspace/<int:pk>',
+            LocalFilesWorkspaceImportStorageDetailAPI.as_view(),
+            name='storage-localfiles-workspace-detail',
         ),
     ]
 
