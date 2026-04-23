@@ -779,6 +779,17 @@ class Annotation(AnnotationMixin, FsmHistoryStateModel):
         null=True,
         help_text='Annotation was created in bulk mode',
     )
+    current_state = models.CharField(
+        _('current state'),
+        max_length=32,
+        null=True,
+        blank=True,
+        default=None,
+        help_text=(
+            'Denormalized latest FSM state. Mirrors the most recent AnnotationState '
+            'record so lists/aggregates can filter without joining the history table.'
+        ),
+    )
 
     class Meta:
         db_table = 'task_completion'
@@ -794,6 +805,8 @@ class Annotation(AnnotationMixin, FsmHistoryStateModel):
             models.Index(fields=['task', 'ground_truth']),
             models.Index(fields=['task', 'was_cancelled']),
             models.Index(fields=['was_cancelled']),
+            models.Index(fields=['current_state']),
+            models.Index(fields=['project', 'current_state']),
         ]
 
     def created_ago(self):

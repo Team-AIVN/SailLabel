@@ -37,9 +37,28 @@ class TaskStateChoices(models.TextChoices):
 
 @register_state_choices('annotation')
 class AnnotationStateChoices(models.TextChoices):
-    """Annotations don't carry state in LSO, but this can still be used for tracking history."""
+    """Annotation lifecycle states.
 
+    The SailLabel pipeline is `UPLOADED → ASSIGNED → ANNOTATED → WILL_REVIEWED →
+    {ACCEPTED | REJECTED}`, with `REJECTED` looping back into `ASSIGNED` on the
+    child annotation created during rework (linked via `parent_annotation_id`).
+
+    `CREATED` is retained as a legacy alias so pre-Phase-4 history records and
+    the default `AnnotationCreatedTransition` keep working without rewriting
+    existing rows.
+    """
+
+    # Legacy — kept for back-compat with `AnnotationCreatedTransition` and any
+    # AnnotationState rows persisted before Phase 4.
     CREATED = 'CREATED', _('Created')
+
+    # Phase 4 pipeline states
+    UPLOADED = 'UPLOADED', _('Uploaded')
+    ASSIGNED = 'ASSIGNED', _('Assigned')
+    ANNOTATED = 'ANNOTATED', _('Annotated')
+    WILL_REVIEWED = 'WILL_REVIEWED', _('Will be reviewed')
+    ACCEPTED = 'ACCEPTED', _('Accepted')
+    REJECTED = 'REJECTED', _('Rejected')
 
 
 @register_state_choices('project')
