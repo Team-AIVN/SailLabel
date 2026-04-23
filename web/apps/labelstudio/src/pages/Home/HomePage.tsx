@@ -8,6 +8,7 @@ import { useUpdatePageTitle } from "@humansignal/core";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { HeidiTips } from "../../components/HeidiTips/HeidiTips";
 import { useAPI } from "../../providers/ApiProvider";
+import { FF_DASHBOARD, isFF } from "../../utils/feature-flags";
 import { CreateProject } from "../CreateProject/CreateProject";
 import { InviteLink } from "../Organization/PeoplePage/InviteLink";
 import type { Page } from "../types/Page";
@@ -20,6 +21,7 @@ import {
   sortedProjectsAtom,
   visitedIdsAtom,
 } from "./atoms";
+import { DashboardWidgets } from "./DashboardWidgets";
 
 const resourceLinks = [
   { key: "documentation", url: "https://labelstud.io/guide/" },
@@ -138,6 +140,8 @@ export const HomePage: Page = () => {
               );
             })}
           </div>
+
+          {isFF(FF_DASHBOARD) ? <DashboardWidgets /> : null}
 
           <SimpleCard
             title={

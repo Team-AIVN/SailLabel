@@ -124,6 +124,9 @@ export const API_CONFIG = {
     settlementDetail: "GET:/settlements/:pk/",
     deleteSettlement: "DELETE:/settlements/:pk/",
     settlementReport: "GET:/settlements/:pk/report/",
+
+    // Dashboard (Phase 7)
+    dashboardSummary: "GET:/dashboard/summary/",
   },
   alwaysExpectJSON: false,
 };

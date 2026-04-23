@@ -123,6 +123,72 @@
       "description": "Once you accept or reject annotations, your review history shows up here."
     }
   },
+  "dashboard": {
+    "pageTitle": "Dashboard",
+    "welcome": "Welcome back 👋",
+    "empty": {
+      "title": "Nothing to show yet",
+      "description": "Once you join a project you'll see role-specific widgets here."
+    },
+    "loadError": "Could not load the dashboard summary.",
+    "generatedAt": "Updated {{timestamp}}",
+    "roles": {
+      "super_admin": "Super Admin",
+      "workspace_manager": "Workspace Manager",
+      "project_manager": "Project Manager",
+      "annotator": "Annotator",
+      "reviewer": "Reviewer"
+    },
+    "superAdmin": {
+      "heading": "Organization overview",
+      "organizations": "Organizations",
+      "workspaces": "Workspaces",
+      "users": "Users",
+      "projects": "Projects",
+      "completion": "Overall completion"
+    },
+    "workspaceManager": {
+      "heading": "Managed workspaces",
+      "empty": "You are not managing any workspaces yet.",
+      "projectCount_one": "{{count}} project",
+      "projectCount_other": "{{count}} projects",
+      "completion": "Completion"
+    },
+    "projectManager": {
+      "heading": "Managed projects",
+      "empty": "You are not managing any projects yet.",
+      "completion": "Completion",
+      "workerProgress": "Worker progress",
+      "workerRowEmpty": "No accepted annotations recorded yet.",
+      "workerAccepted": "{{count}} accepted",
+      "estimatedSettlement": "Estimated settlement",
+      "pricingMissing": "Pricing not set — configure pricing to see the estimate.",
+      "labelAmount": "Label",
+      "reviewAmount": "Review",
+      "total": "Total"
+    },
+    "annotator": {
+      "heading": "My labeling queue",
+      "todayAssigned": "Assigned today",
+      "rejectedOpen": "Rejected (rework)",
+      "rejectedTitle": "Tasks to redo",
+      "rejectedEmpty": "No rejected tasks right now.",
+      "rejectedRow": "Project {{projectId}} · task {{taskId}}",
+      "deadlines": "Deadlines",
+      "deadlinesEmpty": "No deadlines configured."
+    },
+    "reviewer": {
+      "heading": "My review queue",
+      "pendingReview": "Pending review",
+      "recentHeading": "Recent decisions",
+      "recentEmpty": "No recent review activity.",
+      "transitions": {
+        "accept_annotation": "Accepted",
+        "reject_annotation": "Rejected"
+      },
+      "decisionRow": "Project {{projectId}} · annotation {{annotationId}}"
+    }
+  },
   "settlement": {
     "title": "Settlement",
     "description": "Configure per-project pricing and run monthly settlement batches for annotation and review payouts.",

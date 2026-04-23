@@ -123,6 +123,72 @@
       "description": "프로젝트 내 검수 대기 어노테이션을 승인 또는 반려하면 여기에 표시됩니다."
     }
   },
+  "dashboard": {
+    "pageTitle": "대시보드",
+    "welcome": "다시 오신 것을 환영합니다 👋",
+    "empty": {
+      "title": "표시할 내용이 없습니다",
+      "description": "프로젝트에 참여하면 역할별 위젯이 여기에 표시됩니다."
+    },
+    "loadError": "대시보드 요약을 불러오지 못했습니다.",
+    "generatedAt": "갱신 {{timestamp}}",
+    "roles": {
+      "super_admin": "슈퍼 관리자",
+      "workspace_manager": "워크스페이스 관리자",
+      "project_manager": "프로젝트 관리자",
+      "annotator": "어노테이터",
+      "reviewer": "리뷰어"
+    },
+    "superAdmin": {
+      "heading": "조직 개요",
+      "organizations": "조직 수",
+      "workspaces": "워크스페이스 수",
+      "users": "사용자 수",
+      "projects": "프로젝트 수",
+      "completion": "전체 완료율"
+    },
+    "workspaceManager": {
+      "heading": "관리 중인 워크스페이스",
+      "empty": "관리 중인 워크스페이스가 없습니다.",
+      "projectCount_one": "프로젝트 {{count}}개",
+      "projectCount_other": "프로젝트 {{count}}개",
+      "completion": "완료율"
+    },
+    "projectManager": {
+      "heading": "관리 중인 프로젝트",
+      "empty": "관리 중인 프로젝트가 없습니다.",
+      "completion": "완료율",
+      "workerProgress": "작업자 진행 현황",
+      "workerRowEmpty": "아직 승인된 어노테이션이 없습니다.",
+      "workerAccepted": "승인 {{count}}건",
+      "estimatedSettlement": "예상 정산액",
+      "pricingMissing": "단가가 설정되지 않았습니다 — 단가를 설정하면 예상액이 표시됩니다.",
+      "labelAmount": "라벨링",
+      "reviewAmount": "검수",
+      "total": "합계"
+    },
+    "annotator": {
+      "heading": "내 라벨링 큐",
+      "todayAssigned": "오늘 할당",
+      "rejectedOpen": "반려 (재작업)",
+      "rejectedTitle": "재작업 대기",
+      "rejectedEmpty": "재작업이 필요한 태스크가 없습니다.",
+      "rejectedRow": "프로젝트 {{projectId}} · 태스크 {{taskId}}",
+      "deadlines": "마감 기한",
+      "deadlinesEmpty": "설정된 마감 기한이 없습니다."
+    },
+    "reviewer": {
+      "heading": "내 검수 큐",
+      "pendingReview": "검수 대기",
+      "recentHeading": "최근 검수 활동",
+      "recentEmpty": "최근 검수 활동이 없습니다.",
+      "transitions": {
+        "accept_annotation": "승인",
+        "reject_annotation": "반려"
+      },
+      "decisionRow": "프로젝트 {{projectId}} · 어노테이션 {{annotationId}}"
+    }
+  },
   "settlement": {
     "title": "정산",
     "description": "프로젝트별 단가를 설정하고 어노테이션·검수 정산 배치를 실행하세요.",

@@ -252,6 +252,7 @@ INSTALLED_APPS = [
     'organizations',
     'workspaces',
     'settlement',
+    'dashboard',
     'audit',
     'data_import',
     'data_export',

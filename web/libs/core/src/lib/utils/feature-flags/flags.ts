@@ -155,3 +155,12 @@ export const FF_BATCH_REVIEW = "fflag_batch_review";
  * Backend settlement APIs are always on; this flag only gates the UI.
  */
 export const FF_SETTLEMENT = "fflag_settlement";
+
+/**
+ * Phase 7 role-based dashboard — toggles the SailLabel home dashboard widgets
+ * (super admin / workspace manager / project manager / annotator / reviewer
+ * views). The `/api/dashboard/summary/` endpoint is always available; this
+ * flag only gates the UI entry point so the classic Home layout remains the
+ * default until rollout.
+ */
+export const FF_DASHBOARD = "fflag_dashboard";

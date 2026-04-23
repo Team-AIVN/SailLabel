@@ -82,6 +82,33 @@
       "version": 1,
       "deleted": false
     },
+    "fflag_dashboard": {
+      "key": "fflag_dashboard",
+      "on": false,
+      "prerequisites": [],
+      "targets": [],
+      "contextTargets": [],
+      "rules": [],
+      "fallthrough": {
+        "variation": 0
+      },
+      "offVariation": 1,
+      "variations": [
+        true,
+        false
+      ],
+      "clientSideAvailability": {
+        "usingMobileKey": false,
+        "usingEnvironmentId": false
+      },
+      "clientSide": false,
+      "salt": "dashboard0000000000000000000000",
+      "trackEvents": false,
+      "trackEventsFallthrough": false,
+      "debugEventsUntilDate": null,
+      "version": 1,
+      "deleted": false
+    },
     "fflag_batch_review": {
       "key": "fflag_batch_review",
       "on": true,
