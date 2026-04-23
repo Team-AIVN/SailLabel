@@ -17,4 +17,4 @@ class ProjectsConfig(AppConfig):
         Note: FSM transitions are now registered centrally in fsm/apps.py.
         Do NOT import transitions here to avoid duplicate registration.
         """
-        pass
+        from projects import rules  # noqa: F401

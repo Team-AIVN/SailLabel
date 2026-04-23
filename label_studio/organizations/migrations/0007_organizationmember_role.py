@@ -1,0 +1,23 @@
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('organizations', '0006_alter_organizationmember_deleted_at'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='organizationmember',
+            name='role',
+            field=models.CharField(
+                choices=[('super_admin', 'Super Admin'), ('member', 'Member')],
+                db_index=True,
+                default='member',
+                help_text='Organization-scope role. super_admin grants cross-workspace escalation.',
+                max_length=32,
+                verbose_name='role',
+            ),
+        ),
+    ]

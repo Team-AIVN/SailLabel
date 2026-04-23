@@ -38,6 +38,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from fsm.models import FsmHistoryStateModel
 from fsm.project_transitions import update_project_state_after_task_change
+from users.constants import ProjectRole
 from fsm.queryset_mixins import FSMStateQuerySetMixin
 from label_studio_sdk._extensions.label_studio_tools.core.label_config import parse_config
 from labels_manager.models import Label
@@ -1406,9 +1407,43 @@ class ProjectMember(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='project_memberships', help_text='User ID'
     )
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='members', help_text='Project ID')
+    role = models.CharField(
+        _('role'),
+        max_length=32,
+        choices=ProjectRole.choices,
+        default=ProjectRole.ANNOTATOR,
+        db_index=True,
+        help_text='Project-scope role: project_manager, annotator, or reviewer.',
+    )
     enabled = models.BooleanField(default=True, help_text='Project member is enabled')
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    deleted_at = models.DateTimeField(
+        _('deleted at'),
+        default=None,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Timestamp indicating when the project member was soft-deleted. NULL means active.',
+    )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='project_memberships_deleted',
+        help_text='User who removed this membership',
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'project'],
+                condition=Q(deleted_at__isnull=True),
+                name='uniq_active_project_member',
+            ),
+        ]
+        indexes = [models.Index(fields=['project', 'role'])]
 
 
 class ProjectSummary(models.Model):

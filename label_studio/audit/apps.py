@@ -3,8 +3,6 @@
 from django.apps import AppConfig
 
 
-class UsersConfig(AppConfig):
-    name = 'users'
-
-    def ready(self):
-        from users import rules, signals  # noqa: F401
+class AuditConfig(AppConfig):
+    name = 'audit'
+    default_auto_field = 'django.db.models.BigAutoField'
