@@ -103,12 +103,45 @@ class BaseUserSerializerUpdate(BaseUserSerializer):
 
 class BaseWhoAmIUserSerializer(BaseUserSerializer):
     permissions = serializers.SerializerMethodField()
+    organization_role = serializers.SerializerMethodField()
+    is_super_admin = serializers.SerializerMethodField()
 
     class Meta(BaseUserSerializer.Meta):
-        fields = BaseUserSerializer.Meta.fields + ('permissions',)
+        fields = BaseUserSerializer.Meta.fields + ('permissions', 'organization_role', 'is_super_admin')
 
     def get_permissions(self, user) -> list[str]:
         return [perm for _, perm in all_permissions]
+
+    def _active_membership(self, user):
+        """Return the active OrganizationMember row for ``user.active_organization`` or None."""
+        org_id = getattr(user, 'active_organization_id', None)
+        if not org_id:
+            return None
+        # Use prefetched om_through when available to avoid a per-request query.
+        members = getattr(user, 'om_through', None)
+        if members is not None and hasattr(members, 'all'):
+            for m in members.all():
+                if m.organization_id == org_id and not m.deleted_at:
+                    return m
+        from organizations.models import OrganizationMember
+
+        return OrganizationMember.objects.filter(
+            user=user, organization_id=org_id, deleted_at__isnull=True
+        ).first()
+
+    def get_organization_role(self, user) -> str:
+        from users.constants import OrganizationRole
+
+        member = self._active_membership(user)
+        return member.role if member is not None else OrganizationRole.MEMBER.value
+
+    def get_is_super_admin(self, user) -> bool:
+        from users.constants import OrganizationRole
+
+        if getattr(user, 'is_superuser', False):
+            return True
+        member = self._active_membership(user)
+        return bool(member and member.role == OrganizationRole.SUPER_ADMIN)
 
 
 class UserSimpleSerializer(BaseUserSerializer):

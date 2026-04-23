@@ -1,4 +1,5 @@
 import type { Ability } from "../providers/AuthProvider";
+import type { OrganizationRole } from "../lib/utils/roles";
 
 export type APIUser = {
   id: number;
@@ -18,4 +19,6 @@ export type APIUser = {
   allow_newsletters: boolean;
   date_joined: string;
   permissions?: Ability[];
+  organization_role?: OrganizationRole;
+  is_super_admin?: boolean;
 };

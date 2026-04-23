@@ -88,6 +88,14 @@
       "created": "워크스페이스 \"{{title}}\"을(를) 생성했습니다"
     }
   },
+  "roles": {
+    "superAdmin": "슈퍼 관리자",
+    "workspaceManager": "워크스페이스 관리자",
+    "projectManager": "프로젝트 관리자",
+    "annotator": "어노테이터",
+    "reviewer": "검수자",
+    "member": "멤버"
+  },
   "projects": {
     "pageTitle": "프로젝트",
     "createButton": "생성",

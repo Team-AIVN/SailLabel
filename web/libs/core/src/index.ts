@@ -14,6 +14,8 @@ export * from "./lib/utils/billing";
 export * from "./hooks/useAbortController";
 export * from "./hooks/useResolveUser";
 export * from "./lib/hooks/useCopyText";
+export * from "./lib/hooks/useUserRoles";
+export * from "./lib/utils/roles";
 export * from "./hooks/usePageTitle";
 
 // API Provider

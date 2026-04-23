@@ -88,6 +88,14 @@
       "created": "Workspace \"{{title}}\" created"
     }
   },
+  "roles": {
+    "superAdmin": "Super Admin",
+    "workspaceManager": "Workspace Manager",
+    "projectManager": "Project Manager",
+    "annotator": "Annotator",
+    "reviewer": "Reviewer",
+    "member": "Member"
+  },
   "projects": {
     "pageTitle": "Projects",
     "createButton": "Create",

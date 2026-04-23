@@ -135,3 +135,9 @@ export const FF_FIT_1443_ANALYTICS_LABEL_DISTRIBUTION_PAGE =
  * Workspace domain — enables the Workspaces page, Menubar entry, and ProjectsList workspace selector.
  */
 export const FF_WORKSPACE = "fflag_workspace";
+
+/**
+ * RBAC role gating — exposes Super Admin / Project Manager / Annotator / Reviewer badges,
+ * role-based menu gating, and the audit log UI. Backend enforcement is unconditional.
+ */
+export const FF_RBAC = "fflag_rbac";
