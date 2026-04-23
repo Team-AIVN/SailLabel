@@ -16,7 +16,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from users.functions import check_avatar
 from users.models import User
-from users.serializers import HotkeysSerializer, UserSerializer, UserSerializerUpdate, WhoAmIUserSerializer
+from users.serializers import (
+    HotkeysSerializer,
+    ReviewHistorySerializer,
+    UserSerializer,
+    UserSerializerUpdate,
+    WhoAmIUserSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -418,3 +424,72 @@ class UserHotkeysAPI(APIView):
         except Exception as e:
             logger.error(f'Error updating hotkeys for user {request.user.pk}: {str(e)}')
             return Response({'error': 'Failed to update hotkeys configuration'}, status=500)
+
+
+REVIEW_TRANSITION_NAMES = ('accept_annotation', 'reject_annotation')
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(
+        tags=['Users'],
+        summary="List the current user's review actions",
+        description=(
+            'Return the annotations this user has accepted or rejected, derived '
+            'from the AnnotationState audit trail. Supports optional filters: '
+            '`project` (project id), `state` (ACCEPTED|REJECTED), `transition` '
+            '(accept_annotation|reject_annotation).'
+        ),
+        parameters=[
+            OpenApiParameter(
+                name='project', type=OpenApiTypes.INT, location='query',
+                description='Only include reviews for this project id.',
+                required=False,
+            ),
+            OpenApiParameter(
+                name='state', type=OpenApiTypes.STR, location='query',
+                description='Filter by resulting state (ACCEPTED or REJECTED).',
+                required=False,
+            ),
+            OpenApiParameter(
+                name='transition', type=OpenApiTypes.STR, location='query',
+                description='Filter by transition name (accept_annotation or reject_annotation).',
+                required=False,
+            ),
+        ],
+        responses={200: ReviewHistorySerializer(many=True)},
+        extensions={'x-fern-audiences': ['internal']},
+    ),
+)
+class UserReviewsAPI(generics.ListAPIView):
+    """GET `/api/current-user/reviews/` — reviewer's own accept/reject history.
+
+    Reads `AnnotationState` rows where `triggered_by == request.user` and the
+    transition is one of the Phase 5 review actions. UUID7 `-id` ordering
+    yields newest-first without a separate created_at index.
+    """
+
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ReviewHistorySerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        from fsm.state_models import AnnotationState
+
+        qs = AnnotationState.objects.filter(
+            triggered_by=self.request.user,
+            transition_name__in=REVIEW_TRANSITION_NAMES,
+        )
+
+        params = self.request.query_params
+        project_id = params.get('project')
+        if project_id:
+            qs = qs.filter(project_id=project_id)
+        state = params.get('state')
+        if state:
+            qs = qs.filter(state=state)
+        transition = params.get('transition')
+        if transition:
+            qs = qs.filter(transition_name=transition)
+
+        return qs.order_by('-id')

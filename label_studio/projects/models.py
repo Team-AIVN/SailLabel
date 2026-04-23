@@ -215,6 +215,32 @@ class Project(ProjectMixin, FsmHistoryStateModel):
             'ANNOTATED state, instead of waiting for every task to be labeled.'
         ),
     )
+
+    class ProjectType(models.TextChoices):
+        ANNOTATION = 'annotation', _('Annotation')
+        REVIEW = 'review', _('Review')
+
+    type = models.CharField(
+        _('project type'),
+        max_length=16,
+        choices=ProjectType.choices,
+        default=ProjectType.ANNOTATION,
+        help_text=(
+            'Project mode — "annotation" for standard labeling projects, "review" for '
+            'projects dedicated to reviewing annotations from an upstream project.'
+        ),
+    )
+    review_instruction = models.TextField(
+        _('review instruction'),
+        blank=True,
+        null=True,
+        default='',
+        help_text=(
+            'Plain-text review criteria shown to reviewers (§3.4.1). Separate from '
+            '`expert_instruction` (HTML labeling guide) so reviewers see a dedicated '
+            'rubric when judging accept / reject.'
+        ),
+    )
     label_config = models.TextField(
         _('label config'),
         blank=True,

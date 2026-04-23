@@ -1101,3 +1101,89 @@ class AnnotationConvertAPI(generics.RetrieveAPIView):
         emit_webhooks_for_instance(organization, project, WebhookAction.ANNOTATIONS_DELETED, [pk])
         data = AnnotationDraftSerializer(instance=draft).data
         return Response(status=201, data=data)
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 review endpoints — accept / reject an annotation
+#
+# These are thin wrappers over the Phase 4 FSM transitions
+# (`accept_annotation` / `reject_annotation`). The transitions own the state
+# change, ground_truth flip, task aggregation (task_accepted / task_rejected)
+# and project gate (project_can_reviewed); the views just authenticate,
+# validate the reviewer comment, and dispatch.
+# ---------------------------------------------------------------------------
+
+
+class _AnnotationReviewActionAPI(generics.RetrieveAPIView):
+    """Shared base for accept / reject review actions.
+
+    Subclasses declare `transition_name` and `require_comment`. Comment flows
+    into the state record via `reason` so audit queries can surface reviewer
+    feedback without a separate table.
+    """
+
+    permission_required = ViewClassPermission(POST=all_permissions.annotations_change)
+    queryset = Annotation.objects.all()
+    transition_name: str = ''
+    require_comment: bool = False
+
+    def post(self, request, *args, **kwargs):
+        from fsm.state_manager import StateManager
+
+        annotation = self.get_object()
+        comment = (request.data or {}).get('comment', '') or ''
+        comment = comment.strip()
+        if self.require_comment and not comment:
+            raise ValidationError({'comment': 'Comment is required when rejecting an annotation.'})
+
+        reason = comment if comment else None
+        StateManager.execute_transition(
+            entity=annotation,
+            transition_name=self.transition_name,
+            user=request.user,
+            reason=reason,
+        )
+
+        annotation.refresh_from_db()
+        data = AnnotationSerializer(instance=annotation).data
+        return Response(status=200, data=data)
+
+
+@method_decorator(name='get', decorator=extend_schema(exclude=True))
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Annotations'],
+        summary='Accept annotation (reviewer action)',
+        description=(
+            'Reviewer accepts an annotation. Runs the `accept_annotation` FSM '
+            'transition: flips `ground_truth=True`, clears it on siblings, and '
+            'propagates to `task_accepted`. Optional `comment` in the body is '
+            'stored as the reason on the resulting state record.'
+        ),
+        extensions={'x-fern-audiences': ['internal']},
+    ),
+)
+class AnnotationAcceptAPI(_AnnotationReviewActionAPI):
+    transition_name = 'accept_annotation'
+    require_comment = False
+
+
+@method_decorator(name='get', decorator=extend_schema(exclude=True))
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Annotations'],
+        summary='Reject annotation (reviewer action)',
+        description=(
+            'Reviewer rejects an annotation. Runs `reject_annotation`; when all '
+            'siblings on the task are rejected, propagates to `task_rejected`. '
+            'A non-empty `comment` is required so the annotator has actionable '
+            'feedback for any rework that follows.'
+        ),
+        extensions={'x-fern-audiences': ['internal']},
+    ),
+)
+class AnnotationRejectAPI(_AnnotationReviewActionAPI):
+    transition_name = 'reject_annotation'
+    require_comment = True

@@ -267,6 +267,27 @@ class HotkeysSerializer(serializers.Serializer):
                 raise serializers.ValidationError(f"Invalid modifier or key '{part}' in key combination '{key_combo}'")
 
 
+class ReviewHistorySerializer(serializers.Serializer):
+    """Serialize an `AnnotationState` row as one entry in a reviewer's history.
+
+    Accept/reject transitions persist the reviewer in `triggered_by` and the
+    optional comment in `reason`, so a single AnnotationState row is already a
+    self-contained review record — no join back to the annotation is needed
+    for the list view.
+    """
+
+    id = serializers.UUIDField(read_only=True)
+    annotation_id = serializers.IntegerField(read_only=True)
+    task_id = serializers.IntegerField(read_only=True)
+    project_id = serializers.IntegerField(read_only=True)
+    completed_by_id = serializers.IntegerField(read_only=True, allow_null=True)
+    state = serializers.CharField(read_only=True)
+    previous_state = serializers.CharField(read_only=True, allow_null=True)
+    transition_name = serializers.CharField(read_only=True)
+    comment = serializers.CharField(source='reason', read_only=True, allow_blank=True)
+    created_at = serializers.DateTimeField(read_only=True)
+
+
 UserSerializer = load_func(settings.USER_SERIALIZER)
 WhoAmIUserSerializer = load_func(settings.WHOAMI_USER_SERIALIZER)
 UserSerializerUpdate = load_func(settings.USER_SERIALIZER_UPDATE)
