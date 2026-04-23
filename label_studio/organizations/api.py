@@ -2,6 +2,8 @@
 
 import logging
 
+from audit.models import AuditAction
+from audit.services import record_role_change
 from core.feature_flags import flag_set
 from core.mixins import GetParentObjectMixin
 from core.utils.common import load_func
@@ -313,7 +315,17 @@ class OrganizationMemberDetailAPI(GetParentObjectMixin, generics.RetrieveDestroy
         if member.user_id == request.user.id:
             return Response({'detail': 'User cannot soft delete self'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
+        previous_role = getattr(member, 'role', None)
         member.soft_delete()
+        record_role_change(
+            action=AuditAction.ROLE_REVOKED,
+            actor=request.user,
+            subject=member,
+            scope='organization',
+            scope_id=org.id,
+            role=previous_role,
+            organization=org,
+        )
         return Response(status=204)  # 204 No Content is a common HTTP status for successful delete requests
 
 

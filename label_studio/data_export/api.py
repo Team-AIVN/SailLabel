@@ -6,6 +6,7 @@ import traceback as tb
 from datetime import datetime
 from urllib.parse import urlparse
 
+from audit.services import record_data_export
 from core.feature_flags import flag_set
 from core.permissions import all_permissions
 from core.redis import start_job_async_or_sync
@@ -249,6 +250,17 @@ class ExportAPI(generics.RetrieveAPIView):
             project, tasks, export_type, download_resources, request.GET, hostname=request.build_absolute_uri('/')
         )
 
+        record_data_export(
+            actor=request.user,
+            project=project,
+            metadata={
+                'export_type': export_type,
+                'task_count': len(tasks),
+                'only_finished': only_finished,
+                'endpoint': 'sync',
+            },
+        )
+
         r = FileResponse(export_file, as_attachment=True, content_type=content_type, filename=filename)
         r['filename'] = filename
         return r
@@ -389,6 +401,16 @@ class ExportListAPI(generics.ListCreateAPIView):
             task_filter_options=task_filter_options,
             annotation_filter_options=annotation_filter_options,
             serialization_options=serialization_options,
+        )
+
+        record_data_export(
+            actor=self.request.user,
+            project=project,
+            metadata={
+                'export_id': instance.pk,
+                'endpoint': 'async',
+                'title': getattr(instance, 'title', ''),
+            },
         )
 
     def get_queryset(self):
@@ -569,6 +591,16 @@ class ExportDownloadAPI(generics.RetrieveAPIView):
 
         if snapshot.status != Export.Status.COMPLETED:
             return HttpResponse('Export is not completed', status=404)
+
+        record_data_export(
+            actor=request.user,
+            project=self._get_project(),
+            metadata={
+                'export_id': snapshot.pk,
+                'export_type': export_type or 'JSON',
+                'endpoint': 'download',
+            },
+        )
 
         if flag_set('fflag_fix_all_lsdv_4813_async_export_conversion_22032023_short', request.user):
             file = snapshot.file

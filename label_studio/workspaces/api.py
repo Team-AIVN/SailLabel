@@ -2,6 +2,8 @@
 
 import logging
 
+from audit.models import AuditAction
+from audit.services import record_role_change, record_workspace_event
 from core.mixins import GetParentObjectMixin
 from core.permissions import ViewClassPermission, all_permissions
 from django.db import transaction
@@ -64,6 +66,11 @@ class WorkspaceListAPI(generics.ListCreateAPIView):
             workspace=workspace,
             defaults={'role': WorkspaceMember.Role.WORKSPACE_MANAGER},
         )
+        record_workspace_event(
+            action=AuditAction.WORKSPACE_CREATED,
+            actor=self.request.user,
+            workspace=workspace,
+        )
 
 
 @method_decorator(
@@ -98,10 +105,21 @@ class WorkspaceDetailAPI(generics.RetrieveUpdateDestroyAPIView):
 
     def perform_update(self, serializer):
         self._require_manager(self.get_object())
-        serializer.save()
+        workspace = serializer.save()
+        record_workspace_event(
+            action=AuditAction.WORKSPACE_UPDATED,
+            actor=self.request.user,
+            workspace=workspace,
+            metadata={'fields': sorted((self.request.data or {}).keys())},
+        )
 
     def perform_destroy(self, instance):
         self._require_manager(instance)
+        record_workspace_event(
+            action=AuditAction.WORKSPACE_DELETED,
+            actor=self.request.user,
+            workspace=instance,
+        )
         instance.soft_delete(user=self.request.user)
 
 
@@ -143,7 +161,16 @@ class WorkspaceMembersAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
         workspace = self._get_workspace()
         if not is_workspace_manager(self.request.user, workspace):
             raise PermissionDenied('Only a workspace manager can invite members.')
-        serializer.save(workspace=workspace)
+        member = serializer.save(workspace=workspace)
+        record_role_change(
+            action=AuditAction.ROLE_GRANTED,
+            actor=self.request.user,
+            subject=member,
+            scope='workspace',
+            scope_id=workspace.id,
+            role=getattr(member, 'role', None),
+            organization=workspace.organization,
+        )
 
 
 @method_decorator(
@@ -176,12 +203,34 @@ class WorkspaceMemberDetailAPI(_WorkspaceScopedMixin, generics.RetrieveUpdateDes
         workspace = self._get_workspace()
         if not is_workspace_manager(self.request.user, workspace):
             raise PermissionDenied('Only a workspace manager can update membership.')
-        serializer.save()
+        previous_role = getattr(serializer.instance, 'role', None)
+        member = serializer.save()
+        new_role = getattr(member, 'role', None)
+        if previous_role != new_role:
+            record_role_change(
+                action=AuditAction.ROLE_CHANGED,
+                actor=self.request.user,
+                subject=member,
+                scope='workspace',
+                scope_id=workspace.id,
+                role=new_role,
+                previous_role=previous_role,
+                organization=workspace.organization,
+            )
 
     def perform_destroy(self, instance):
         workspace = self._get_workspace()
         if not is_workspace_manager(self.request.user, workspace):
             raise PermissionDenied('Only a workspace manager can remove members.')
+        record_role_change(
+            action=AuditAction.ROLE_REVOKED,
+            actor=self.request.user,
+            subject=instance,
+            scope='workspace',
+            scope_id=workspace.id,
+            role=getattr(instance, 'role', None),
+            organization=workspace.organization,
+        )
         # Soft delete to preserve audit trail.
         from django.utils import timezone
         instance.deleted_at = timezone.now()

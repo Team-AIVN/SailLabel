@@ -1129,12 +1129,13 @@ class _AnnotationReviewActionAPI(generics.RetrieveAPIView):
 
     def post(self, request, *args, **kwargs):
         from fsm.state_manager import StateManager
+        from users.rules import not_self_review
 
         annotation = self.get_object()
 
-        # Self-review guard (§2.2 / §3.4.4): the annotator must not also be
-        # the reviewer of the same annotation.
-        if annotation.completed_by_id and annotation.completed_by_id == request.user.id:
+        # Self-review guard (§2.2 / §3.4.4): delegate to the shared predicate so
+        # every entrypoint uses one source of truth for the rule.
+        if not not_self_review.test(request.user, annotation):
             raise PermissionDenied('You cannot review your own annotation.')
 
         comment = (request.data or {}).get('comment', '') or ''

@@ -140,17 +140,30 @@ def is_project_member_of(user, obj):
 
 
 @rules.predicate
-def can_review_annotation(user, annotation):
-    """Reviewer predicate with self-review prohibition.
+def not_self_review(user, annotation):
+    """Self-review prohibition — isolated from the full authorisation rule.
 
-    Denies when ``annotation.completed_by_id == user.id`` even if the reviewer
-    otherwise has permission. ``annotation`` is expected to be an
-    ``tasks.models.Annotation`` instance.
+    ``tasks/api.py`` enforces this at the endpoint regardless of the caller's
+    project role (OSS default allows any authenticated user to invoke the
+    endpoint, so the self-review guard must stand independently).
     """
-    if not user or not user.is_authenticated or annotation is None:
+    if annotation is None:
+        return False
+    if not user or not user.is_authenticated:
         return False
     completed_by_id = getattr(annotation, 'completed_by_id', None)
-    if completed_by_id and completed_by_id == user.id:
+    return not (completed_by_id and completed_by_id == user.id)
+
+
+@rules.predicate
+def can_review_annotation(user, annotation):
+    """Full reviewer authorisation: self-review denied *and* role membership present.
+
+    Use this where the caller needs a single yes/no (e.g. the ``/next-review/``
+    queue filter). The accept/reject HTTP endpoints rely on ``not_self_review``
+    on its own so they remain compatible with OSS role-less installations.
+    """
+    if not not_self_review.test(user, annotation):
         return False
     project = getattr(annotation, 'project', None) or getattr(getattr(annotation, 'task', None), 'project', None)
     if project is None:

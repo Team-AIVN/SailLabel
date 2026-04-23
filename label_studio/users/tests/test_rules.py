@@ -22,6 +22,7 @@ from users.rules import (
     is_super_admin,
     is_worker_of,
     is_workspace_manager_of,
+    not_self_review,
 )
 from users.tests.factories import UserFactory
 from workspaces.models import WorkspaceMember
@@ -181,3 +182,35 @@ class CanReviewAnnotationTests(APITestCase):
         _join_org(outsider, self.org)
         annotation = self._make_annotation(completed_by=self.reviewer)
         assert not can_review_annotation.test(outsider, annotation)
+
+
+class NotSelfReviewPredicateTests(APITestCase):
+    """The narrow self-review guard used by accept/reject endpoints."""
+
+    def setUp(self):
+        self.org = OrganizationFactory()
+        self.project = ProjectFactory(organization=self.org)
+        self.user = UserFactory()
+        _join_org(self.user, self.org)
+
+    def _make_annotation(self, completed_by):
+        from tasks.models import Annotation, Task
+
+        task = Task.objects.create(project=self.project, data={})
+        return Annotation.objects.create(task=task, project=self.project, completed_by=completed_by, result=[])
+
+    def test_user_reviewing_own_annotation_denied(self):
+        annotation = self._make_annotation(completed_by=self.user)
+        assert not not_self_review.test(self.user, annotation)
+
+    def test_user_reviewing_other_allowed(self):
+        other = UserFactory()
+        annotation = self._make_annotation(completed_by=other)
+        assert not_self_review.test(self.user, annotation)
+
+    def test_anonymous_denied(self):
+        from django.contrib.auth.models import AnonymousUser
+
+        other = UserFactory()
+        annotation = self._make_annotation(completed_by=other)
+        assert not not_self_review.test(AnonymousUser(), annotation)
