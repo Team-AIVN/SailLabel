@@ -204,6 +204,17 @@ class Project(ProjectMixin, FsmHistoryStateModel):
         blank=True,
         help_text='Workspace the project belongs to. Nullable for legacy OSS compatibility.',
     )
+    review_batch_size = models.PositiveIntegerField(
+        _('review batch size'),
+        null=True,
+        blank=True,
+        default=None,
+        help_text=(
+            'Batch review threshold — when `fflag_batch_review` is enabled and this '
+            'value is set, reviewers can start once this many annotations are in '
+            'ANNOTATED state, instead of waiting for every task to be labeled.'
+        ),
+    )
     label_config = models.TextField(
         _('label config'),
         blank=True,
