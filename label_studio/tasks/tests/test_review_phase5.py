@@ -23,6 +23,7 @@ from organizations.tests.factories import OrganizationFactory
 from projects.tests.factories import ProjectFactory
 from rest_framework.test import APITestCase
 from tasks.tests.factories import AnnotationFactory, TaskFactory
+from users.tests.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -55,19 +56,27 @@ def _task_state(task):
     return TaskState.get_current_state_value(task)
 
 
-class AnnotationAcceptAPITests(APITestCase):
+class _ReviewAPIBase(APITestCase):
+    """Shared setUp: separate annotator from reviewer so tests don't accidentally
+    trip the self-review guard (§2.2). The org creator plays reviewer; a fresh
+    UserFactory user plays annotator.
+    """
+
     def setUp(self):
         self.org = OrganizationFactory()
-        self.user = self.org.created_by
-        self.project = ProjectFactory(organization=self.org, created_by=self.user)
+        self.reviewer = self.org.created_by
+        self.annotator = UserFactory()
+        self.project = ProjectFactory(organization=self.org, created_by=self.reviewer)
         self.task = TaskFactory(project=self.project, is_labeled=True)
         self.annotation = AnnotationFactory(
-            task=self.task, project=self.project, completed_by=self.user, result=[]
+            task=self.task, project=self.project, completed_by=self.annotator, result=[]
         )
-        _drive_to_will_reviewed(self.annotation, self.user)
+        _drive_to_will_reviewed(self.annotation, self.annotator)
 
+
+class AnnotationAcceptAPITests(_ReviewAPIBase):
     def test_accept_endpoint_fires_transition(self):
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.reviewer)
         response = self.client.post(f'/api/annotations/{self.annotation.id}/accept/', data={}, format='json')
 
         assert response.status_code == 200, response.content
@@ -76,7 +85,7 @@ class AnnotationAcceptAPITests(APITestCase):
         assert _task_state(self.task) == TaskStateChoices.ACCEPTED
 
     def test_accept_endpoint_persists_optional_comment_as_reason(self):
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.reviewer)
         response = self.client.post(
             f'/api/annotations/{self.annotation.id}/accept/',
             data={'comment': 'LGTM — clean labels'},
@@ -89,26 +98,25 @@ class AnnotationAcceptAPITests(APITestCase):
         ).order_by('-id').first()
         assert latest is not None
         assert latest.reason == 'LGTM — clean labels'
-        assert latest.triggered_by_id == self.user.id
+        assert latest.triggered_by_id == self.reviewer.id
 
     def test_accept_endpoint_rejects_unauthenticated(self):
         response = self.client.post(f'/api/annotations/{self.annotation.id}/accept/', data={}, format='json')
         assert response.status_code in (401, 403)
 
+    def test_accept_endpoint_blocks_self_review(self):
+        """Annotator cannot also be the reviewer of the same annotation."""
+        self.client.force_authenticate(user=self.annotator)
+        response = self.client.post(f'/api/annotations/{self.annotation.id}/accept/', data={}, format='json')
 
-class AnnotationRejectAPITests(APITestCase):
-    def setUp(self):
-        self.org = OrganizationFactory()
-        self.user = self.org.created_by
-        self.project = ProjectFactory(organization=self.org, created_by=self.user)
-        self.task = TaskFactory(project=self.project, is_labeled=True)
-        self.annotation = AnnotationFactory(
-            task=self.task, project=self.project, completed_by=self.user, result=[]
-        )
-        _drive_to_will_reviewed(self.annotation, self.user)
+        assert response.status_code == 403, response.content
+        # Annotation stays in WILL_REVIEWED — no transition ran.
+        assert _annotation_state(self.annotation) == AnnotationStateChoices.WILL_REVIEWED
 
+
+class AnnotationRejectAPITests(_ReviewAPIBase):
     def test_reject_without_comment_returns_400(self):
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.reviewer)
         response = self.client.post(f'/api/annotations/{self.annotation.id}/reject/', data={}, format='json')
 
         assert response.status_code == 400, response.content
@@ -116,7 +124,7 @@ class AnnotationRejectAPITests(APITestCase):
         assert _annotation_state(self.annotation) == AnnotationStateChoices.WILL_REVIEWED
 
     def test_reject_with_whitespace_only_comment_returns_400(self):
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.reviewer)
         response = self.client.post(
             f'/api/annotations/{self.annotation.id}/reject/',
             data={'comment': '   '},
@@ -125,7 +133,7 @@ class AnnotationRejectAPITests(APITestCase):
         assert response.status_code == 400
 
     def test_reject_with_comment_fires_transition_and_stores_reason(self):
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.reviewer)
         response = self.client.post(
             f'/api/annotations/{self.annotation.id}/reject/',
             data={'comment': 'Missing bbox on the cat'},
@@ -140,7 +148,18 @@ class AnnotationRejectAPITests(APITestCase):
         ).order_by('-id').first()
         assert latest is not None
         assert latest.reason == 'Missing bbox on the cat'
-        assert latest.triggered_by_id == self.user.id
+        assert latest.triggered_by_id == self.reviewer.id
+
+    def test_reject_endpoint_blocks_self_review(self):
+        self.client.force_authenticate(user=self.annotator)
+        response = self.client.post(
+            f'/api/annotations/{self.annotation.id}/reject/',
+            data={'comment': 'self-review should be blocked'},
+            format='json',
+        )
+
+        assert response.status_code == 403, response.content
+        assert _annotation_state(self.annotation) == AnnotationStateChoices.WILL_REVIEWED
 
 
 class UserReviewsAPITests(APITestCase):

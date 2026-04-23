@@ -953,6 +953,94 @@ class TaskLock(FsmHistoryStateModel):
         return self.task.has_permission(user)
 
 
+class ReviewerLock(models.Model):
+    """Per-annotation lock held by a reviewer while they're deliberating.
+
+    Mirrors `TaskLock` but scoped to `Annotation` instead of `Task` — the
+    Phase 5 review flow operates on individual annotations, and two reviewers
+    should never pick up the same one concurrently. Expiry is time-based so a
+    crashed/abandoned review session does not permanently block the annotation
+    (§3.6.2 랜덤 검수).
+
+    This is a plain Django model — no FSM state history is kept for locks
+    (same as `TaskLock` which predates the FSM mixin adoption for non-audited
+    ephemeral records).
+    """
+
+    annotation = models.ForeignKey(
+        'tasks.Annotation',
+        on_delete=models.CASCADE,
+        related_name='reviewer_locks',
+        help_text='Annotation held for review',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='reviewer_locks',
+        on_delete=models.CASCADE,
+        help_text='Reviewer who holds this lock',
+    )
+    expire_at = models.DateTimeField(_('expire_at'))
+    unique_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['annotation', 'expire_at']),
+            models.Index(fields=['user', 'expire_at']),
+        ]
+
+    def has_permission(self, user):
+        return self.annotation.has_permission(user)
+
+    def is_expired(self) -> bool:
+        return self.expire_at <= now()
+
+    @classmethod
+    def clear_expired(cls, annotation=None) -> int:
+        """Delete expired locks. If `annotation` is given, scope to that row."""
+        qs = cls.objects.filter(expire_at__lte=now())
+        if annotation is not None:
+            qs = qs.filter(annotation=annotation)
+        deleted, _ = qs.delete()
+        return deleted
+
+    @classmethod
+    def acquire(cls, annotation, user, ttl_seconds: int = 3600):
+        """Try to acquire a lock. Returns (lock, created).
+
+        Semantics:
+        - If the reviewer already holds the lock, refresh `expire_at`.
+        - If another live reviewer holds it, return `(existing, False)` and
+          DO NOT overwrite — caller treats the `created=False` signal as
+          "someone else has it, skip to the next candidate."
+        - Expired locks are cleared before the check so crashed sessions don't
+          permanently block annotations.
+        """
+        cls.clear_expired(annotation=annotation)
+        expire_at = now() + datetime.timedelta(seconds=ttl_seconds)
+
+        with transaction.atomic():
+            existing = (
+                cls.objects
+                .select_for_update(skip_locked=True)
+                .filter(annotation=annotation, expire_at__gt=now())
+                .first()
+            )
+            if existing is not None:
+                if existing.user_id == user.id:
+                    existing.expire_at = expire_at
+                    existing.save(update_fields=['expire_at'])
+                    return existing, False
+                return existing, False
+
+            lock = cls.objects.create(annotation=annotation, user=user, expire_at=expire_at)
+            return lock, True
+
+    def release(self) -> None:
+        """Release this lock immediately (idempotent — no-op if already gone)."""
+        type(self).objects.filter(pk=self.pk).delete()
+
+
 class AnnotationDraftQuerySet(models.QuerySet):
     """Custom QuerySet for AnnotationDraft model"""
 

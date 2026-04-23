@@ -5,7 +5,7 @@ from core.utils.common import load_func
 from django.conf import settings
 from django.utils import timezone
 from faker import Faker
-from tasks.models import Annotation, AnnotationDraft, FailedPrediction, Prediction, Task, TaskLock
+from tasks.models import Annotation, AnnotationDraft, FailedPrediction, Prediction, ReviewerLock, Task, TaskLock
 
 
 class TaskFactory(factory.django.DjangoModelFactory):
@@ -96,3 +96,12 @@ class TaskLockFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = TaskLock
+
+
+class ReviewerLockFactory(factory.django.DjangoModelFactory):
+    annotation = factory.SubFactory(AnnotationFactory)
+    user = factory.SubFactory(load_func(settings.USER_FACTORY))
+    expire_at = factory.LazyFunction(lambda: timezone.now() + timedelta(seconds=3600))
+
+    class Meta:
+        model = ReviewerLock
