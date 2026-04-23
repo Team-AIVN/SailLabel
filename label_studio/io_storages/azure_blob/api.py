@@ -14,9 +14,21 @@ from io_storages.api import (
     ImportStorageListAPI,
     ImportStorageSyncAPI,
     ImportStorageValidateAPI,
+    WorkspaceImportStorageDetailAPI,
+    WorkspaceImportStorageListAPI,
+    WorkspaceStorageAssignMixin,
+    _compose_prefix,
 )
-from io_storages.azure_blob.models import AzureBlobExportStorage, AzureBlobImportStorage
-from io_storages.azure_blob.serializers import AzureBlobExportStorageSerializer, AzureBlobImportStorageSerializer
+from io_storages.azure_blob.models import (
+    AzureBlobExportStorage,
+    AzureBlobImportStorage,
+    AzureBlobWorkspaceImportStorage,
+)
+from io_storages.azure_blob.serializers import (
+    AzureBlobExportStorageSerializer,
+    AzureBlobImportStorageSerializer,
+    AzureBlobWorkspaceImportStorageSerializer,
+)
 
 from .openapi_schema import (
     _azure_blob_export_storage_schema,
@@ -303,3 +315,114 @@ class AzureBlobImportStorageFormLayoutAPI(ImportStorageFormLayoutAPI):
 
 class AzureBlobExportStorageFormLayoutAPI(ExportStorageFormLayoutAPI):
     pass
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(
+        tags=['Storage: Azure'],
+        summary='List workspace-scope import storage',
+        description='List Azure import storage templates for a workspace.',
+        parameters=[
+            OpenApiParameter(
+                name='workspace',
+                type=OpenApiTypes.INT,
+                location='query',
+                description='Workspace ID',
+                required=True,
+            ),
+        ],
+        request=None,
+    ),
+)
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Storage: Azure'],
+        summary='Create workspace-scope import storage',
+        description='Create a workspace-scope Azure Blob import storage template.',
+    ),
+)
+class AzureBlobWorkspaceImportStorageListAPI(WorkspaceImportStorageListAPI):
+    queryset = AzureBlobWorkspaceImportStorage.objects.all()
+    serializer_class = AzureBlobWorkspaceImportStorageSerializer
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(
+        tags=['Storage: Azure'],
+        summary='Get workspace-scope import storage',
+        description='Get a workspace-scope Azure Blob import storage template.',
+        request=None,
+    ),
+)
+@method_decorator(
+    name='patch',
+    decorator=extend_schema(
+        tags=['Storage: Azure'],
+        summary='Update workspace-scope import storage',
+        description='Update a workspace-scope Azure Blob import storage template.',
+    ),
+)
+@method_decorator(
+    name='delete',
+    decorator=extend_schema(
+        tags=['Storage: Azure'],
+        summary='Delete workspace-scope import storage',
+        description='Delete a workspace-scope Azure Blob import storage template.',
+        request=None,
+    ),
+)
+class AzureBlobWorkspaceImportStorageDetailAPI(WorkspaceImportStorageDetailAPI):
+    queryset = AzureBlobWorkspaceImportStorage.objects.all()
+    serializer_class = AzureBlobWorkspaceImportStorageSerializer
+
+
+@extend_schema(
+    tags=['Storage: Azure'],
+    summary='Assign workspace storage to a project',
+    description=(
+        'Derive a project-scope AzureBlobImportStorage from a workspace-scope template. '
+        'The child storage inherits the container + credentials; the prefix can be '
+        'extended with a relative subpath under the template prefix.'
+    ),
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'project': {'type': 'integer', 'description': 'Project ID in the same workspace'},
+                'subpath': {
+                    'type': 'string',
+                    'description': 'Optional relative prefix under the template prefix',
+                },
+                'title': {'type': 'string'},
+            },
+            'required': ['project'],
+        },
+    },
+    responses={201: AzureBlobImportStorageSerializer},
+)
+class AzureBlobWorkspaceImportStorageAssignAPI(WorkspaceStorageAssignMixin):
+    queryset = AzureBlobWorkspaceImportStorage.objects.all()
+    serializer_class = AzureBlobWorkspaceImportStorageSerializer
+    child_serializer_class = AzureBlobImportStorageSerializer
+
+    def build_child(self, template, project, request):
+        subpath = request.data.get('subpath') or ''
+        target_prefix = _compose_prefix(template.prefix or '', subpath)
+        title = request.data.get('title') or template.title or f'From {template.title or "workspace template"}'
+        return AzureBlobImportStorage(
+            project=project,
+            parent_storage=template,
+            title=title,
+            container=template.container,
+            prefix=target_prefix or None,
+            regex_filter=template.regex_filter,
+            use_blob_urls=template.use_blob_urls,
+            account_name=template.account_name,
+            account_key=template.account_key,
+            presign=template.presign,
+            presign_ttl=template.presign_ttl,
+            recursive_scan=template.recursive_scan,
+        )

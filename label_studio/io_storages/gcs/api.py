@@ -14,9 +14,17 @@ from io_storages.api import (
     ImportStorageListAPI,
     ImportStorageSyncAPI,
     ImportStorageValidateAPI,
+    WorkspaceImportStorageDetailAPI,
+    WorkspaceImportStorageListAPI,
+    WorkspaceStorageAssignMixin,
+    _compose_prefix,
 )
-from io_storages.gcs.models import GCSExportStorage, GCSImportStorage
-from io_storages.gcs.serializers import GCSExportStorageSerializer, GCSImportStorageSerializer
+from io_storages.gcs.models import GCSExportStorage, GCSImportStorage, GCSWorkspaceImportStorage
+from io_storages.gcs.serializers import (
+    GCSExportStorageSerializer,
+    GCSImportStorageSerializer,
+    GCSWorkspaceImportStorageSerializer,
+)
 
 from .openapi_schema import (
     _gcs_export_storage_schema,
@@ -303,3 +311,114 @@ class GCSImportStorageFormLayoutAPI(ImportStorageFormLayoutAPI):
 
 class GCSExportStorageFormLayoutAPI(ExportStorageFormLayoutAPI):
     pass
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(
+        tags=['Storage: GCS'],
+        summary='List workspace-scope import storage',
+        description='List GCS import storage templates for a workspace.',
+        parameters=[
+            OpenApiParameter(
+                name='workspace',
+                type=OpenApiTypes.INT,
+                location='query',
+                description='Workspace ID',
+                required=True,
+            ),
+        ],
+        request=None,
+    ),
+)
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Storage: GCS'],
+        summary='Create workspace-scope import storage',
+        description='Create a workspace-scope GCS import storage template.',
+    ),
+)
+class GCSWorkspaceImportStorageListAPI(WorkspaceImportStorageListAPI):
+    queryset = GCSWorkspaceImportStorage.objects.all()
+    serializer_class = GCSWorkspaceImportStorageSerializer
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(
+        tags=['Storage: GCS'],
+        summary='Get workspace-scope import storage',
+        description='Get a workspace-scope GCS import storage template.',
+        request=None,
+    ),
+)
+@method_decorator(
+    name='patch',
+    decorator=extend_schema(
+        tags=['Storage: GCS'],
+        summary='Update workspace-scope import storage',
+        description='Update a workspace-scope GCS import storage template.',
+    ),
+)
+@method_decorator(
+    name='delete',
+    decorator=extend_schema(
+        tags=['Storage: GCS'],
+        summary='Delete workspace-scope import storage',
+        description='Delete a workspace-scope GCS import storage template.',
+        request=None,
+    ),
+)
+class GCSWorkspaceImportStorageDetailAPI(WorkspaceImportStorageDetailAPI):
+    queryset = GCSWorkspaceImportStorage.objects.all()
+    serializer_class = GCSWorkspaceImportStorageSerializer
+
+
+@extend_schema(
+    tags=['Storage: GCS'],
+    summary='Assign workspace storage to a project',
+    description=(
+        'Derive a project-scope GCSImportStorage from a workspace-scope template. '
+        'The child storage inherits the bucket + credentials; the prefix can be '
+        'extended with a relative subpath under the template prefix.'
+    ),
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'project': {'type': 'integer', 'description': 'Project ID in the same workspace'},
+                'subpath': {
+                    'type': 'string',
+                    'description': 'Optional relative prefix under the template prefix',
+                },
+                'title': {'type': 'string'},
+            },
+            'required': ['project'],
+        },
+    },
+    responses={201: GCSImportStorageSerializer},
+)
+class GCSWorkspaceImportStorageAssignAPI(WorkspaceStorageAssignMixin):
+    queryset = GCSWorkspaceImportStorage.objects.all()
+    serializer_class = GCSWorkspaceImportStorageSerializer
+    child_serializer_class = GCSImportStorageSerializer
+
+    def build_child(self, template, project, request):
+        subpath = request.data.get('subpath') or ''
+        target_prefix = _compose_prefix(template.prefix or '', subpath)
+        title = request.data.get('title') or template.title or f'From {template.title or "workspace template"}'
+        return GCSImportStorage(
+            project=project,
+            parent_storage=template,
+            title=title,
+            bucket=template.bucket,
+            prefix=target_prefix or None,
+            regex_filter=template.regex_filter,
+            use_blob_urls=template.use_blob_urls,
+            google_application_credentials=template.google_application_credentials,
+            google_project_id=template.google_project_id,
+            presign=template.presign,
+            presign_ttl=template.presign_ttl,
+            recursive_scan=template.recursive_scan,
+        )

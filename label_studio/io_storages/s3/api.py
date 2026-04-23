@@ -14,9 +14,17 @@ from io_storages.api import (
     ImportStorageListAPI,
     ImportStorageSyncAPI,
     ImportStorageValidateAPI,
+    WorkspaceImportStorageDetailAPI,
+    WorkspaceImportStorageListAPI,
+    WorkspaceStorageAssignMixin,
+    _compose_prefix,
 )
-from io_storages.s3.models import S3ExportStorage, S3ImportStorage
-from io_storages.s3.serializers import S3ExportStorageSerializer, S3ImportStorageSerializer
+from io_storages.s3.models import S3ExportStorage, S3ImportStorage, S3WorkspaceImportStorage
+from io_storages.s3.serializers import (
+    S3ExportStorageSerializer,
+    S3ImportStorageSerializer,
+    S3WorkspaceImportStorageSerializer,
+)
 
 from .openapi_schema import (
     _s3_export_storage_schema,
@@ -302,3 +310,118 @@ class S3ImportStorageFormLayoutAPI(ImportStorageFormLayoutAPI):
 
 class S3ExportStorageFormLayoutAPI(ExportStorageFormLayoutAPI):
     pass
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(
+        tags=['Storage: S3'],
+        summary='List workspace-scope import storage',
+        description='List S3 import storage templates for a workspace.',
+        parameters=[
+            OpenApiParameter(
+                name='workspace',
+                type=OpenApiTypes.INT,
+                location='query',
+                description='Workspace ID',
+                required=True,
+            ),
+        ],
+        request=None,
+    ),
+)
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Storage: S3'],
+        summary='Create workspace-scope import storage',
+        description='Create a workspace-scope S3 import storage template.',
+    ),
+)
+class S3WorkspaceImportStorageListAPI(WorkspaceImportStorageListAPI):
+    queryset = S3WorkspaceImportStorage.objects.all()
+    serializer_class = S3WorkspaceImportStorageSerializer
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(
+        tags=['Storage: S3'],
+        summary='Get workspace-scope import storage',
+        description='Get a workspace-scope S3 import storage template.',
+        request=None,
+    ),
+)
+@method_decorator(
+    name='patch',
+    decorator=extend_schema(
+        tags=['Storage: S3'],
+        summary='Update workspace-scope import storage',
+        description='Update a workspace-scope S3 import storage template.',
+    ),
+)
+@method_decorator(
+    name='delete',
+    decorator=extend_schema(
+        tags=['Storage: S3'],
+        summary='Delete workspace-scope import storage',
+        description='Delete a workspace-scope S3 import storage template.',
+        request=None,
+    ),
+)
+class S3WorkspaceImportStorageDetailAPI(WorkspaceImportStorageDetailAPI):
+    queryset = S3WorkspaceImportStorage.objects.all()
+    serializer_class = S3WorkspaceImportStorageSerializer
+
+
+@extend_schema(
+    tags=['Storage: S3'],
+    summary='Assign workspace storage to a project',
+    description=(
+        'Derive a project-scope S3ImportStorage from a workspace-scope template. '
+        'The child storage inherits the bucket + credentials; the prefix can be '
+        'extended with a relative subpath under the template prefix.'
+    ),
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'project': {'type': 'integer', 'description': 'Project ID in the same workspace'},
+                'subpath': {
+                    'type': 'string',
+                    'description': 'Optional relative prefix under the template prefix',
+                },
+                'title': {'type': 'string'},
+            },
+            'required': ['project'],
+        },
+    },
+    responses={201: S3ImportStorageSerializer},
+)
+class S3WorkspaceImportStorageAssignAPI(WorkspaceStorageAssignMixin):
+    queryset = S3WorkspaceImportStorage.objects.all()
+    serializer_class = S3WorkspaceImportStorageSerializer
+    child_serializer_class = S3ImportStorageSerializer
+
+    def build_child(self, template, project, request):
+        subpath = request.data.get('subpath') or ''
+        target_prefix = _compose_prefix(template.prefix or '', subpath)
+        title = request.data.get('title') or template.title or f'From {template.title or "workspace template"}'
+        return S3ImportStorage(
+            project=project,
+            parent_storage=template,
+            title=title,
+            bucket=template.bucket,
+            prefix=target_prefix or None,
+            regex_filter=template.regex_filter,
+            use_blob_urls=template.use_blob_urls,
+            aws_access_key_id=template.aws_access_key_id,
+            aws_secret_access_key=template.aws_secret_access_key,
+            aws_session_token=template.aws_session_token,
+            aws_sse_kms_key_id=template.aws_sse_kms_key_id,
+            region_name=template.region_name,
+            s3_endpoint=template.s3_endpoint,
+            presign=template.presign,
+            presign_ttl=template.presign_ttl,
+            recursive_scan=template.recursive_scan,
+        )

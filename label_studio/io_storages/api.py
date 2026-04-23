@@ -323,6 +323,76 @@ class WorkspaceImportStorageDetailAPI(generics.RetrieveUpdateDestroyAPIView):
         return super(WorkspaceImportStorageDetailAPI, self).put(request, *args, **kwargs)
 
 
+def _compose_prefix(parent_prefix: str, subprefix: str) -> str:
+    """Join an object-store prefix with a caller-supplied sub-prefix safely.
+
+    Shared by cloud backends (S3 / GCS / Azure) that use slash-delimited
+    prefixes under a bucket/container. Rejects absolute or escaping segments
+    (``/foo``, ``../foo``) and produces a single normalized forward-slash
+    prefix with no trailing slash. Empty inputs are handled at both ends.
+    """
+    parent = (parent_prefix or '').strip('/')
+    sub = (subprefix or '').strip('/')
+    if not sub:
+        return parent
+    if '..' in sub.split('/'):
+        raise ValidationError({'subpath': 'must resolve to a location inside the workspace storage prefix'})
+    joined = f'{parent}/{sub}' if parent else sub
+    # Collapse accidental double slashes from callers passing "foo//bar".
+    return '/'.join(segment for segment in joined.split('/') if segment)
+
+
+class WorkspaceStorageAssignMixin(generics.GenericAPIView):
+    """Shared POST handler for deriving a project-scope storage from a workspace template.
+
+    Subclasses must set:
+    - ``queryset`` / ``serializer_class`` for the workspace-scope model
+    - ``child_serializer_class`` — DRF serializer for the project-scope model
+    - override ``build_child(template, project, request)`` to construct (but not
+      save) a concrete project-scope storage instance, applying backend-specific
+      path/prefix composition and field inheritance.
+    """
+
+    permission_required = ViewClassPermission(
+        POST=all_permissions.workspaces_change,
+    )
+    parser_classes = (JSONParser, FormParser, MultiPartParser)
+    child_serializer_class = None
+
+    def get_queryset(self):
+        org = getattr(self.request.user, 'active_organization', None)
+        if org is None:
+            return self.serializer_class.Meta.model.objects.none()
+        return self.serializer_class.Meta.model.objects.filter(workspace__organization=org)
+
+    def build_child(self, template, project, request):  # pragma: no cover - abstract
+        raise NotImplementedError
+
+    def post(self, request, *args, **kwargs):
+        template = self.get_object()
+        workspace = _resolve_workspace_for_user(request, template.workspace_id)
+        if not is_workspace_manager(request.user, workspace):
+            raise PermissionDenied('Only a workspace manager can assign storage to a project.')
+
+        project_id = request.data.get('project')
+        if not project_id:
+            raise ValidationError({'project': 'this field is required'})
+        project = generics.get_object_or_404(Project, pk=project_id)
+        if project.organization_id != workspace.organization_id:
+            raise PermissionDenied('Project belongs to a different organization.')
+        if project.workspace_id != workspace.id:
+            raise ValidationError({'project': 'must live inside the same workspace as the template'})
+
+        child = self.build_child(template, project, request)
+        try:
+            child.validate_connection()
+        except Exception as exc:
+            raise ValidationError(str(exc))
+        child.save()
+        body = self.child_serializer_class(child).data
+        return Response(body, status=status.HTTP_201_CREATED)
+
+
 class ImportStorageValidateAPI(StorageValidateAPI):
     serializer_class = ImportStorageSerializer
 

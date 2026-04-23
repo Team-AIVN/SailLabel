@@ -5,7 +5,7 @@ import os
 
 from botocore.exceptions import ClientError, ParamValidationError
 from botocore.handlers import validate_bucket_name
-from io_storages.s3.models import S3ExportStorage, S3ImportStorage
+from io_storages.s3.models import S3ExportStorage, S3ImportStorage, S3WorkspaceImportStorage
 from io_storages.serializers import ExportStorageSerializer, ImportStorageSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -79,6 +79,18 @@ class S3ImportStorageSerializer(S3StorageSerializerMixin, ImportStorageSerialize
 
     class Meta:
         model = S3ImportStorage
+        fields = '__all__'
+
+
+class S3WorkspaceImportStorageSerializer(S3StorageSerializerMixin, ImportStorageSerializer):
+    """Workspace-scope S3 template. Reuses the same S3 credential/connection
+    validation mixin; only the ownership layer (workspace vs project) differs."""
+
+    type = serializers.ReadOnlyField(default=os.path.basename(os.path.dirname(__file__)))
+    presign = serializers.BooleanField(required=False, default=True)
+
+    class Meta:
+        model = S3WorkspaceImportStorage
         fields = '__all__'
 
 
