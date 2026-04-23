@@ -48,6 +48,7 @@ from io_storages.localfiles.api import (
     LocalFilesImportStorageSerializer,
     LocalFilesImportStorageSyncAPI,
     LocalFilesImportStorageValidateAPI,
+    LocalFilesWorkspaceImportStorageAssignAPI,
     LocalFilesWorkspaceImportStorageDetailAPI,
     LocalFilesWorkspaceImportStorageListAPI,
 )
@@ -197,6 +198,11 @@ if settings.ENABLE_LOCAL_FILES_STORAGE:
             'localfiles/workspace/<int:pk>',
             LocalFilesWorkspaceImportStorageDetailAPI.as_view(),
             name='storage-localfiles-workspace-detail',
+        ),
+        path(
+            'localfiles/workspace/<int:pk>/assign',
+            LocalFilesWorkspaceImportStorageAssignAPI.as_view(),
+            name='storage-localfiles-workspace-assign',
         ),
     ]
 
