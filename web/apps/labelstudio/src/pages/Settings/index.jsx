@@ -1,4 +1,5 @@
 import { SidebarMenu } from "../../components/SidebarMenu/SidebarMenu";
+import { FF_SETTLEMENT, isFF } from "../../utils/feature-flags";
 import { WebhookPage } from "../WebhookPage/WebhookPage";
 import { DangerZone } from "./DangerZone";
 import { GeneralSettings } from "./GeneralSettings";
@@ -6,6 +7,7 @@ import { AnnotationSettings } from "./AnnotationSettings";
 import { LabelingSettings } from "./LabelingSettings";
 import { MachineLearningSettings } from "./MachineLearningSettings/MachineLearningSettings";
 import { PredictionsSettings } from "./PredictionsSettings/PredictionsSettings";
+import { SettlementSettings } from "./SettlementSettings";
 import { StorageSettings } from "./StorageSettings/StorageSettings";
 import "./settings.prefix.css";
 
@@ -20,6 +22,7 @@ export const MenuLayout = ({ children, ...routeProps }) => {
         PredictionsSettings,
         StorageSettings,
         WebhookPage,
+        isFF(FF_SETTLEMENT) && SettlementSettings,
         DangerZone,
       ].filter(Boolean)}
       path={routeProps.match.url}
@@ -35,6 +38,7 @@ const pages = {
   PredictionsSettings,
   StorageSettings,
   WebhookPage,
+  ...(isFF(FF_SETTLEMENT) ? { SettlementSettings } : {}),
   DangerZone,
 };
 

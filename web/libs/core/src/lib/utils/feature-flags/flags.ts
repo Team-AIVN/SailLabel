@@ -148,3 +148,10 @@ export const FF_RBAC = "fflag_rbac";
  * always on; this flag only gates the review-focused surfaces in the product.
  */
 export const FF_BATCH_REVIEW = "fflag_batch_review";
+
+/**
+ * Phase 6 settlement — enables the "Settlement" tab in project settings (pricing
+ * entry, batch runner, payout reports) and settlement-related dashboard widgets.
+ * Backend settlement APIs are always on; this flag only gates the UI.
+ */
+export const FF_SETTLEMENT = "fflag_settlement";

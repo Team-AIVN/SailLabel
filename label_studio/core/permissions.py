@@ -65,6 +65,12 @@ class AllPermissions(BaseModel):
     views_change: str = 'views.change'
     views_delete: str = 'views.delete'
 
+    settlement_view: str = 'settlement.view'
+    settlement_change: str = 'settlement.change'
+    settlement_delete: str = 'settlement.delete'
+    settlement_run_batch: str = 'settlement.run_batch'
+    settlement_set_pricing: str = 'settlement.set_pricing'
+
 
 all_permissions = AllPermissions()
 

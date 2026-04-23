@@ -123,6 +123,73 @@
       "description": "Once you accept or reject annotations, your review history shows up here."
     }
   },
+  "settlement": {
+    "title": "Settlement",
+    "description": "Configure per-project pricing and run monthly settlement batches for annotation and review payouts.",
+    "pricing": {
+      "heading": "Pricing",
+      "currency": "Currency",
+      "annotationRate": "Annotation rate",
+      "annotationRateHint": "Amount paid per accepted annotation (parent-chain deduplicated).",
+      "reviewRate": "Review rate",
+      "reviewRateHint": "Amount paid to reviewers per accept/reject action.",
+      "save": "Save pricing",
+      "saved": "Pricing saved",
+      "loadError": "Failed to load pricing",
+      "saveError": "Failed to save pricing",
+      "notSet": "Not set — configure pricing before running a batch.",
+      "lastUpdated": "Last updated {{timestamp}}"
+    },
+    "batches": {
+      "heading": "Settlement batches",
+      "run": "Run new batch",
+      "periodStart": "Period start",
+      "periodEnd": "Period end",
+      "periodLabel": "Period",
+      "submit": "Run batch",
+      "runError": "Failed to start batch",
+      "runSuccess": "Batch queued",
+      "empty": "No settlement batches yet.",
+      "columns": {
+        "period": "Period",
+        "status": "Status",
+        "total": "Total",
+        "items": "Annotations / Reviews",
+        "createdAt": "Created",
+        "actions": "Actions"
+      },
+      "status": {
+        "pending": "Pending",
+        "running": "Running",
+        "completed": "Completed",
+        "failed": "Failed"
+      },
+      "actions": {
+        "view": "View",
+        "downloadCsv": "CSV",
+        "downloadPdf": "PDF",
+        "delete": "Delete"
+      },
+      "deleteConfirm": "Delete this settlement batch? This cannot be undone.",
+      "deleteError": "Failed to delete batch"
+    },
+    "detail": {
+      "heading": "Batch detail",
+      "close": "Close",
+      "itemsHeading": "Items",
+      "user": "User",
+      "annotations": "Annotations",
+      "reviews": "Reviews",
+      "subtotal": "Subtotal",
+      "total": "Total",
+      "noItems": "No payable items in this period."
+    },
+    "form": {
+      "required": "Required",
+      "invalidAmount": "Enter a valid non-negative amount",
+      "invalidPeriod": "End date must be after start date"
+    }
+  },
   "roles": {
     "superAdmin": "Super Admin",
     "workspaceManager": "Workspace Manager",

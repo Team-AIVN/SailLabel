@@ -55,6 +55,33 @@
       "version": 1,
       "deleted": false
     },
+    "fflag_settlement": {
+      "key": "fflag_settlement",
+      "on": false,
+      "prerequisites": [],
+      "targets": [],
+      "contextTargets": [],
+      "rules": [],
+      "fallthrough": {
+        "variation": 0
+      },
+      "offVariation": 1,
+      "variations": [
+        true,
+        false
+      ],
+      "clientSideAvailability": {
+        "usingMobileKey": false,
+        "usingEnvironmentId": false
+      },
+      "clientSide": false,
+      "salt": "settlement00000000000000000000",
+      "trackEvents": false,
+      "trackEventsFallthrough": false,
+      "debugEventsUntilDate": null,
+      "version": 1,
+      "deleted": false
+    },
     "fflag_batch_review": {
       "key": "fflag_batch_review",
       "on": true,

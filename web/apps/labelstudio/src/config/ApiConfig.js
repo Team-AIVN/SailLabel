@@ -115,6 +115,15 @@ export const API_CONFIG = {
     acceptAnnotation: "POST:/annotations/:pk/accept/",
     rejectAnnotation: "POST:/annotations/:pk/reject/",
     releaseAnnotationLock: "POST:/annotations/:pk/release-lock/",
+
+    // Settlement (Phase 6)
+    projectPricing: "GET:/projects/:pk/pricing/",
+    updateProjectPricing: "POST:/projects/:pk/pricing/",
+    projectSettlements: "GET:/projects/:pk/settlements/",
+    createProjectSettlement: "POST:/projects/:pk/settlements/",
+    settlementDetail: "GET:/settlements/:pk/",
+    deleteSettlement: "DELETE:/settlements/:pk/",
+    settlementReport: "GET:/settlements/:pk/report/",
   },
   alwaysExpectJSON: false,
 };
