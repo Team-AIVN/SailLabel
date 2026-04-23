@@ -27,6 +27,7 @@
     "home": "Home",
     "projects": "Projects",
     "workspaces": "Workspaces",
+    "myReviews": "My Reviews",
     "organization": "Organization",
     "api": "API",
     "docs": "Docs",
@@ -86,6 +87,35 @@
     },
     "toast": {
       "created": "Workspace \"{{title}}\" created"
+    }
+  },
+  "myReviews": {
+    "pageTitle": "My Reviews",
+    "filter": {
+      "state": "State"
+    },
+    "states": {
+      "all": "All",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "will_reviewed": "Pending review"
+    },
+    "transitions": {
+      "accept_annotation": "Accepted",
+      "reject_annotation": "Rejected"
+    },
+    "columns": {
+      "task": "Task",
+      "project": "Project",
+      "annotation": "Annotation",
+      "transition": "Action",
+      "state": "State",
+      "comment": "Comment",
+      "reviewedAt": "Reviewed at"
+    },
+    "empty": {
+      "title": "No reviews yet",
+      "description": "Once you accept or reject annotations, your review history shows up here."
     }
   },
   "roles": {

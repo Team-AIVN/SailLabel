@@ -924,3 +924,72 @@ class ProjectAnnotatorsAPI(generics.RetrieveAPIView):
         users = User.objects.filter(id__in=annotator_ids).prefetch_related('om_through').order_by('id')
         data = UserSimpleSerializer(users, many=True, context={'request': request}).data
         return Response(data)
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(
+        tags=['Projects'],
+        summary='Get the next annotation to review',
+        description=(
+            'Random-review dispatcher (§3.6.2). Picks the next annotation in '
+            'the project that is in state `WILL_REVIEWED`, is not authored by '
+            'the requester (self-review guard), and is not currently locked '
+            'by another reviewer. On success, acquires a `ReviewerLock` for '
+            'the caller and returns the annotation plus its task payload. '
+            'Returns 404 when the queue is empty for this reviewer.'
+        ),
+        parameters=[
+            OpenApiParameter(
+                name='id', type=OpenApiTypes.INT, location='path',
+                description='Project id', required=True,
+            ),
+        ],
+        extensions={'x-fern-audiences': ['internal']},
+    ),
+)
+class ProjectNextReviewAPI(generics.RetrieveAPIView):
+    """Dispatch the next reviewable annotation and lock it for the caller.
+
+    Why a lock: without one, two reviewers hitting this endpoint in parallel
+    would both receive the same annotation and race on accept/reject. The
+    Phase 5 ReviewerLock gives us a per-annotation mutex with TTL so a dropped
+    reviewer session doesn't permanently block the queue (§3.6.2).
+    """
+
+    permission_required = all_permissions.annotations_view
+    queryset = Project.objects.all()
+
+    # Default reviewer hold time before the lock auto-expires.
+    LOCK_TTL_SECONDS = 60 * 30  # 30 minutes
+
+    def get(self, request, *args, **kwargs):
+        from fsm.state_choices import AnnotationStateChoices
+        from tasks.models import ReviewerLock
+        from tasks.serializers import AnnotationSerializer, TaskSimpleSerializer
+
+        project = self.get_object()
+
+        candidates = (
+            Annotation.objects
+            .filter(project=project, current_state=AnnotationStateChoices.WILL_REVIEWED)
+            .exclude(completed_by_id=request.user.id)
+            .order_by('id')
+        )
+
+        for annotation in candidates.iterator():
+            lock, created = ReviewerLock.acquire(
+                annotation, request.user, ttl_seconds=self.LOCK_TTL_SECONDS
+            )
+            if created or lock.user_id == request.user.id:
+                return Response({
+                    'annotation': AnnotationSerializer(instance=annotation).data,
+                    'task': TaskSimpleSerializer(instance=annotation.task).data,
+                    'lock': {
+                        'unique_id': str(lock.unique_id),
+                        'expire_at': lock.expire_at.isoformat(),
+                    },
+                })
+            # Someone else holds a live lock — keep scanning.
+
+        raise NotFound('No annotations are available for review.')

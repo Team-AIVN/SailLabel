@@ -1,0 +1,105 @@
+.my-reviews-page {
+  min-height: calc(100vh - var(--header-height));
+  display: flex;
+  flex-direction: column;
+
+  &__toolbar {
+    padding: 16px 40px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  &__filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--color-neutral-content-subtler);
+
+    select {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--color-neutral-border);
+      background: var(--color-neutral-surface);
+    }
+  }
+
+  &__loading,
+  &__empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-neutral-content-subtler);
+  }
+
+  &__empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  &__empty-description {
+    color: var(--color-neutral-content-subtler);
+  }
+
+  &__table-wrapper {
+    padding: 0 40px 40px;
+    overflow-x: auto;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--color-neutral-border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      font-weight: 600;
+      background: var(--color-neutral-surface-subtle);
+      color: var(--color-neutral-content);
+    }
+
+    a {
+      color: var(--color-primary-content);
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  &__comment {
+    max-width: 320px;
+    color: var(--color-neutral-content-subtler);
+  }
+
+  &__state-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--color-neutral-surface-subtle);
+    color: var(--color-neutral-content);
+
+    &_value_accepted {
+      background: color-mix(in srgb, var(--color-positive-content) 12%, transparent);
+      color: var(--color-positive-content);
+    }
+
+    &_value_rejected {
+      background: color-mix(in srgb, var(--color-negative-content) 12%, transparent);
+      color: var(--color-negative-content);
+    }
+  }
+}

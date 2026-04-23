@@ -30,6 +30,7 @@ _api_annotations_urlpatterns = [
     path('<int:pk>/convert-to-draft', api.AnnotationConvertAPI.as_view(), name='annotation-convert-to-draft'),
     path('<int:pk>/accept/', api.AnnotationAcceptAPI.as_view(), name='annotation-accept'),
     path('<int:pk>/reject/', api.AnnotationRejectAPI.as_view(), name='annotation-reject'),
+    path('<int:pk>/release-lock/', api.AnnotationReleaseLockAPI.as_view(), name='annotation-release-lock'),
 ]
 
 _api_drafts_urlpatterns = [

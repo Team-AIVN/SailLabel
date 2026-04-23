@@ -8,6 +8,7 @@ import {
   IconHome,
   IconHotkeys,
   IconLayers2,
+  IconClipboardCheck,
   IconPeople,
   IconPersonInCircle,
   IconPin,
@@ -31,7 +32,7 @@ import { VersionNotifier, VersionProvider } from "../VersionNotifier/VersionNoti
 import "./Menubar.prefix.css";
 import "./MenuContent.prefix.css";
 import "./MenuSidebar.prefix.css";
-import { FF_HOMEPAGE, FF_WORKSPACE } from "../../utils/feature-flags";
+import { FF_BATCH_REVIEW, FF_HOMEPAGE, FF_WORKSPACE } from "../../utils/feature-flags";
 import { pages } from "@humansignal/app-common";
 import { isFF } from "../../utils/feature-flags";
 import { ff } from "@humansignal/core";
@@ -243,6 +244,15 @@ export const Menubar = ({ enabled, defaultOpened, defaultPinned, children, onSid
                     label={t("menubar.workspaces")}
                     to="/workspaces"
                     icon={<IconLayers2 />}
+                    data-external
+                    exact
+                  />
+                )}
+                {isFF(FF_BATCH_REVIEW) && (
+                  <Menu.Item
+                    label={t("menubar.myReviews")}
+                    to="/reviews"
+                    icon={<IconClipboardCheck />}
                     data-external
                     exact
                   />

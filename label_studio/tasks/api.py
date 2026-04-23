@@ -1150,6 +1150,11 @@ class _AnnotationReviewActionAPI(generics.RetrieveAPIView):
             reason=reason,
         )
 
+        # Review resolved — drop any ReviewerLock so /next-review/ can move on
+        # before the 30-minute TTL expires.
+        from tasks.models import ReviewerLock
+        ReviewerLock.objects.filter(annotation=annotation).delete()
+
         annotation.refresh_from_db()
         data = AnnotationSerializer(instance=annotation).data
         return Response(status=200, data=data)
@@ -1193,3 +1198,42 @@ class AnnotationAcceptAPI(_AnnotationReviewActionAPI):
 class AnnotationRejectAPI(_AnnotationReviewActionAPI):
     transition_name = 'reject_annotation'
     require_comment = True
+
+
+@method_decorator(name='get', decorator=extend_schema(exclude=True))
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Annotations'],
+        summary='Release reviewer lock on an annotation',
+        description=(
+            'Release the caller\'s `ReviewerLock` on this annotation so another '
+            'reviewer can pick it up before the TTL expires. Safe to call from '
+            'page-unload handlers (idempotent: returns 200 whether or not a '
+            'lock existed). Returns 403 if the live lock belongs to a different '
+            'reviewer.'
+        ),
+        extensions={'x-fern-audiences': ['internal']},
+    ),
+)
+class AnnotationReleaseLockAPI(generics.RetrieveAPIView):
+    permission_required = ViewClassPermission(POST=all_permissions.annotations_view)
+    queryset = Annotation.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        from tasks.models import ReviewerLock
+
+        annotation = self.get_object()
+
+        live_lock = (
+            ReviewerLock.objects
+            .filter(annotation=annotation, expire_at__gt=timezone.now())
+            .first()
+        )
+        if live_lock is not None and live_lock.user_id != request.user.id:
+            raise PermissionDenied('This annotation is locked by another reviewer.')
+
+        deleted, _ = ReviewerLock.objects.filter(
+            annotation=annotation, user=request.user,
+        ).delete()
+        return Response(status=200, data={'released': bool(deleted)})

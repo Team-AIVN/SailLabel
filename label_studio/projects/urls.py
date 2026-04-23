@@ -47,6 +47,8 @@ _api_urlpatterns = [
     path('<int:pk>/model-versions/', api.ProjectModelVersions.as_view(), name='project-model-versions'),
     # List all annotators for project
     path('<int:pk>/annotators/', api.ProjectAnnotatorsAPI.as_view(), name='project-annotators'),
+    # Phase 5: dispatch the next annotation for random review
+    path('<int:pk>/next-review/', api.ProjectNextReviewAPI.as_view(), name='project-next-review'),
 ]
 
 _api_urlpatterns_templates = [

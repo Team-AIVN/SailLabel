@@ -271,6 +271,26 @@ def get_all_columns(project, *_):
         },
     ]
 
+    # FSM `state` column — gated by the same two flags that DataManagerTaskSerializer
+    # uses to strip the value, so column metadata and row data stay in sync.
+    if flag_set('fflag_feat_fit_568_finite_state_management', user='auto') and flag_set(
+        'fflag_feat_fit_710_fsm_state_fields', user='auto'
+    ):
+        from fsm.state_choices import TaskStateChoices
+
+        result['columns'].append(
+            {
+                'id': 'state',
+                'title': 'State',
+                'type': 'String',
+                'target': 'tasks',
+                'help': 'FSM task state (Phase 4B aggregation: CREATED / IN_PROGRESS / COMPLETED / ACCEPTED / REJECTED)',
+                'schema': {'items': list(TaskStateChoices.values)},
+                'visibility_defaults': {'explore': True, 'labeling': True},
+                'project_defined': False,
+            }
+        )
+
     result['columns'].append(data_root)
 
     return result

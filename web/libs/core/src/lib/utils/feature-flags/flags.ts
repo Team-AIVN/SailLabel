@@ -141,3 +141,10 @@ export const FF_WORKSPACE = "fflag_workspace";
  * role-based menu gating, and the audit log UI. Backend enforcement is unconditional.
  */
 export const FF_RBAC = "fflag_rbac";
+
+/**
+ * Phase 5 batch-review workflow — enables the MyReviews page, Menubar entry, and
+ * the random-review dispatcher UI. Backend accept/reject/review-lock endpoints are
+ * always on; this flag only gates the review-focused surfaces in the product.
+ */
+export const FF_BATCH_REVIEW = "fflag_batch_review";

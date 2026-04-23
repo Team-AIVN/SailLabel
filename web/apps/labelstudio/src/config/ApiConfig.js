@@ -108,6 +108,13 @@ export const API_CONFIG = {
 
     // FSM
     fsmStateHistory: "GET:/fsm/entities/:entityType/:entityId/history",
+
+    // Reviews (Phase 5)
+    currentUserReviews: "GET:/current-user/reviews/",
+    projectNextReview: "GET:/projects/:pk/next-review/",
+    acceptAnnotation: "POST:/annotations/:pk/accept/",
+    rejectAnnotation: "POST:/annotations/:pk/reject/",
+    releaseAnnotationLock: "POST:/annotations/:pk/release-lock/",
   },
   alwaysExpectJSON: false,
 };

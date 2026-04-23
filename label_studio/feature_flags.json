@@ -57,7 +57,7 @@
     },
     "fflag_batch_review": {
       "key": "fflag_batch_review",
-      "on": false,
+      "on": true,
       "prerequisites": [],
       "targets": [],
       "contextTargets": [],
@@ -2501,7 +2501,7 @@
     },
     "fflag_feat_fit_568_finite_state_management": {
       "key": "fflag_feat_fit_568_finite_state_management",
-      "on": false,
+      "on": true,
       "prerequisites": [],
       "targets": [],
       "contextTargets": [],
@@ -2528,7 +2528,7 @@
     },
     "fflag_feat_fit_710_fsm_state_fields": {
       "key": "fflag_feat_fit_710_fsm_state_fields",
-      "on": false,
+      "on": true,
       "prerequisites": [],
       "targets": [],
       "contextTargets": [],

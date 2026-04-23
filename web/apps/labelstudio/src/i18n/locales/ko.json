@@ -27,6 +27,7 @@
     "home": "홈",
     "projects": "프로젝트",
     "workspaces": "워크스페이스",
+    "myReviews": "내 검수",
     "organization": "조직",
     "api": "API",
     "docs": "문서",
@@ -86,6 +87,35 @@
     },
     "toast": {
       "created": "워크스페이스 \"{{title}}\"을(를) 생성했습니다"
+    }
+  },
+  "myReviews": {
+    "pageTitle": "내 검수 내역",
+    "filter": {
+      "state": "상태"
+    },
+    "states": {
+      "all": "전체",
+      "accepted": "승인됨",
+      "rejected": "반려됨",
+      "will_reviewed": "검수 대기"
+    },
+    "transitions": {
+      "accept_annotation": "승인",
+      "reject_annotation": "반려"
+    },
+    "columns": {
+      "task": "작업",
+      "project": "프로젝트",
+      "annotation": "어노테이션",
+      "transition": "액션",
+      "state": "상태",
+      "comment": "코멘트",
+      "reviewedAt": "검수 시각"
+    },
+    "empty": {
+      "title": "아직 검수 내역이 없습니다",
+      "description": "프로젝트 내 검수 대기 어노테이션을 승인 또는 반려하면 여기에 표시됩니다."
     }
   },
   "roles": {
