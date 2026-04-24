@@ -1,0 +1,1 @@
+- [E2E Playwright plan location](project_e2e_playwright_plan.md) — Plan doc, seed + session-mint commands, role fixture naming rule, and the 6 E2E accounts
