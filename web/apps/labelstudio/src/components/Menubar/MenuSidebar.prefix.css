@@ -1,3 +1,47 @@
+/* The collapsible row lays out chevron + link on the same line. */
+.menu-collapsible {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  list-style-type: none;
+}
+
+.menu-collapsible-chevron {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 40px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral-content-subtler);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--corner-radius-smaller);
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.menu-collapsible-chevron:hover {
+  color: var(--color-neutral-content);
+  background: var(--color-primary-emphasis-subtle);
+}
+
+.menu-collapsible-chevron svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* The NavLink occupies the rest of the row. Tighten its left padding so
+   the icon column aligns with top-level menu items (the chevron took the
+   outer 13px margin). */
+.menu-collapsible > .menu-collapsible-link {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 4px;
+}
+
 .sidebar {
   left: 0;
   overflow: auto;

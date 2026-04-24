@@ -2,6 +2,7 @@ import { EnterpriseBadge, Select, Typography } from "@humansignal/ui";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router";
+import { useAuth } from "@humansignal/core/providers/AuthProvider";
 import { ToggleItems } from "../../components";
 import { Button } from "@humansignal/ui";
 import { Modal } from "../../components/Modal/Modal";
@@ -17,6 +18,9 @@ import { useDraftProject } from "./utils/useDraftProject";
 import { Input, TextArea } from "../../components/Form";
 import { FF_LSDV_E_297, isFF } from "../../utils/feature-flags";
 import { createURL } from "../../components/HeidiTips/utils";
+import { MembersPage } from "./Members/Members";
+import { SchedulePage } from "./Schedule/Schedule";
+import { SettlementPage } from "./Settlement/Settlement";
 
 const ProjectName = ({ name, setName, onSaveName, onSubmit, error, description, setDescription, show = true }) => {
   const { t } = useTranslation();
@@ -91,17 +95,24 @@ const ProjectName = ({ name, setName, onSaveName, onSubmit, error, description, 
 
 export const CreateProject = ({ onClose }) => {
   const { t } = useTranslation();
-  const [step, _setStep] = React.useState("name"); // name | import | config
+  const [step, _setStep] = React.useState("name"); // name | import | config | members | schedule | settlement
   const [waiting, setWaitingStatus] = React.useState(false);
 
   const { project, setProject: updateProject } = useDraftProject();
   const history = useHistory();
   const api = useAPI();
+  const { user } = useAuth();
 
   const [name, setName] = React.useState("");
   const [error, setError] = React.useState();
   const [description, setDescription] = React.useState("");
   const [sample, setSample] = React.useState(null);
+
+  const [memberAssignments, setMemberAssignments] = React.useState([]);
+  const [schedule, setSchedule] = React.useState({ start_date: "", end_date: "", task_due_hours: "" });
+  const [scheduleError, setScheduleError] = React.useState(null);
+  const [pricing, setPricing] = React.useState({ currency: "USD", label_price: "", review_price: "" });
+  const [settlementError, setSettlementError] = React.useState(null);
 
   const setStep = React.useCallback((step) => {
     _setStep(step);
@@ -109,6 +120,9 @@ export const CreateProject = ({ onClose }) => {
       name: "project_name",
       import: "data_import",
       config: "labeling_setup",
+      members: "members",
+      schedule: "schedule",
+      settlement: "settlement",
     };
     __lsa(`create_project.tab.${eventNameMap[step]}`);
   }, []);
@@ -116,6 +130,18 @@ export const CreateProject = ({ onClose }) => {
   React.useEffect(() => {
     setError(null);
   }, [name]);
+
+  React.useEffect(() => {
+    if (!schedule.start_date || !schedule.end_date) {
+      setScheduleError(null);
+      return;
+    }
+    if (new Date(schedule.end_date) <= new Date(schedule.start_date)) {
+      setScheduleError(t("createProject.schedule.invalidRange"));
+    } else {
+      setScheduleError(null);
+    }
+  }, [schedule.start_date, schedule.end_date, t]);
 
   const { columns, uploading, uploadDisabled, finishUpload, pageProps, uploadSample } = useImportPage(project, sample);
 
@@ -127,6 +153,13 @@ export const CreateProject = ({ onClose }) => {
       <span className={tabClass.mod({ disabled: uploadDisabled }).toClassName()}>{t("createProject.steps.import")}</span>
     ),
     config: t("createProject.steps.config"),
+    members: t("createProject.steps.members"),
+    schedule: (
+      <span className={tabClass.mod({ disabled: !!scheduleError }).toClassName()}>
+        {t("createProject.steps.schedule")}
+      </span>
+    ),
+    settlement: t("createProject.steps.settlement"),
   };
 
   // name intentionally skipped from deps:
@@ -144,7 +177,53 @@ export const CreateProject = ({ onClose }) => {
     [name, description, project?.label_config],
   );
 
+  const applyMemberAssignments = React.useCallback(
+    async (projectId) => {
+      if (!memberAssignments.length) return;
+      const failures = [];
+      for (const assignment of memberAssignments) {
+        const resp = await api.callApi("createProjectMember", {
+          params: { pk: projectId },
+          body: { user: assignment.user, role: assignment.role },
+          suppressError: true,
+        });
+        if (!resp || resp.error) failures.push(assignment);
+      }
+      if (failures.length) {
+        console.warn("Some project member assignments failed", failures);
+      }
+    },
+    [memberAssignments, api],
+  );
+
+  const applyPricing = React.useCallback(
+    async (projectId) => {
+      const label = pricing.label_price === "" ? null : Number.parseFloat(pricing.label_price);
+      const review = pricing.review_price === "" ? null : Number.parseFloat(pricing.review_price);
+      if (label === null && review === null) return;
+      const body = { currency: pricing.currency || "USD" };
+      if (label !== null && !Number.isNaN(label)) body.label_price = label;
+      if (review !== null && !Number.isNaN(review)) body.review_price = review;
+      const resp = await api.callApi("updateProjectPricing", {
+        params: { pk: projectId },
+        body,
+        suppressError: true,
+      });
+      if (!resp || resp.error) {
+        setSettlementError(t("createProject.settlement.saveError"));
+        setStep("settlement");
+        return false;
+      }
+      return true;
+    },
+    [pricing, api, t, setStep],
+  );
+
   const onCreate = React.useCallback(async () => {
+    if (scheduleError) {
+      setStep("schedule");
+      return;
+    }
     // First, persist project with label_config so import/reimport validates against it
     const response = await api.callApi("updateProject", {
       params: {
@@ -163,12 +242,15 @@ export const CreateProject = ({ onClose }) => {
 
     if (sample) await uploadSample(sample);
 
+    await applyMemberAssignments(response.id);
+    await applyPricing(response.id);
+
     __lsa("create_project.create", { sample: sample?.url });
 
     setWaitingStatus(false);
 
     history.push(`/projects/${response.id}/data`);
-  }, [project, projectBody, finishUpload]);
+  }, [project, projectBody, finishUpload, scheduleError, applyMemberAssignments, applyPricing, setStep]);
 
   const onSaveName = async () => {
     if (error) return;
@@ -225,7 +307,7 @@ export const CreateProject = ({ onClose }) => {
               onClick={onCreate}
               waiting={waiting || uploading}
               waitingClickable={false}
-              disabled={!project || uploadDisabled || error}
+              disabled={!project || uploadDisabled || error || !!scheduleError}
             >
               {t("common.save")}
             </Button>
@@ -257,6 +339,24 @@ export const CreateProject = ({ onClose }) => {
           show={step === "config"}
           columns={columns}
           disableSaveButton={true}
+        />
+        <MembersPage
+          show={step === "members"}
+          assignments={memberAssignments}
+          setAssignments={setMemberAssignments}
+          organizationId={user?.active_organization}
+        />
+        <SchedulePage
+          show={step === "schedule"}
+          schedule={schedule}
+          setSchedule={setSchedule}
+          error={scheduleError}
+        />
+        <SettlementPage
+          show={step === "settlement"}
+          pricing={pricing}
+          setPricing={setPricing}
+          error={settlementError}
         />
       </div>
     </Modal>

@@ -105,9 +105,15 @@ class BaseWhoAmIUserSerializer(BaseUserSerializer):
     permissions = serializers.SerializerMethodField()
     organization_role = serializers.SerializerMethodField()
     is_super_admin = serializers.SerializerMethodField()
+    managed_workspace_ids = serializers.SerializerMethodField()
 
     class Meta(BaseUserSerializer.Meta):
-        fields = BaseUserSerializer.Meta.fields + ('permissions', 'organization_role', 'is_super_admin')
+        fields = BaseUserSerializer.Meta.fields + (
+            'permissions',
+            'organization_role',
+            'is_super_admin',
+            'managed_workspace_ids',
+        )
 
     def get_permissions(self, user) -> list[str]:
         return [perm for _, perm in all_permissions]
@@ -142,6 +148,38 @@ class BaseWhoAmIUserSerializer(BaseUserSerializer):
             return True
         member = self._active_membership(user)
         return bool(member and member.role == OrganizationRole.SUPER_ADMIN)
+
+    def get_managed_workspace_ids(self, user) -> list[int]:
+        """Workspaces in the active org where this user is a workspace_manager.
+
+        Drives the sidebar's Workspaces menu gating (Phase 2 RBAC). Includes
+        workspaces owned by the org (the org creator is treated as manager
+        everywhere in the org) so super-admins / owners always see them.
+        """
+        org_id = getattr(user, 'active_organization_id', None)
+        if not org_id:
+            return []
+        try:
+            from workspaces.models import Workspace, WorkspaceMember
+        except ImportError:
+            return []
+        ids = set(
+            WorkspaceMember.objects.filter(
+                user=user,
+                workspace__organization_id=org_id,
+                role=WorkspaceMember.Role.WORKSPACE_MANAGER,
+                deleted_at__isnull=True,
+            ).values_list('workspace_id', flat=True)
+        )
+        # Org owner / super-admin sees every workspace as a manager.
+        if getattr(user, 'is_superuser', False) or (
+            self._active_membership(user) and self.get_is_super_admin(user)
+        ):
+            ids.update(
+                Workspace.objects.filter(organization_id=org_id, deleted_at__isnull=True)
+                .values_list('id', flat=True)
+            )
+        return sorted(ids)
 
 
 class UserSimpleSerializer(BaseUserSerializer):

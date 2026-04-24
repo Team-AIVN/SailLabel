@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams as useRouterParams } from "react-router";
+import { useHistory, useParams as useRouterParams } from "react-router";
 import { Redirect } from "react-router-dom";
+import { IconClipboardCheck } from "@humansignal/icons";
 import { Button } from "@humansignal/ui";
+import { FF_BATCH_REVIEW, isFF } from "../../utils/feature-flags";
 import { Oneof } from "../../components/Oneof/Oneof";
 import { Spinner } from "../../components/Spinner/Spinner";
 import { ApiContext } from "../../providers/ApiProvider";
@@ -164,10 +166,25 @@ ProjectsPage.routes = ({ store }) => [
 ];
 const CreateProjectContextButton = ({ openModal }) => {
   const { t } = useTranslation();
+  const history = useHistory();
   return (
-    <Button onClick={openModal} size="small" aria-label={t("projects.createProjectAriaLabel")}>
-      {t("projects.createButton")}
-    </Button>
+    <>
+      {isFF(FF_BATCH_REVIEW) && (
+        <Button
+          size="small"
+          look="outlined"
+          variant="neutral"
+          leading={<IconClipboardCheck />}
+          onClick={() => history.push("/reviews")}
+          aria-label={t("menubar.myReviews")}
+        >
+          {t("menubar.myReviews")}
+        </Button>
+      )}
+      <Button onClick={openModal} size="small" aria-label={t("projects.createProjectAriaLabel")}>
+        {t("projects.createButton")}
+      </Button>
+    </>
   );
 };
 

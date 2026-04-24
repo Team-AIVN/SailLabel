@@ -17,7 +17,8 @@
     "loading": "불러오는 중",
     "or": "또는",
     "learnMore": "자세히 보기",
-    "optional": "선택 사항"
+    "optional": "선택 사항",
+    "remove": "삭제"
   },
   "menubar": {
     "keyboardShortcuts": "키보드 단축키",
@@ -27,6 +28,8 @@
     "home": "홈",
     "projects": "프로젝트",
     "workspaces": "워크스페이스",
+    "unknownWorkspace": "워크스페이스",
+    "unassignedWorkspace": "미지정",
     "myReviews": "내 검수",
     "organization": "조직",
     "api": "API",
@@ -75,7 +78,18 @@
     },
     "create": {
       "title": "워크스페이스 생성",
-      "submit": "생성"
+      "submit": "생성",
+      "titleTooShort": "제목은 3자 이상이어야 합니다",
+      "failed": "워크스페이스 생성에 실패했습니다"
+    },
+    "steps": {
+      "name": "이름",
+      "import": "데이터셋 가져오기"
+    },
+    "import": {
+      "note": "여기에 첨부한 데이터셋은 워크스페이스 단위 스토리지 연결이 완료되면 하위 프로젝트의 기본 import 풀로 사용됩니다.",
+      "dropTitle": "파일을 여기로 놓으세요",
+      "dropHint": "또는 클릭해 직접 선택하세요"
     },
     "card": {
       "projectCount_one": "프로젝트 {{count}}개",
@@ -86,7 +100,9 @@
       "description": "워크스페이스를 만들어 프로젝트와 팀원을 묶어 관리해 보세요."
     },
     "toast": {
-      "created": "워크스페이스 \"{{title}}\"을(를) 생성했습니다"
+      "created": "워크스페이스 \"{{title}}\"을(를) 생성했습니다",
+      "importPending": "파일 {{count}}개가 대기 중입니다 — 워크스페이스 단위 데이터셋 가져오기는 스토리지 연결과 함께 제공됩니다.",
+      "importBound": "워크스페이스 \"{{title}}\"을(를) 생성하고 파일 {{count}}개를 연결했습니다."
     }
   },
   "myReviews": {
@@ -286,7 +302,10 @@
     "steps": {
       "name": "프로젝트 이름",
       "import": "데이터 가져오기",
-      "config": "레이블링 설정"
+      "config": "레이블링 설정",
+      "members": "작업자",
+      "schedule": "일정",
+      "settlement": "비용 정산"
     },
     "name": {
       "projectName": "프로젝트 이름",
@@ -340,7 +359,41 @@
       "labelingConfigurationLink": "레이블링 구성",
       "setupLabelingTrailing": "을 설정하면 예상 JSON 데이터 형식을 미리 볼 수 있습니다"
     },
-    "cancelAriaLabel": "프로젝트 생성 취소"
+    "cancelAriaLabel": "프로젝트 생성 취소",
+    "members": {
+      "heading": "작업자 할당",
+      "note": "이 프로젝트의 어노테이터와 리뷰어를 할당합니다. 할당은 프로젝트 생성 직후 적용됩니다.",
+      "rolePicker": "역할",
+      "userPicker": "사용자",
+      "addButton": "추가",
+      "empty": "아직 할당이 없습니다. 역할과 사용자를 선택한 뒤 추가 버튼을 누르세요.",
+      "removeAriaLabel": "할당 제거",
+      "loadError": "조직 멤버를 불러오지 못했습니다.",
+      "saveError": "일부 할당을 적용하지 못했습니다.",
+      "roles": {
+        "project_manager": "프로젝트 관리자",
+        "reviewer": "리뷰어",
+        "annotator": "어노테이터"
+      }
+    },
+    "schedule": {
+      "heading": "일정",
+      "note": "여기에 입력한 일정은 계획 용도로만 사용됩니다. 자동 마감·알림은 이후 단계에서 제공됩니다.",
+      "startLabel": "시작일",
+      "endLabel": "종료일",
+      "taskDueLabel": "태스크 마감 (시간)",
+      "taskDueHint": "한 어노테이터가 태스크를 배정받은 뒤 완료해야 하는 시간입니다.",
+      "invalidRange": "종료일은 시작일보다 이후여야 합니다."
+    },
+    "settlement": {
+      "heading": "비용 정산",
+      "note": "수락된 어노테이션·검수 건마다 적용되는 단가입니다. 이후에도 프로젝트 설정 → 정산에서 수정할 수 있습니다.",
+      "currencyLabel": "통화",
+      "labelPriceLabel": "어노테이션 단가",
+      "reviewPriceLabel": "검수 단가",
+      "priceHint": "선택한 통화 기준, 수락된 건당 지급 금액입니다.",
+      "saveError": "단가 저장에 실패했습니다."
+    }
   },
   "accountSettings": {
     "pageTitle": "내 계정",

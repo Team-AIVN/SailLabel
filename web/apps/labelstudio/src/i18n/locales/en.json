@@ -17,7 +17,8 @@
     "loading": "Loading",
     "or": "or",
     "learnMore": "Learn more",
-    "optional": "Optional"
+    "optional": "Optional",
+    "remove": "Remove"
   },
   "menubar": {
     "keyboardShortcuts": "Keyboard Shortcuts",
@@ -27,6 +28,8 @@
     "home": "Home",
     "projects": "Projects",
     "workspaces": "Workspaces",
+    "unknownWorkspace": "Workspace",
+    "unassignedWorkspace": "Unassigned",
     "myReviews": "My Reviews",
     "organization": "Organization",
     "api": "API",
@@ -75,7 +78,18 @@
     },
     "create": {
       "title": "Create Workspace",
-      "submit": "Create"
+      "submit": "Create",
+      "titleTooShort": "Title must be at least 3 characters",
+      "failed": "Failed to create workspace"
+    },
+    "steps": {
+      "name": "Name",
+      "import": "Dataset import"
+    },
+    "import": {
+      "note": "Datasets attached here will become the default import pool for this workspace's projects once workspace-level storage is wired up.",
+      "dropTitle": "Drop files here",
+      "dropHint": "or click to browse from your device"
     },
     "card": {
       "projectCount_one": "{{count}} project",
@@ -86,7 +100,9 @@
       "description": "Create a workspace to organize projects and team members."
     },
     "toast": {
-      "created": "Workspace \"{{title}}\" created"
+      "created": "Workspace \"{{title}}\" created",
+      "importPending": "{{count}} file(s) staged — workspace-level dataset import will ship with storage wiring.",
+      "importBound": "Workspace \"{{title}}\" created with {{count}} file(s)."
     }
   },
   "myReviews": {
@@ -286,7 +302,10 @@
     "steps": {
       "name": "Project Name",
       "import": "Data Import",
-      "config": "Labeling Setup"
+      "config": "Labeling Setup",
+      "members": "Members",
+      "schedule": "Schedule",
+      "settlement": "Settlement"
     },
     "name": {
       "projectName": "Project Name",
@@ -340,7 +359,41 @@
       "labelingConfigurationLink": "labeling configuration",
       "setupLabelingTrailing": " first to preview the expected JSON data format"
     },
-    "cancelAriaLabel": "Cancel project creation"
+    "cancelAriaLabel": "Cancel project creation",
+    "members": {
+      "heading": "Assign workers",
+      "note": "Assign annotators and reviewers for this project. Assignments are applied after the project is created.",
+      "rolePicker": "Role",
+      "userPicker": "User",
+      "addButton": "Add",
+      "empty": "No assignments yet. Pick a role and a user, then press Add.",
+      "removeAriaLabel": "Remove assignment",
+      "loadError": "Failed to load organization members.",
+      "saveError": "Failed to apply some assignments.",
+      "roles": {
+        "project_manager": "Project Manager",
+        "reviewer": "Reviewer",
+        "annotator": "Annotator"
+      }
+    },
+    "schedule": {
+      "heading": "Schedule",
+      "note": "These dates are a planning aid. Automatic deadlines and reminders land in a later phase.",
+      "startLabel": "Start date",
+      "endLabel": "End date",
+      "taskDueLabel": "Task due (hours)",
+      "taskDueHint": "How long an annotator has to finish a task once assigned.",
+      "invalidRange": "End date must be later than start date."
+    },
+    "settlement": {
+      "heading": "Cost settlement",
+      "note": "Per-task pricing applied when annotations or reviews are accepted. You can revisit this later from Project Settings → Settlement.",
+      "currencyLabel": "Currency",
+      "labelPriceLabel": "Annotation rate",
+      "reviewPriceLabel": "Review rate",
+      "priceHint": "Amount paid per accepted unit in the selected currency.",
+      "saveError": "Failed to save pricing."
+    }
   },
   "accountSettings": {
     "pageTitle": "My Account",

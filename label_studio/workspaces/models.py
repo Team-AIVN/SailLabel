@@ -1,6 +1,8 @@
 """This file and its contents are licensed under the Apache License 2.0. Please see the included NOTICE for copyright information and LICENSE for a copy of the license."""
 
 import logging
+import os
+import uuid
 
 from core.utils.common import load_func
 from core.utils.db import has_column_cached
@@ -8,6 +10,7 @@ from django.conf import settings
 from django.core.validators import MaxLengthValidator, MinLengthValidator
 from django.db import models, transaction
 from django.utils import timezone
+from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
 logger = logging.getLogger(__name__)
@@ -156,3 +159,60 @@ class WorkspaceMember(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['user', 'workspace'], name='uniq_workspace_member'),
         ]
+
+
+def _workspace_upload_path(instance, filename):
+    workspace = str(instance.workspace_id)
+    workspace_dir = os.path.join(settings.MEDIA_ROOT, 'workspace-upload', workspace)
+    os.makedirs(workspace_dir, exist_ok=True)
+    return 'workspace-upload/' + workspace + '/' + str(uuid.uuid4())[0:8] + '-' + filename
+
+
+class WorkspaceFileUpload(models.Model):
+    """File uploaded at the workspace scope.
+
+    These files are the workspace's default import pool. They are stored independently from
+    :class:`data_import.models.FileUpload` (which is project-scoped) so that the existing
+    per-project import pipeline is untouched. Phase 3 storage work will introduce the
+    mechanism that promotes these files into project tasks.
+    """
+
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name='file_uploads',
+        help_text='Workspace that owns the file',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='workspace_file_uploads',
+        help_text='User that uploaded the file',
+    )
+    file = models.FileField(upload_to=_workspace_upload_path)
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+
+    class Meta:
+        db_table = 'workspace_file_upload'
+        indexes = [models.Index(fields=['workspace', '-created_at'])]
+
+    @cached_property
+    def file_name(self):
+        return os.path.basename(self.file.name)
+
+    @property
+    def size(self):
+        try:
+            return self.file.size
+        except (ValueError, OSError):
+            return None
+
+    @property
+    def url(self):
+        try:
+            return self.file.url
+        except ValueError:
+            return None
+
+    def has_permission(self, user):
+        return self.workspace.has_permission(user)

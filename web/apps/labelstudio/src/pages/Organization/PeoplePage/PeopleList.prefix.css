@@ -1,7 +1,7 @@
 .people-list {
   width: 100%;
-  min-width: 650px;
-  font-size: 16px;
+  min-width: 900px;
+  font-size: 14px;
 
   &__wrapper {
     border-radius: 4px;
@@ -31,29 +31,84 @@
   &__column,
   &__field {
     z-index: 2;
-    height: 48px;
-    padding: 0 10px;
+    min-height: 48px;
+    padding: 8px 10px;
     border: none;
     color: var(--color-neutral-content);
     display: flex;
     position: relative;
     align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
     &.avatar {
-      width: 28px;
+      width: 48px;
       box-sizing: content-box;
+      justify-content: center;
     }
 
     &.name {
-      flex: 1;
+      width: 140px;
     }
 
     &.email {
-      width: 200px;
+      flex: 1 1 220px;
+      min-width: 180px;
+    }
+
+    &.roles {
+      flex: 2 1 280px;
+      min-width: 220px;
+      white-space: normal;
     }
 
     &.last-activity {
-      width: 160px;
+      width: 170px;
+      flex-shrink: 0;
+    }
+
+    &.actions {
+      width: 110px;
+      flex-shrink: 0;
+      justify-content: flex-end;
+    }
+  }
+
+  &__chips {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  &__chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.5;
+    background: var(--color-neutral-emphasis);
+    color: #fff;
+
+    &_tone_admin {
+      background: var(--grape_500, #7c3aed);
+      color: #fff;
+    }
+
+    &_tone_workspace {
+      background: var(--blue_500, #2563eb);
+      color: #fff;
+    }
+
+    &_tone_project {
+      background: var(--green_600, #16a34a);
+      color: #fff;
+    }
+
+    &_tone_muted {
+      background: var(--color-neutral-emphasis-subtle);
+      color: var(--color-neutral-content-subtler);
     }
   }
 

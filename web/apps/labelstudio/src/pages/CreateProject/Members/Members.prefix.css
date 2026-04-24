@@ -1,0 +1,86 @@
+.project-members {
+  width: 700px;
+  margin: 32px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__note {
+    padding: 12px 16px;
+    background: var(--color-info-surface, var(--color-primary-surface));
+    color: var(--color-info-content, var(--color-primary-content));
+    border-radius: var(--corner-radius-smaller);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  &__picker {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    align-items: end;
+    gap: 12px;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--color-neutral-content);
+  }
+
+  &__error {
+    padding: 10px 14px;
+    background: var(--color-negative-surface);
+    color: var(--color-negative-content);
+    border-radius: var(--corner-radius-smaller);
+    font-size: 13px;
+  }
+
+  &__empty {
+    padding: 20px;
+    text-align: center;
+    color: var(--color-neutral-content-subtler);
+    background: var(--color-neutral-emphasis-subtle);
+    border-radius: var(--corner-radius-smaller);
+    font-size: 14px;
+  }
+
+  &__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--color-neutral-emphasis-subtle);
+    border-radius: var(--corner-radius-smaller);
+  }
+
+  &__chip {
+    padding: 2px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--blue_500, #2563eb);
+
+    &_role_project_manager { background: var(--grape_500, #7c3aed); }
+    &_role_reviewer { background: var(--blue_500, #2563eb); }
+    &_role_annotator { background: var(--green_600, #16a34a); }
+  }
+
+  &__user {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

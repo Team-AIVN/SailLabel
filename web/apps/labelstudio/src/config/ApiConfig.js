@@ -13,8 +13,16 @@ export const API_CONFIG = {
     // Organization
     memberships: "/organizations/:pk/memberships",
     userMemberships: "/organizations/:pk/memberships/:userPk",
+    updateOrganizationMemberRole: "PATCH:/organizations/:pk/memberships/:userPk",
+    deleteOrganizationMember: "DELETE:/organizations/:pk/memberships/:userPk",
     inviteLink: "/invite",
     resetInviteLink: "POST:/invite/reset-token",
+
+    // Project members (role management)
+    projectMembers: "/projects/:pk/members",
+    createProjectMember: "POST:/projects/:pk/members",
+    updateProjectMember: "PATCH:/projects/:pk/members/:memberPk",
+    deleteProjectMember: "DELETE:/projects/:pk/members/:memberPk",
 
     // Project
     projects: "/projects",
@@ -36,6 +44,9 @@ export const API_CONFIG = {
     updateWorkspaceMember: "PATCH:/workspaces/:pk/members/:memberPk",
     deleteWorkspaceMember: "DELETE:/workspaces/:pk/members/:memberPk",
     workspaceProjects: "/workspaces/:pk/projects",
+    workspaceFileUploads: "/workspaces/:pk/file-uploads",
+    deleteWorkspaceFileUpload: "DELETE:/workspaces/:pk/file-uploads/:uploadPk",
+    workspaceImportFiles: "POST:/workspaces/:pk/import",
 
     // Presigning
     presignUrlForTask: "/../tasks/:taskID/presign",

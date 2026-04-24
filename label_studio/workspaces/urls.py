@@ -16,6 +16,13 @@ _api_urlpatterns = [
         name='workspace-member-detail',
     ),
     path('<int:pk>/projects/', api.WorkspaceProjectsAPI.as_view(), name='workspace-projects'),
+    path('<int:pk>/import/', api.WorkspaceImportAPI.as_view(), name='workspace-import'),
+    path('<int:pk>/file-uploads/', api.WorkspaceFileUploadsAPI.as_view(), name='workspace-file-uploads'),
+    path(
+        '<int:pk>/file-uploads/<int:upload_pk>/',
+        api.WorkspaceFileUploadDetailAPI.as_view(),
+        name='workspace-file-upload-detail',
+    ),
 ]
 
 

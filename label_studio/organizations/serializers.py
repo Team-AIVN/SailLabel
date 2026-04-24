@@ -5,10 +5,12 @@ from typing import TypedDict
 from drf_dynamic_fields import DynamicFieldsMixin
 from drf_spectacular.utils import extend_schema_serializer
 from organizations.models import Organization, OrganizationMember
-from projects.models import Project
+from projects.models import Project, ProjectMember
 from rest_framework import serializers
 from tasks.models import Annotation
+from users.constants import OrganizationRole
 from users.serializers import UserSerializer
+from workspaces.models import WorkspaceMember
 
 
 class OrganizationIdSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
@@ -65,14 +67,36 @@ class UserOrganizationMemberListSerializer(UserSerializer):
         fields = UserSerializer.Meta.fields + ('created_projects', 'contributed_to_projects')
 
 
+class RoleAssignment(TypedDict):
+    scope: str
+    scope_id: int | None
+    scope_title: str | None
+    role: str
+
+
 class OrganizationMemberListSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     user = UserOrganizationMemberListSerializer()
+    role = serializers.CharField(read_only=True)
+    role_assignments = serializers.SerializerMethodField(read_only=True)
     created_projects = serializers.SerializerMethodField(read_only=True)
     contributed_to_projects = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = OrganizationMember
-        fields = ['id', 'organization', 'user', 'created_projects', 'contributed_to_projects']
+        fields = [
+            'id',
+            'organization',
+            'user',
+            'role',
+            'role_assignments',
+            'created_projects',
+            'contributed_to_projects',
+        ]
+
+    def get_role_assignments(self, member) -> list[RoleAssignment]:
+        workspace_map = self.context.get('workspace_memberships_map', {}) or {}
+        project_map = self.context.get('project_memberships_map', {}) or {}
+        return workspace_map.get(member.user_id, []) + project_map.get(member.user_id, [])
 
     def get_created_projects(self, member) -> list[ProjectInfo] | None:
         if not self.context.get('contributed_to_projects', False):
@@ -138,12 +162,27 @@ class OrganizationMemberSerializer(DynamicFieldsMixin, serializers.ModelSerializ
         fields = [
             'user',
             'organization',
+            'role',
             'contributed_projects_count',
             'annotations_count',
             'created_at',
             'created_projects',
             'contributed_to_projects',
         ]
+
+
+class OrganizationMemberRoleUpdateSerializer(serializers.ModelSerializer):
+    """Write-only serializer for PATCHing OrganizationMember.role.
+
+    Restricted to the ``role`` field — other fields on the member row (user,
+    organization) are structural and must never change via this endpoint.
+    """
+
+    role = serializers.ChoiceField(choices=OrganizationRole.choices, required=True)
+
+    class Meta:
+        model = OrganizationMember
+        fields = ['role']
 
 
 # =========================================

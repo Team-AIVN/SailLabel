@@ -1482,6 +1482,14 @@ class ProjectMember(models.Model):
         ]
         indexes = [models.Index(fields=['project', 'role'])]
 
+    def has_permission(self, user):
+        # DRF default HasObjectPermission (see settings.REST_FRAMEWORK) invokes
+        # this on every retrieve/update/delete. Delegate to the parent project
+        # so project-scope rules (workspace manager, org owner, super admin)
+        # are respected uniformly. View-level mutation guards
+        # (see ``projects/members_api.py``) perform the stricter role check.
+        return self.project.has_permission(user)
+
 
 class ProjectSummary(models.Model):
     project = AutoOneToOneField(Project, primary_key=True, on_delete=models.CASCADE, related_name='summary')

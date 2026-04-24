@@ -30,7 +30,7 @@
     },
     "fflag_workspace": {
       "key": "fflag_workspace",
-      "on": false,
+      "on": true,
       "prerequisites": [],
       "targets": [],
       "contextTargets": [],

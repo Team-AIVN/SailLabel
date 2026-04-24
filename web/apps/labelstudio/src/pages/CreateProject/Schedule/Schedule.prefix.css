@@ -1,0 +1,58 @@
+.project-schedule {
+  width: 700px;
+  margin: 32px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__note {
+    padding: 12px 16px;
+    background: var(--color-info-surface, var(--color-primary-surface));
+    color: var(--color-info-content, var(--color-primary-content));
+    border-radius: var(--corner-radius-smaller);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 180px;
+    gap: 16px;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--color-neutral-content);
+
+    & input {
+      padding: 8px 12px;
+      border: 1px solid var(--color-neutral-border);
+      border-radius: var(--corner-radius-smaller);
+      background: var(--color-neutral-background);
+      color: var(--color-neutral-content);
+      font-size: 14px;
+
+      &:focus,
+      &:focus-visible {
+        border-color: var(--color-neutral-border-bolder);
+        outline: none;
+        box-shadow: 0 0 0 4px var(--color-primary-focus-outline);
+      }
+    }
+
+    & small {
+      color: var(--color-neutral-content-subtler);
+    }
+  }
+
+  &__error {
+    padding: 10px 14px;
+    background: var(--color-negative-surface);
+    color: var(--color-negative-content);
+    border-radius: var(--corner-radius-smaller);
+    font-size: 13px;
+  }
+}

@@ -3,7 +3,7 @@
 from rest_framework import serializers
 from users.serializers import UserSimpleSerializer
 
-from .models import Workspace, WorkspaceMember
+from .models import Workspace, WorkspaceFileUpload, WorkspaceMember
 
 
 class WorkspaceSerializer(serializers.ModelSerializer):
@@ -38,3 +38,19 @@ class WorkspaceMemberSerializer(serializers.ModelSerializer):
         model = WorkspaceMember
         fields = ('id', 'user', 'user_detail', 'role', 'created_at', 'updated_at')
         read_only_fields = ('created_at', 'updated_at')
+
+
+class WorkspaceFileUploadSerializer(serializers.ModelSerializer):
+    file = serializers.SerializerMethodField(read_only=True)
+    size = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = WorkspaceFileUpload
+        fields = ('id', 'workspace', 'user', 'file', 'size', 'created_at')
+        read_only_fields = ('workspace', 'user', 'file', 'size', 'created_at')
+
+    def get_file(self, obj: WorkspaceFileUpload) -> str:
+        return obj.file_name
+
+    def get_size(self, obj: WorkspaceFileUpload):
+        return obj.size

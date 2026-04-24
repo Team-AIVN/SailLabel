@@ -19,12 +19,13 @@ from organizations.serializers import (
     OrganizationInviteSerializer,
     OrganizationMemberListParamsSerializer,
     OrganizationMemberListSerializer,
+    OrganizationMemberRoleUpdateSerializer,
     OrganizationMemberSerializer,
     OrganizationSerializer,
 )
-from projects.models import Project
+from projects.models import Project, ProjectMember
 from rest_framework import generics, status
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -33,7 +34,10 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.views import APIView
 from tasks.models import Annotation
+from users.constants import OrganizationRole
 from users.models import User
+from users.rules import is_super_admin
+from workspaces.models import WorkspaceMember
 
 from label_studio.core.permissions import ViewClassPermission, all_permissions
 from label_studio.core.utils.params import bool_from_request
@@ -155,6 +159,56 @@ class OrganizationMemberListAPI(generics.ListAPIView):
             )
         return projects_map
 
+    def _get_workspace_memberships_map(self):
+        members = self.paginated_members
+        user_ids = [member.user_id for member in members]
+        org = self.request.user.active_organization
+        rows = (
+            WorkspaceMember.objects.filter(
+                user_id__in=user_ids,
+                workspace__organization=org,
+                workspace__deleted_at__isnull=True,
+                deleted_at__isnull=True,
+            )
+            .values('user_id', 'role', 'workspace_id', 'workspace__title')
+        )
+        result: dict[int, list[dict]] = {}
+        for row in rows:
+            result.setdefault(row['user_id'], []).append(
+                {
+                    'scope': 'workspace',
+                    'scope_id': row['workspace_id'],
+                    'scope_title': row['workspace__title'],
+                    'role': row['role'],
+                }
+            )
+        return result
+
+    def _get_project_memberships_map(self):
+        members = self.paginated_members
+        user_ids = [member.user_id for member in members]
+        org = self.request.user.active_organization
+        rows = (
+            ProjectMember.objects.filter(
+                user_id__in=user_ids,
+                project__organization=org,
+                deleted_at__isnull=True,
+                enabled=True,
+            )
+            .values('user_id', 'role', 'project_id', 'project__title')
+        )
+        result: dict[int, list[dict]] = {}
+        for row in rows:
+            result.setdefault(row['user_id'], []).append(
+                {
+                    'scope': 'project',
+                    'scope_id': row['project_id'],
+                    'scope_title': row['project__title'],
+                    'role': row['role'],
+                }
+            )
+        return result
+
     def _get_contributed_to_projects_map(self):
         members = self.paginated_members
         user_ids = [member.user_id for member in members]
@@ -189,6 +243,9 @@ class OrganizationMemberListAPI(generics.ListAPIView):
             'contributed_to_projects_map': self._get_contributed_to_projects_map()
             if contributed_to_projects
             else None,
+            # role assignments: one bulk query per scope, independent of ``contributed_to_projects``.
+            'workspace_memberships_map': self._get_workspace_memberships_map(),
+            'project_memberships_map': self._get_project_memberships_map(),
             **context,
         }
 
@@ -243,6 +300,25 @@ class OrganizationMemberListAPI(generics.ListAPIView):
     ),
 )
 @method_decorator(
+    name='patch',
+    decorator=extend_schema(
+        tags=['Organizations'],
+        summary='Update an organization member role',
+        description=(
+            'Change an organization member role. Only super_admins (or the Django '
+            'superuser) may call this endpoint. The acting super_admin cannot '
+            'demote themselves while they are the only super_admin in the org.'
+        ),
+        request=OrganizationMemberRoleUpdateSerializer,
+        responses={200: OrganizationMemberSerializer},
+        extensions={
+            'x-fern-sdk-group-name': ['organizations', 'members'],
+            'x-fern-sdk-method-name': 'update_role',
+            'x-fern-audiences': ['public'],
+        },
+    ),
+)
+@method_decorator(
     name='delete',
     decorator=extend_schema(
         tags=['Organizations'],
@@ -269,19 +345,21 @@ class OrganizationMemberListAPI(generics.ListAPIView):
         },
     ),
 )
-class OrganizationMemberDetailAPI(GetParentObjectMixin, generics.RetrieveDestroyAPIView):
+class OrganizationMemberDetailAPI(GetParentObjectMixin, generics.RetrieveUpdateDestroyAPIView):
     permission_required = ViewClassPermission(
         GET=all_permissions.organizations_view,
+        PATCH=all_permissions.organizations_change,
+        PUT=all_permissions.organizations_change,
         DELETE=all_permissions.organizations_change,
     )
     parent_queryset = Organization.objects.all()
     parser_classes = (JSONParser, FormParser, MultiPartParser)
     serializer_class = OrganizationMemberSerializer
-    http_method_names = ['delete', 'get']
+    http_method_names = ['delete', 'get', 'patch']
 
     @property
     def permission_classes(self):
-        if self.request.method == 'DELETE':
+        if self.request.method in ('DELETE', 'PATCH'):
             return [IsAuthenticated, HasObjectPermission]
         return api_settings.DEFAULT_PERMISSION_CLASSES
 
@@ -301,6 +379,51 @@ class OrganizationMemberDetailAPI(GetParentObjectMixin, generics.RetrieveDestroy
         self.check_object_permissions(request, member)
         serializer = self.get_serializer(member)
         return Response(serializer.data)
+
+    def patch(self, request, pk=None, user_pk=None):
+        org = self.parent_object
+        if org != request.user.active_organization:
+            raise PermissionDenied('You can update members only for your current active organization.')
+        if not is_super_admin.test(request.user):
+            raise PermissionDenied('Only super admins can change organization roles.')
+
+        member = get_object_or_404(
+            OrganizationMember, user=user_pk, organization=org, deleted_at__isnull=True,
+        )
+
+        update = OrganizationMemberRoleUpdateSerializer(member, data=request.data, partial=True)
+        update.is_valid(raise_exception=True)
+        new_role = update.validated_data['role']
+        previous_role = member.role
+        if new_role == previous_role:
+            return Response(self.get_serializer(member).data)
+
+        # Last-admin guard: if the caller is demoting themselves AND they are the
+        # only remaining super_admin in the org, refuse. Otherwise the org becomes
+        # unmanageable at the organization scope.
+        if member.user_id == request.user.id and new_role != OrganizationRole.SUPER_ADMIN:
+            remaining_admins = OrganizationMember.objects.filter(
+                organization=org,
+                role=OrganizationRole.SUPER_ADMIN,
+                deleted_at__isnull=True,
+            ).exclude(pk=member.pk).count()
+            if remaining_admins == 0:
+                raise ValidationError('Cannot demote the last super admin of the organization.')
+
+        update.save()
+        member.refresh_from_db()
+
+        record_role_change(
+            action=AuditAction.ROLE_CHANGED,
+            actor=request.user,
+            subject=member,
+            scope='organization',
+            scope_id=org.id,
+            role=member.role,
+            previous_role=previous_role,
+            organization=org,
+        )
+        return Response(self.get_serializer(member).data)
 
     def delete(self, request, pk=None, user_pk=None):
         org = self.parent_object

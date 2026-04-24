@@ -83,7 +83,7 @@ Menu.Builder = (url, menuItems) => {
 Menu.Group = ({ children, title, className, style }) => {
   return (
     <div className={cn("menu-group").mix(className).toClassName()} style={style}>
-      <div className={cn("menu-group").elem("title").toClassName()}>{title}</div>
+      {title ? <div className={cn("menu-group").elem("title").toClassName()}>{title}</div> : null}
       <ul className={cn("menu-group").elem("list").toClassName()}>{children}</ul>
     </div>
   );

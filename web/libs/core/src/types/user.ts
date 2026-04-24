@@ -21,4 +21,5 @@ export type APIUser = {
   permissions?: Ability[];
   organization_role?: OrganizationRole;
   is_super_admin?: boolean;
+  managed_workspace_ids?: number[];
 };

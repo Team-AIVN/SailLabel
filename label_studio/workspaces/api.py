@@ -11,11 +11,12 @@ from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
-from .models import Workspace, WorkspaceMember
+from .models import Workspace, WorkspaceFileUpload, WorkspaceMember
 from .rules import is_workspace_manager, is_workspace_member
-from .serializers import WorkspaceMemberSerializer, WorkspaceSerializer
+from .serializers import WorkspaceFileUploadSerializer, WorkspaceMemberSerializer, WorkspaceSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -259,3 +260,113 @@ class WorkspaceProjectsAPI(_WorkspaceScopedMixin, generics.ListAPIView):
         ctx = super().get_serializer_context()
         ctx['created_by'] = self.request.user
         return ctx
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(tags=['Workspaces'], summary='List workspace file uploads'),
+)
+class WorkspaceFileUploadsAPI(_WorkspaceScopedMixin, generics.ListAPIView):
+    serializer_class = WorkspaceFileUploadSerializer
+    permission_required = ViewClassPermission(GET=all_permissions.workspaces_view)
+
+    def get_queryset(self):
+        workspace = self._get_workspace()
+        query = self.request.query_params.get('ids')
+        qs = workspace.file_uploads.all().order_by('-created_at')
+        if query:
+            import json as _json
+            try:
+                ids = _json.loads(query)
+            except Exception:
+                raise ValidationError('ids must be a JSON-encoded integer array')
+            if not isinstance(ids, list):
+                raise ValidationError('ids must be a JSON-encoded integer array')
+            qs = qs.filter(id__in=ids)
+        return qs
+
+
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Workspaces'],
+        summary='Import files into a workspace',
+        description='Store one or more files (multipart) or a single `url` (application/x-www-form-urlencoded) '
+        'as workspace-scoped file uploads. Files become the workspace default import pool.',
+    ),
+)
+class WorkspaceImportAPI(_WorkspaceScopedMixin, generics.GenericAPIView):
+    serializer_class = WorkspaceFileUploadSerializer
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+    permission_required = ViewClassPermission(POST=all_permissions.workspaces_change)
+
+    def post(self, request, *args, **kwargs):
+        workspace = self._get_workspace()
+        if not is_workspace_manager(request.user, workspace):
+            raise PermissionDenied('Only a workspace manager can import files.')
+
+        uploaded = []
+        # Case 1 — URL form payload
+        url = request.data.get('url') if hasattr(request.data, 'get') else None
+        if url:
+            filename = url.rstrip('/').split('/')[-1] or 'url-upload'
+            obj = WorkspaceFileUpload.objects.create(
+                workspace=workspace,
+                user=request.user,
+                file=_remote_url_placeholder(filename, url),
+            )
+            uploaded.append(obj)
+        else:
+            # Case 2 — multipart files
+            files = [f for _, f in request.FILES.items()]
+            if not files:
+                raise ValidationError('Provide at least one file (multipart) or a `url` field.')
+            for fileobj in files:
+                obj = WorkspaceFileUpload.objects.create(
+                    workspace=workspace,
+                    user=request.user,
+                    file=fileobj,
+                )
+                uploaded.append(obj)
+
+        data = WorkspaceFileUploadSerializer(uploaded, many=True).data
+        return Response(
+            {
+                'file_upload_ids': [item['id'] for item in data],
+                'files': data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@method_decorator(
+    name='delete',
+    decorator=extend_schema(tags=['Workspaces'], summary='Delete workspace file upload'),
+)
+class WorkspaceFileUploadDetailAPI(_WorkspaceScopedMixin, generics.DestroyAPIView):
+    serializer_class = WorkspaceFileUploadSerializer
+    permission_required = ViewClassPermission(DELETE=all_permissions.workspaces_change)
+    lookup_url_kwarg = 'upload_pk'
+
+    def get_queryset(self):
+        workspace = self._get_workspace()
+        return workspace.file_uploads.all()
+
+    def perform_destroy(self, instance):
+        workspace = self._get_workspace()
+        if not is_workspace_manager(self.request.user, workspace):
+            raise PermissionDenied('Only a workspace manager can delete files.')
+        instance.file.delete(save=False)
+        instance.delete()
+
+
+def _remote_url_placeholder(filename, url):
+    """Store a tiny placeholder file that records the referenced URL.
+
+    The Phase 3 storage pipeline will replace this with a real fetch pipeline; for now
+    we persist just enough information (the URL) so the UI can reflect the uploaded row.
+    """
+    from django.core.files.base import ContentFile
+    placeholder = ContentFile(url.encode('utf-8'))
+    placeholder.name = filename
+    return placeholder
