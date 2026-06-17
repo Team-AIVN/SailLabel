@@ -15,7 +15,8 @@
     },
     "card": {
       "projectCount_one": "{{count}} project",
-      "projectCount_other": "{{count}} projects"
+      "projectCount_other": "{{count}} projects",
+      "open": "Open"
     },
     "empty": {
       "title": "No workspaces yet",

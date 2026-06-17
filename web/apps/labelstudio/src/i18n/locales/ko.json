@@ -15,7 +15,8 @@
     },
     "card": {
       "projectCount_one": "프로젝트 {{count}}개",
-      "projectCount_other": "프로젝트 {{count}}개"
+      "projectCount_other": "프로젝트 {{count}}개",
+      "open": "열기"
     },
     "empty": {
       "title": "아직 워크스페이스가 없습니다",
