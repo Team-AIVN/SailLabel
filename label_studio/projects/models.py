@@ -62,6 +62,7 @@ from tasks.models import (
     Task,
     bulk_update_stats_project_tasks,
 )
+from users.constants import ProjectRole
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +195,14 @@ class Project(ProjectMixin, FsmHistoryStateModel):
 
     organization = models.ForeignKey(
         'organizations.Organization', on_delete=models.CASCADE, related_name='projects', null=True
+    )
+    workspace = models.ForeignKey(
+        'workspaces.Workspace',
+        on_delete=models.CASCADE,
+        related_name='projects',
+        null=True,
+        blank=True,
+        help_text='Workspace that owns the project',
     )
     label_config = models.TextField(
         _('label config'),
@@ -1398,9 +1407,50 @@ class ProjectMember(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='project_memberships', help_text='User ID'
     )
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='members', help_text='Project ID')
+    role = models.CharField(
+        _('role'),
+        max_length=32,
+        choices=ProjectRole.choices,
+        default=ProjectRole.ANNOTATOR,
+        db_index=True,
+        help_text='Project-scope role: project_manager, annotator, or reviewer.',
+    )
     enabled = models.BooleanField(default=True, help_text='Project member is enabled')
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    deleted_at = models.DateTimeField(
+        _('deleted at'),
+        default=None,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Timestamp indicating when the project member was soft-deleted. NULL means active.',
+    )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='project_memberships_deleted',
+        help_text='User who removed this membership',
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'project'],
+                condition=Q(deleted_at__isnull=True),
+                name='uniq_active_project_member',
+            ),
+        ]
+        indexes = [models.Index(fields=['project', 'role'])]
+
+    def has_permission(self, user):
+        # DRF default HasObjectPermission invokes this on retrieve/update/delete.
+        # Delegate to the parent project so project-scope rules (workspace manager,
+        # org owner, super admin) are respected uniformly. View-level mutation
+        # guards perform the stricter role check.
+        return self.project.has_permission(user)
 
 
 class ProjectSummary(models.Model):

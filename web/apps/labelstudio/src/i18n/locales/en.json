@@ -1,4 +1,30 @@
 {
+  "workspaces": {
+    "pageTitle": "Workspaces",
+    "createButton": "Create Workspace",
+    "createWorkspaceAriaLabel": "Create new workspace",
+    "fields": {
+      "title": "Title",
+      "description": "Description"
+    },
+    "create": {
+      "title": "Create Workspace",
+      "submit": "Create",
+      "titleTooShort": "Title must be at least 3 characters",
+      "failed": "Failed to create workspace"
+    },
+    "card": {
+      "projectCount_one": "{{count}} project",
+      "projectCount_other": "{{count}} projects"
+    },
+    "empty": {
+      "title": "No workspaces yet",
+      "description": "Create a workspace to organize projects and team members."
+    },
+    "toast": {
+      "created": "Workspace \"{{title}}\" created"
+    }
+  },
   "locale": {
     "label": "Language",
     "english": "English",
@@ -26,6 +52,7 @@
     "newsletterNotice": "Please check new notification settings in the Account & Settings page",
     "home": "Home",
     "projects": "Projects",
+    "workspaces": "Workspaces",
     "organization": "Organization",
     "api": "API",
     "docs": "Docs",

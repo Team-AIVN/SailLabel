@@ -24,6 +24,30 @@ export const API_CONFIG = {
     deleteProject: "DELETE:/projects/:pk",
     projectResetCache: "POST:/projects/:pk/summary/reset",
 
+    // Project members (role management)
+    projectMembers: "/projects/:pk/members",
+    createProjectMember: "POST:/projects/:pk/members",
+    updateProjectMember: "PATCH:/projects/:pk/members/:memberPk",
+    deleteProjectMember: "DELETE:/projects/:pk/members/:memberPk",
+
+    // Workspaces
+    workspaces: "/workspaces",
+    workspace: "/workspaces/:pk",
+    createWorkspace: "POST:/workspaces",
+    updateWorkspace: "PATCH:/workspaces/:pk",
+    deleteWorkspace: "DELETE:/workspaces/:pk",
+    workspaceMembers: "/workspaces/:pk/members",
+    workspaceMember: "/workspaces/:pk/members/:memberPk",
+    createWorkspaceMember: "POST:/workspaces/:pk/members",
+    updateWorkspaceMember: "PATCH:/workspaces/:pk/members/:memberPk",
+    deleteWorkspaceMember: "DELETE:/workspaces/:pk/members/:memberPk",
+    workspaceProjects: "/workspaces/:pk/projects",
+    workspaceFileUploads: "/workspaces/:pk/file-uploads",
+    deleteWorkspaceFileUpload: "DELETE:/workspaces/:pk/file-uploads/:uploadPk",
+    workspaceImportFiles: "POST:/workspaces/:pk/import",
+    assignWorkspaceDataset: "POST:/workspaces/:pk/assign",
+    workspaceWorkload: "/workspaces/:pk/workload",
+
     // Presigning
     presignUrlForTask: "/../tasks/:taskID/presign",
     presignUrlForProject: "/../projects/:projectId/presign",

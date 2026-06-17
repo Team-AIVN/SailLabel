@@ -253,6 +253,8 @@ INSTALLED_APPS = [
     'data_import',
     'data_export',
     'projects',
+    'workspaces',
+    'audit',
     'tasks',
     'data_manager',
     'io_storages',
@@ -709,6 +711,7 @@ DATA_MANAGER_CHECK_ACTION_PERMISSION = 'data_manager.actions.check_action_permis
 BULK_UPDATE_IS_LABELED = 'tasks.functions.bulk_update_is_labeled_by_overlap'
 USER_LOGIN_FORM = 'users.forms.LoginForm'
 PROJECT_MIXIN = 'projects.mixins.ProjectMixin'
+WORKSPACE_MIXIN = 'workspaces.mixins.WorkspaceMixin'
 TASK_MIXIN = 'tasks.mixins.TaskMixin'
 LSE_PROJECT = None
 GET_TASKS_AGREEMENT_QUERYSET = None

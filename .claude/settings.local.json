@@ -8,7 +8,9 @@
       "Bash(poetry run python -c ' *)",
       "WebSearch",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:mozilla-django-oidc.readthedocs.io)"
+      "WebFetch(domain:mozilla-django-oidc.readthedocs.io)",
+      "Bash(git ls-files *)",
+      "Bash(git ls-tree *)"
     ]
   }
 }

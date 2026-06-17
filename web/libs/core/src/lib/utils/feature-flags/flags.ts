@@ -45,6 +45,12 @@ export const FF_IMPROVE_GLOBAL_ERROR_MESSAGES = "fflag_feat_front_optic_1746_imp
 export const FF_HOMEPAGE = "fflag_all_feat_dia_1777_ls_homepage_short";
 
 /**
+ * Enable the Workspaces tenancy layer: workspace pages, workspace-scoped dataset
+ * upload, and workspace member/role management.
+ */
+export const FF_WORKSPACE = "fflag_feat_all_fit_162_workspaces_projects_ui_improvements";
+
+/**
  * Sample datasets UI for the import flow
  */
 export const FF_SAMPLE_DATASETS = "fflag_feat_dia_1920_project_creation_sample_data_short";

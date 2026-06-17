@@ -9,6 +9,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
+from users.constants import OrganizationRole
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,15 @@ class OrganizationMember(OrganizationMemberMixin, models.Model):
     )
     organization = models.ForeignKey(
         'organizations.Organization', on_delete=models.CASCADE, help_text='Organization ID'
+    )
+
+    role = models.CharField(
+        _('role'),
+        max_length=32,
+        choices=OrganizationRole.choices,
+        default=OrganizationRole.MEMBER,
+        db_index=True,
+        help_text='Organization-scope role. super_admin grants cross-workspace escalation.',
     )
 
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
@@ -54,6 +64,10 @@ class OrganizationMember(OrganizationMemberMixin, models.Model):
     @cached_property
     def is_owner(self):
         return self.user.id == self.organization.created_by.id
+
+    @cached_property
+    def is_super_admin(self):
+        return self.role == OrganizationRole.SUPER_ADMIN
 
     class Meta:
         ordering = ['pk']

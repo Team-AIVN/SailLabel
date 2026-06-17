@@ -30,7 +30,7 @@ import { VersionNotifier, VersionProvider } from "../VersionNotifier/VersionNoti
 import "./Menubar.prefix.css";
 import "./MenuContent.prefix.css";
 import "./MenuSidebar.prefix.css";
-import { FF_HOMEPAGE } from "../../utils/feature-flags";
+import { FF_HOMEPAGE, FF_WORKSPACE } from "../../utils/feature-flags";
 import { pages } from "@humansignal/app-common";
 import { isFF } from "../../utils/feature-flags";
 import { ff } from "@humansignal/core";
@@ -237,6 +237,15 @@ export const Menubar = ({ enabled, defaultOpened, defaultPinned, children, onSid
                   <Menu.Item label={t("menubar.home")} to="/" icon={<IconHome />} data-external exact />
                 )}
                 <Menu.Item label={t("menubar.projects")} to="/projects" icon={<IconFolder />} data-external exact />
+                {isFF(FF_WORKSPACE) && (
+                  <Menu.Item
+                    label={t("menubar.workspaces")}
+                    to="/workspaces"
+                    icon={<IconFolder />}
+                    data-external
+                    exact
+                  />
+                )}
                 <Menu.Item
                   label={t("menubar.organization")}
                   to="/organization"
