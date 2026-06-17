@@ -744,6 +744,32 @@ class ProjectStorageMixin(models.Model):
         abstract = True
 
 
+class WorkspaceStorageMixin(models.Model):
+    """Mixin that scopes a storage to a Workspace instead of a Project.
+
+    Workspace-scope storages act as templates: when a project is created inside
+    the workspace, a project-scope storage can be derived from the workspace one
+    via the `parent_storage` FK on the concrete project-scope model. Child
+    storages are plain project storages and sync independently.
+    """
+
+    workspace = models.ForeignKey(
+        'workspaces.Workspace',
+        related_name='%(app_label)s_%(class)ss',
+        on_delete=models.CASCADE,
+        help_text='Workspace that owns this storage.',
+    )
+
+    def has_permission(self, user):
+        user.workspace = self.workspace  # link for activity log
+        # Delegate to the workspace's permission check; downstream rules decide
+        # whether read vs mutate is allowed based on membership role.
+        return self.workspace.has_permission(user)
+
+    class Meta:
+        abstract = True
+
+
 def import_sync_background(storage_class, storage_id, timeout=settings.RQ_LONG_JOB_TIMEOUT, **kwargs):
     storage = storage_class.objects.get(id=storage_id)
     try:

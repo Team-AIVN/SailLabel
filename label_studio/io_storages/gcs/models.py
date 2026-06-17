@@ -20,6 +20,7 @@ from io_storages.base_models import (
     ImportStorage,
     ImportStorageLink,
     ProjectStorageMixin,
+    WorkspaceStorageMixin,
 )
 from io_storages.gcs.utils import GCS
 from io_storages.utils import (
@@ -241,6 +242,30 @@ class GCSImportStorageBase(GCSStorageMixin, ImportStorage):
 
 
 class GCSImportStorage(ProjectStorageMixin, GCSImportStorageBase):
+    # Optional workspace-scope template this storage was cloned from. Nullable so
+    # legacy and manually created project-scope storages keep working unchanged.
+    parent_storage = models.ForeignKey(
+        'io_storages.GCSWorkspaceImportStorage',
+        related_name='child_storages',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text='Workspace-scope storage this project storage was derived from.',
+    )
+
+    class Meta:
+        abstract = False
+
+
+class GCSWorkspaceImportStorage(WorkspaceStorageMixin, GCSImportStorageBase):
+    """Workspace-scope template for GCS imports. See LocalFilesWorkspaceImportStorage."""
+
+    def scan_and_create_links(self):  # pragma: no cover - defensive guard
+        raise NotImplementedError(
+            'Workspace-scope storages are templates only. '
+            'Create a project-scope storage with parent_storage set to sync tasks.'
+        )
+
     class Meta:
         abstract = False
 

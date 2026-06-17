@@ -22,6 +22,9 @@ from io_storages.azure_blob.api import (
     AzureBlobImportStorageSerializer,
     AzureBlobImportStorageSyncAPI,
     AzureBlobImportStorageValidateAPI,
+    AzureBlobWorkspaceImportStorageAssignAPI,
+    AzureBlobWorkspaceImportStorageDetailAPI,
+    AzureBlobWorkspaceImportStorageListAPI,
 )
 from io_storages.gcs.api import (
     GCSExportStorageDetailAPI,
@@ -35,6 +38,9 @@ from io_storages.gcs.api import (
     GCSImportStorageSerializer,
     GCSImportStorageSyncAPI,
     GCSImportStorageValidateAPI,
+    GCSWorkspaceImportStorageAssignAPI,
+    GCSWorkspaceImportStorageDetailAPI,
+    GCSWorkspaceImportStorageListAPI,
 )
 from io_storages.localfiles.api import (
     LocalFilesExportStorageDetailAPI,
@@ -48,6 +54,9 @@ from io_storages.localfiles.api import (
     LocalFilesImportStorageSerializer,
     LocalFilesImportStorageSyncAPI,
     LocalFilesImportStorageValidateAPI,
+    LocalFilesWorkspaceImportStorageAssignAPI,
+    LocalFilesWorkspaceImportStorageDetailAPI,
+    LocalFilesWorkspaceImportStorageListAPI,
 )
 from io_storages.localfiles.views import localfiles_data
 from io_storages.redis.api import (
@@ -75,6 +84,9 @@ from io_storages.s3.api import (
     S3ImportStorageSerializer,
     S3ImportStorageSyncAPI,
     S3ImportStorageValidateAPI,
+    S3WorkspaceImportStorageAssignAPI,
+    S3WorkspaceImportStorageDetailAPI,
+    S3WorkspaceImportStorageListAPI,
 )
 
 app_name = 'storages'
@@ -91,6 +103,14 @@ _api_urlpatterns = [
     path('s3/<int:pk>', S3ImportStorageDetailAPI.as_view(), name='storage-s3-detail'),
     path('s3/<int:pk>/sync', S3ImportStorageSyncAPI.as_view(), name='storage-s3-sync'),
     path('s3/validate', S3ImportStorageValidateAPI.as_view(), name='storage-s3-validate'),
+    # Workspace-scope S3 storage templates
+    path('s3/workspace/', S3WorkspaceImportStorageListAPI.as_view(), name='storage-s3-workspace-list'),
+    path('s3/workspace/<int:pk>', S3WorkspaceImportStorageDetailAPI.as_view(), name='storage-s3-workspace-detail'),
+    path(
+        's3/workspace/<int:pk>/assign',
+        S3WorkspaceImportStorageAssignAPI.as_view(),
+        name='storage-s3-workspace-assign',
+    ),
     path('s3/form', S3ImportStorageFormLayoutAPI.as_view(), name='storage-s3-form'),
     path(
         's3/files',
@@ -118,6 +138,22 @@ _api_urlpatterns = [
     path('export/azure/<int:pk>/sync', AzureBlobExportStorageSyncAPI.as_view(), name='export-storage-azure-sync'),
     path('export/azure/validate', AzureBlobExportStorageValidateAPI.as_view(), name='export-storage-azure-validate'),
     path('export/azure/form', AzureBlobExportStorageFormLayoutAPI.as_view(), name='export-storage-azure-form'),
+    # Workspace-scope Azure Blob storage templates
+    path(
+        'azure/workspace/',
+        AzureBlobWorkspaceImportStorageListAPI.as_view(),
+        name='storage-azure-workspace-list',
+    ),
+    path(
+        'azure/workspace/<int:pk>',
+        AzureBlobWorkspaceImportStorageDetailAPI.as_view(),
+        name='storage-azure-workspace-detail',
+    ),
+    path(
+        'azure/workspace/<int:pk>/assign',
+        AzureBlobWorkspaceImportStorageAssignAPI.as_view(),
+        name='storage-azure-workspace-assign',
+    ),
     # Google Cloud Storage
     path('gcs/', GCSImportStorageListAPI.as_view(), name='storage-gcs-list'),
     path('gcs/<int:pk>', GCSImportStorageDetailAPI.as_view(), name='storage-gcs-detail'),
@@ -134,6 +170,22 @@ _api_urlpatterns = [
     path('export/gcs/<int:pk>/sync', GCSExportStorageSyncAPI.as_view(), name='export-storage-gcs-sync'),
     path('export/gcs/validate', GCSExportStorageValidateAPI.as_view(), name='export-storage-gcs-validate'),
     path('export/gcs/form', GCSExportStorageFormLayoutAPI.as_view(), name='export-storage-gcs-form'),
+    # Workspace-scope GCS storage templates
+    path(
+        'gcs/workspace/',
+        GCSWorkspaceImportStorageListAPI.as_view(),
+        name='storage-gcs-workspace-list',
+    ),
+    path(
+        'gcs/workspace/<int:pk>',
+        GCSWorkspaceImportStorageDetailAPI.as_view(),
+        name='storage-gcs-workspace-detail',
+    ),
+    path(
+        'gcs/workspace/<int:pk>/assign',
+        GCSWorkspaceImportStorageAssignAPI.as_view(),
+        name='storage-gcs-workspace-assign',
+    ),
     # Redis DB
     path('redis/', RedisImportStorageListAPI.as_view(), name='storage-redis-list'),
     path('redis/<int:pk>', RedisImportStorageDetailAPI.as_view(), name='storage-redis-detail'),
@@ -184,6 +236,22 @@ if settings.ENABLE_LOCAL_FILES_STORAGE:
             'export/localfiles/form',
             LocalFilesExportStorageFormLayoutAPI.as_view(),
             name='export-storage-localfiles-form',
+        ),
+        # Workspace-scope localfiles storage templates
+        path(
+            'localfiles/workspace/',
+            LocalFilesWorkspaceImportStorageListAPI.as_view(),
+            name='storage-localfiles-workspace-list',
+        ),
+        path(
+            'localfiles/workspace/<int:pk>',
+            LocalFilesWorkspaceImportStorageDetailAPI.as_view(),
+            name='storage-localfiles-workspace-detail',
+        ),
+        path(
+            'localfiles/workspace/<int:pk>/assign',
+            LocalFilesWorkspaceImportStorageAssignAPI.as_view(),
+            name='storage-localfiles-workspace-assign',
         ),
     ]
 

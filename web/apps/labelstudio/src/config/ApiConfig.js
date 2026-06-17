@@ -48,6 +48,14 @@ export const API_CONFIG = {
     assignWorkspaceDataset: "POST:/workspaces/:pk/assign",
     workspaceWorkload: "/workspaces/:pk/workload",
 
+    // Workspace-scope cloud storage templates (provider in path: s3 | gcs | azure | localfiles)
+    workspaceStorages: "/storages/:provider/workspace/?workspace=:workspacePk",
+    createWorkspaceStorage: "POST:/storages/:provider/workspace/",
+    workspaceStorage: "/storages/:provider/workspace/:pk",
+    updateWorkspaceStorage: "PATCH:/storages/:provider/workspace/:pk",
+    deleteWorkspaceStorage: "DELETE:/storages/:provider/workspace/:pk",
+    assignWorkspaceStorageToProject: "POST:/storages/:provider/workspace/:pk/assign",
+
     // Presigning
     presignUrlForTask: "/../tasks/:taskID/presign",
     presignUrlForProject: "/../projects/:projectId/presign",

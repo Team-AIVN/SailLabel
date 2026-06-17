@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError  # t
 from io_storages.localfiles.models import (
     LocalFilesExportStorage,
     LocalFilesImportStorage,
+    LocalFilesWorkspaceImportStorage,
     normalize_storage_path,
 )
 from io_storages.serializers import ExportStorageSerializer, ImportStorageSerializer
@@ -36,6 +37,32 @@ class LocalFilesImportStorageSerializer(ImportStorageSerializer):
         if 'path' in data:
             data['path'] = normalize_storage_path(data['path'])
         storage = LocalFilesImportStorage(**data)
+        try:
+            storage.validate_connection()
+        except (DjangoValidationError, DRFValidationError) as exc:
+            detail = getattr(exc, 'detail', getattr(exc, 'messages', str(exc)))
+            raise DRFValidationError(_stringify_detail(detail))
+        except Exception as exc:
+            raise DRFValidationError(extract_message(exc))
+        return data
+
+
+class LocalFilesWorkspaceImportStorageSerializer(ImportStorageSerializer):
+    """Workspace-scope variant. Reuses the project-scope validation (path,
+    LOCAL_FILES_DOCUMENT_ROOT checks) since the underlying on-disk layout is
+    identical; only the ownership layer (workspace vs project) differs."""
+
+    type = serializers.ReadOnlyField(default=os.path.basename(os.path.dirname(__file__)))
+
+    class Meta:
+        model = LocalFilesWorkspaceImportStorage
+        fields = '__all__'
+
+    def validate(self, data):
+        data = super(LocalFilesWorkspaceImportStorageSerializer, self).validate(data)
+        if 'path' in data:
+            data['path'] = normalize_storage_path(data['path'])
+        storage = LocalFilesWorkspaceImportStorage(**data)
         try:
             storage.validate_connection()
         except (DjangoValidationError, DRFValidationError) as exc:
