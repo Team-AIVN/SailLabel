@@ -204,6 +204,18 @@ class Project(ProjectMixin, FsmHistoryStateModel):
         blank=True,
         help_text='Workspace that owns the project',
     )
+    due_date = models.DateTimeField(
+        _('due date'),
+        null=True,
+        blank=True,
+        help_text='Target completion date for the project (used by the workspace dashboard)',
+    )
+    tags = models.JSONField(
+        _('tags'),
+        default=list,
+        blank=True,
+        help_text='Free-form labels for filtering projects in the workspace dashboard',
+    )
     label_config = models.TextField(
         _('label config'),
         blank=True,

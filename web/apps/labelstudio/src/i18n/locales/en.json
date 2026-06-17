@@ -22,7 +22,72 @@
       "description": "Create a workspace to organize projects and team members."
     },
     "toast": {
-      "created": "Workspace \"{{title}}\" created"
+      "created": "Workspace \"{{title}}\" created",
+      "importBound": "Workspace \"{{title}}\" created with {{count}} file(s)."
+    },
+    "detail": {
+      "projects": "Projects",
+      "noProjects": "No projects in this workspace yet.",
+      "members": "Members",
+      "dataset": "Dataset",
+      "workload": "Workload",
+      "notFound": "Workspace not found"
+    },
+    "roles": {
+      "member": "Member",
+      "workspace_manager": "Workspace Manager"
+    },
+    "members": {
+      "user": "User",
+      "role": "Role",
+      "add": "Add member",
+      "selectUser": "Select a user",
+      "added": "Member added",
+      "addFailed": "Could not add member",
+      "roleUpdated": "Role updated",
+      "removed": "Member removed"
+    },
+    "dataset": {
+      "uploaded": "{{count}} file(s) uploaded",
+      "uploadFailed": "Upload failed",
+      "selectProject": "Select a project",
+      "byCount": "By count",
+      "byRatio": "By ratio",
+      "assign": "Assign",
+      "assigned": "Assigned {{count}} task(s)",
+      "assignFailed": "Assignment failed"
+    },
+    "workload": {
+      "refresh": "Refresh report",
+      "annotations": "Annotations",
+      "cancelled": "Skipped",
+      "projects": "Projects"
+    },
+    "steps": {
+      "name": "Workspace Name",
+      "import": "Data Import"
+    },
+    "dashboard": {
+      "newProject": "New Project",
+      "newDataset": "New Dataset",
+      "inviteUser": "Invite User",
+      "searchProjects": "Search projects",
+      "searchDatasets": "Search datasets",
+      "searchUsers": "Search users",
+      "allTypes": "All types",
+      "filterTag": "Filter by tag",
+      "sortNewest": "Newest",
+      "sortDueDate": "Due date",
+      "sortProgress": "Progress",
+      "sortTitle": "Title",
+      "tagsPlaceholder": "tags, comma separated",
+      "reviewProgress": "{{p}}% reviewed",
+      "datasetName": "Name",
+      "dataType": "Type",
+      "itemCount": "Items",
+      "lastUpdated": "Last updated",
+      "projectCreated": "Project created",
+      "actionFailed": "Action failed"
     }
   },
   "locale": {
@@ -43,7 +108,9 @@
     "loading": "Loading",
     "or": "or",
     "learnMore": "Learn more",
-    "optional": "Optional"
+    "optional": "Optional",
+    "remove": "Remove",
+    "actions": "Actions"
   },
   "menubar": {
     "keyboardShortcuts": "Keyboard Shortcuts",

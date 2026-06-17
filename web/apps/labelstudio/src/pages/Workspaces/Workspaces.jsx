@@ -9,6 +9,7 @@ import { useContextProps } from "../../providers/RoutesProvider";
 import { cn } from "../../utils/bem";
 import { CreateWorkspace } from "./CreateWorkspace";
 import { WorkspacesList } from "./WorkspacesList";
+import { WorkspaceDetail } from "./WorkspaceDetail";
 import "./Workspaces.prefix.css";
 
 const parseList = (response) => {
@@ -89,6 +90,14 @@ export const WorkspacesPage = () => {
 WorkspacesPage.title = "Workspaces";
 WorkspacesPage.path = "/workspaces";
 WorkspacesPage.exact = true;
+WorkspacesPage.routes = () => [
+  {
+    title: "Workspace",
+    path: "/:id(\\d+)",
+    exact: true,
+    component: WorkspaceDetail,
+  },
+];
 
 const CreateWorkspaceContextButton = ({ openCreate }) => {
   const { t } = useTranslation();

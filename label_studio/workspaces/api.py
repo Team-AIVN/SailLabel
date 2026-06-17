@@ -16,7 +16,14 @@ from rest_framework.response import Response
 
 from .models import Workspace, WorkspaceFileUpload, WorkspaceMember
 from .rules import is_workspace_manager, is_workspace_member
-from .serializers import WorkspaceFileUploadSerializer, WorkspaceMemberSerializer, WorkspaceSerializer
+from .serializers import (
+    WorkspaceDatasetSerializer,
+    WorkspaceFileUploadSerializer,
+    WorkspaceMemberSerializer,
+    WorkspaceProjectCardSerializer,
+    WorkspaceSerializer,
+    WorkspaceSummarySerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +163,17 @@ class WorkspaceMembersAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
 
     def get_queryset(self):
         workspace = self._get_workspace()
-        return workspace.members.filter(deleted_at__isnull=True).order_by('id')
+        qs = workspace.members.filter(deleted_at__isnull=True).select_related('user').order_by('id')
+        search = self.request.query_params.get('search')
+        if search:
+            from django.db.models import Q
+
+            qs = qs.filter(
+                Q(user__first_name__icontains=search)
+                | Q(user__last_name__icontains=search)
+                | Q(user__email__icontains=search)
+            )
+        return qs
 
     def perform_create(self, serializer):
         workspace = self._get_workspace()
@@ -242,24 +259,72 @@ class WorkspaceMemberDetailAPI(_WorkspaceScopedMixin, generics.RetrieveUpdateDes
     name='get',
     decorator=extend_schema(tags=['Workspaces'], summary='List projects in workspace'),
 )
-class WorkspaceProjectsAPI(_WorkspaceScopedMixin, generics.ListAPIView):
-    permission_required = ViewClassPermission(GET=all_permissions.projects_view)
+class WorkspaceProjectsAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
+    serializer_class = WorkspaceProjectCardSerializer
+    permission_required = ViewClassPermission(
+        GET=all_permissions.projects_view,
+        POST=all_permissions.projects_create,
+    )
 
-    def get_serializer_class(self):
-        # Import lazily to avoid circular import at module load time.
-        from projects.serializers import ProjectSerializer
-        return ProjectSerializer
+    # whitelist of DB-orderable fields for ?ordering=
+    ORDERING_FIELDS = {
+        'due_date': 'due_date',
+        '-due_date': '-due_date',
+        'created_at': 'created_at',
+        '-created_at': '-created_at',
+        'title': 'title',
+        '-title': '-title',
+        # progress is approximated by the count of review-finished tasks
+        'progress': 'finished_task_number',
+        '-progress': '-finished_task_number',
+    }
 
     def get_queryset(self):
         from projects.models import Project
 
         workspace = self._get_workspace()
-        return Project.objects.filter(workspace=workspace).order_by('-created_at')
+        # with_counts() is a manager method (adds task_number / finished_task_number
+        # annotations); call it before filtering.
+        qs = Project.objects.with_counts().filter(workspace=workspace, deleted_at__isnull=True)
 
-    def get_serializer_context(self):
-        ctx = super().get_serializer_context()
-        ctx['created_by'] = self.request.user
-        return ctx
+        params = self.request.query_params
+        search = params.get('search')
+        if search:
+            qs = qs.filter(title__icontains=search)
+
+        label_type = params.get('label_type')
+        if label_type:
+            # parsed_label_config is a JSON map keyed by control name → {type, ...}
+            qs = qs.filter(parsed_label_config__icontains=f'"type": "{label_type}"')
+
+        tag = params.get('tag')
+        if tag:
+            qs = qs.filter(tags__icontains=tag)
+
+        ordering = self.ORDERING_FIELDS.get(params.get('ordering'), '-created_at')
+        return qs.order_by(ordering)
+
+    def perform_create(self, serializer):
+        workspace = self._get_workspace()
+        if not is_workspace_manager(self.request.user, workspace):
+            raise PermissionDenied('Only a workspace manager can create projects.')
+        serializer.save(
+            workspace=workspace,
+            organization=self.request.user.active_organization,
+            created_by=self.request.user,
+        )
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(tags=['Workspaces'], summary='Workspace summary', description='Resource totals.'),
+)
+class WorkspaceSummaryAPI(_WorkspaceScopedMixin, generics.RetrieveAPIView):
+    serializer_class = WorkspaceSummarySerializer
+    permission_required = ViewClassPermission(GET=all_permissions.workspaces_view)
+
+    def get_object(self):
+        return self._get_workspace()
 
 
 @method_decorator(
@@ -283,6 +348,27 @@ class WorkspaceFileUploadsAPI(_WorkspaceScopedMixin, generics.ListAPIView):
             if not isinstance(ids, list):
                 raise ValidationError('ids must be a JSON-encoded integer array')
             qs = qs.filter(id__in=ids)
+        return qs
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(tags=['Workspaces'], summary='List workspace datasets'),
+)
+class WorkspaceDatasetsAPI(_WorkspaceScopedMixin, generics.ListAPIView):
+    """Workspace file uploads presented as dataset rows for the dashboard."""
+
+    serializer_class = WorkspaceDatasetSerializer
+    permission_required = ViewClassPermission(GET=all_permissions.workspaces_view)
+
+    def get_queryset(self):
+        workspace = self._get_workspace()
+        qs = workspace.file_uploads.all().order_by('-created_at')
+        search = self.request.query_params.get('search')
+        if search:
+            from django.db.models import Q
+
+            qs = qs.filter(Q(file__icontains=search))
         return qs
 
 

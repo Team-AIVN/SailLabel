@@ -1,9 +1,23 @@
 """This file and its contents are licensed under the Apache License 2.0. Please see the included NOTICE for copyright information and LICENSE for a copy of the license."""
 
+import os
+
+from projects.models import Project
 from rest_framework import serializers
 from users.serializers import UserSimpleSerializer
 
 from .models import Workspace, WorkspaceFileUpload, WorkspaceMember
+
+
+def _derive_label_type(parsed_label_config):
+    """Pick a human-facing labeling type from a project's parsed label config."""
+    if not parsed_label_config:
+        return None
+    for cfg in parsed_label_config.values():
+        control_type = cfg.get('type') if isinstance(cfg, dict) else None
+        if control_type:
+            return control_type
+    return None
 
 
 class WorkspaceSerializer(serializers.ModelSerializer):
@@ -54,3 +68,91 @@ class WorkspaceFileUploadSerializer(serializers.ModelSerializer):
 
     def get_size(self, obj: WorkspaceFileUpload):
         return obj.size
+
+
+class WorkspaceSummarySerializer(serializers.ModelSerializer):
+    """Workspace header summary with resource totals for the dashboard."""
+
+    total_users = serializers.SerializerMethodField()
+    total_datasets = serializers.SerializerMethodField()
+    total_projects = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Workspace
+        fields = ('id', 'title', 'description', 'created_at', 'total_users', 'total_datasets', 'total_projects')
+
+    def get_total_users(self, obj) -> int:
+        return obj.members.filter(deleted_at__isnull=True).count()
+
+    def get_total_datasets(self, obj) -> int:
+        return obj.file_uploads.count()
+
+    def get_total_projects(self, obj) -> int:
+        return obj.projects.filter(deleted_at__isnull=True).count()
+
+
+class WorkspaceDatasetSerializer(serializers.ModelSerializer):
+    """A workspace file upload presented as a dataset row."""
+
+    name = serializers.SerializerMethodField()
+    data_type = serializers.SerializerMethodField()
+    item_count = serializers.SerializerMethodField()
+    last_updated = serializers.DateTimeField(source='created_at', read_only=True)
+    size = serializers.SerializerMethodField()
+
+    class Meta:
+        model = WorkspaceFileUpload
+        fields = ('id', 'name', 'data_type', 'item_count', 'last_updated', 'size')
+
+    def get_name(self, obj) -> str:
+        return obj.file_name
+
+    def get_data_type(self, obj) -> str:
+        ext = os.path.splitext(obj.file_name or '')[1].lstrip('.').upper()
+        return ext or 'FILE'
+
+    def get_item_count(self, obj):
+        # Record-level counts require parsing the file; left null for the list view.
+        return None
+
+    def get_size(self, obj):
+        return obj.size
+
+
+class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
+    """Project card for the workspace dashboard.
+
+    ``label_type`` is derived from the parsed label config; ``review_progress``
+    is the share of fully-completed (review-finished) tasks. Count fields come
+    from ``Project.objects.with_counts()`` annotations.
+    """
+
+    label_type = serializers.SerializerMethodField()
+    review_progress = serializers.SerializerMethodField()
+    task_number = serializers.IntegerField(read_only=True, default=None)
+    finished_task_number = serializers.IntegerField(read_only=True, default=None)
+
+    class Meta:
+        model = Project
+        fields = (
+            'id',
+            'title',
+            'description',
+            'label_type',
+            'review_progress',
+            'due_date',
+            'tags',
+            'task_number',
+            'finished_task_number',
+            'created_at',
+        )
+
+    def get_label_type(self, obj):
+        return _derive_label_type(obj.parsed_label_config)
+
+    def get_review_progress(self, obj) -> int:
+        total = getattr(obj, 'task_number', None) or 0
+        finished = getattr(obj, 'finished_task_number', None) or 0
+        if not total:
+            return 0
+        return round(finished / total * 100)
