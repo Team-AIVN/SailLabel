@@ -121,6 +121,7 @@ pip install label-studio
 You can run the latest Label Studio version locally without installing the package from pypi. 
 
 ```bash
+source .venv/bin/activate
 # Install all package dependencies
 pip install poetry
 poetry install
