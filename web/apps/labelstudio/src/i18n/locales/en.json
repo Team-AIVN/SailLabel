@@ -283,5 +283,27 @@
         "pending": "Pending"
       }
     }
+  },
+  "review": {
+    "title": "Review",
+    "annotationProgress": "Annotation progress",
+    "reviewProgress": "Review progress",
+    "reviewed": "Reviewed",
+    "allStatuses": "All review statuses",
+    "empty": "No tasks.",
+    "status": {
+      "NOT_SELECTED": "Not selected",
+      "PENDING": "Pending",
+      "ACCEPTED": "Accepted",
+      "REJECTED": "Rejected",
+      "FIXED_AND_ACCEPTED": "Fixed & accepted"
+    },
+    "col": {
+      "taskId": "Task ID",
+      "version": "Version",
+      "annotator": "Annotator",
+      "reviewStatus": "Review status",
+      "reviewer": "Reviewer"
+    }
   }
 }

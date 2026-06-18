@@ -171,3 +171,33 @@ class ReviewWorkflowTests(APITestCase):
         rows = cand.json()
         rows = rows['results'] if isinstance(rows, dict) and 'results' in rows else rows
         assert rows == []
+
+    def test_review_tasks_list_columns_and_filter(self):
+        tasks = [self._task() for _ in range(3)]
+        anns = [_completed_annotation(t, self.annotator) for t in tasks]
+        self.client.force_authenticate(self.reviewer)
+        self.client.post(f'/api/annotations/{anns[0].id}/review/', {'decision': 'ACCEPT'}, format='json')
+
+        res = self.client.get(f'/api/projects/{self.project.id}/review/tasks/')
+        assert res.status_code == 200, res.content
+        rows = res.json()
+        rows = rows['results'] if isinstance(rows, dict) and 'results' in rows else rows
+        assert len(rows) == 3
+        first = rows[0]
+        # Task List UI columns
+        for key in ('task_id', 'annotation_version', 'annotator', 'review_status', 'reviewer'):
+            assert key in first
+        assert first['annotation_version'] == 1
+        assert first['annotator']['id'] == self.annotator.id
+
+        # filter by review_status
+        res2 = self.client.get(f'/api/projects/{self.project.id}/review/tasks/?review_status=ACCEPTED')
+        rows2 = res2.json()
+        rows2 = rows2['results'] if isinstance(rows2, dict) and 'results' in rows2 else rows2
+        assert len(rows2) == 1
+        assert rows2[0]['review_status'] == 'ACCEPTED'
+        assert rows2[0]['reviewer']['id'] == self.reviewer.id
+
+        # invalid filter -> 400
+        bad = self.client.get(f'/api/projects/{self.project.id}/review/tasks/?review_status=NOPE')
+        assert bad.status_code == 400

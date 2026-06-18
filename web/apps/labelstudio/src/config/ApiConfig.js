@@ -24,6 +24,12 @@ export const API_CONFIG = {
     deleteProject: "DELETE:/projects/:pk",
     projectResetCache: "POST:/projects/:pk/summary/reset",
 
+    // Review workflow
+    reviewTasks: "/projects/:pk/review/tasks",
+    reviewCandidates: "/projects/:pk/review/candidates",
+    reviewProgress: "/projects/:pk/review/progress",
+    submitReview: "POST:/annotations/:pk/review",
+
     // Project members (role management)
     projectMembers: "/projects/:pk/members",
     createProjectMember: "POST:/projects/:pk/members",

@@ -283,5 +283,27 @@
         "pending": "대기중"
       }
     }
+  },
+  "review": {
+    "title": "리뷰",
+    "annotationProgress": "어노테이션 진행률",
+    "reviewProgress": "리뷰 진행률",
+    "reviewed": "검수 완료",
+    "allStatuses": "전체 리뷰 상태",
+    "empty": "태스크가 없습니다.",
+    "status": {
+      "NOT_SELECTED": "미선정",
+      "PENDING": "대기",
+      "ACCEPTED": "승인",
+      "REJECTED": "반려",
+      "FIXED_AND_ACCEPTED": "수정 후 승인"
+    },
+    "col": {
+      "taskId": "태스크 ID",
+      "version": "버전",
+      "annotator": "어노테이터",
+      "reviewStatus": "리뷰 상태",
+      "reviewer": "리뷰어"
+    }
   }
 }

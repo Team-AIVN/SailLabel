@@ -61,6 +61,35 @@ class ReviewCandidatesAPI(generics.ListAPIView):
 
 @method_decorator(
     name='get',
+    decorator=extend_schema(
+        tags=['Reviews'],
+        summary='Review task list',
+        description='All tasks in the project with review columns (task id, current annotation '
+        'version, annotator, review status, reviewer) for the review Task List UI. '
+        'Optional ?review_status= filter.',
+    ),
+)
+class ReviewTasksAPI(generics.ListAPIView):
+    serializer_class = ReviewCandidateSerializer
+    permission_required = ViewClassPermission(GET=all_permissions.projects_view)
+
+    def get_queryset(self):
+        project = _project_in_active_org_or_404(self.request, self.kwargs['pk'])
+        _require_reviewer(self.request.user, project)
+        qs = Task.objects.filter(project=project).select_related(
+            'current_annotation', 'current_annotation__completed_by'
+        )
+        review_status = self.request.query_params.get('review_status')
+        if review_status:
+            valid = {c for c, _ in Task.ReviewStatus.choices}
+            if review_status not in valid:
+                raise ValidationError(f'invalid review_status; one of {sorted(valid)}')
+            qs = qs.filter(review_status=review_status)
+        return qs.order_by('id')
+
+
+@method_decorator(
+    name='get',
     decorator=extend_schema(tags=['Reviews'], summary='Review progress', description='Annotation and review progress.'),
 )
 class ReviewProgressAPI(generics.GenericAPIView):

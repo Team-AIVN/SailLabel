@@ -29,7 +29,7 @@ class ReviewCandidateSerializer(serializers.Serializer):
     """A task whose current annotation is awaiting review (Task List UI source)."""
 
     task_id = serializers.IntegerField(source='id')
-    current_annotation_id = serializers.IntegerField(source='current_annotation_id')
+    current_annotation_id = serializers.IntegerField()
     annotation_version = serializers.SerializerMethodField()
     annotator = serializers.SerializerMethodField()
     review_status = serializers.CharField()
