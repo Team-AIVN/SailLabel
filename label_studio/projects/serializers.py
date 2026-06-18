@@ -277,6 +277,7 @@ class ProjectSerializer(FlexFieldsModelSerializer):
             'enable_empty_annotation',
             'show_annotation_history',
             'organization',
+            'workspace',
             'color',
             'maximum_annotations',
             'is_published',
@@ -322,6 +323,17 @@ class ProjectSerializer(FlexFieldsModelSerializer):
         else:
             # Existing project is updated
             self.instance.validate_config(value)
+        return value
+
+    def validate_workspace(self, value):
+        # A project may only be placed in a workspace from its own organization.
+        if value is None:
+            return value
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        active_org_id = getattr(user, 'active_organization_id', None)
+        if active_org_id and value.organization_id != active_org_id:
+            raise serializers.ValidationError('Workspace does not belong to your active organization.')
         return value
 
     def validate_model_version(self, value):

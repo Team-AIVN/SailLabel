@@ -1,4 +1,4 @@
-import { EnterpriseBadge, Select, Typography } from "@humansignal/ui";
+import { Select, Typography } from "@humansignal/ui";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router";
@@ -6,19 +6,27 @@ import { ToggleItems } from "../../components";
 import { Button } from "@humansignal/ui";
 import { Modal } from "../../components/Modal/Modal";
 import { Space } from "../../components/Space/Space";
-import { HeidiTips } from "../../components/HeidiTips/HeidiTips";
 import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
 import { ConfigPage } from "./Config/Config";
 import "./CreateProject.prefix.css";
-import { ImportPage } from "./Import/Import";
-import { useImportPage } from "./Import/useImportPage";
 import { useDraftProject } from "./utils/useDraftProject";
 import { Input, TextArea } from "../../components/Form";
-import { FF_LSDV_E_297, isFF } from "../../utils/feature-flags";
-import { createURL } from "../../components/HeidiTips/utils";
+import { FF_WORKSPACE, isFF } from "../../utils/feature-flags";
 
-const ProjectName = ({ name, setName, onSaveName, onSubmit, error, description, setDescription, show = true }) => {
+const ProjectName = ({
+  name,
+  setName,
+  onSaveName,
+  onSubmit,
+  error,
+  description,
+  setDescription,
+  workspaces = [],
+  workspace,
+  setWorkspace,
+  show = true,
+}) => {
   const { t } = useTranslation();
   if (!show) return null;
   return (
@@ -58,31 +66,21 @@ const ProjectName = ({ name, setName, onSaveName, onSubmit, error, description, 
           className="project-description w-full"
         />
       </div>
-      {isFF(FF_LSDV_E_297) && (
+      {isFF(FF_WORKSPACE) && (
         <div className="w-full flex flex-col gap-2">
-          <label>
+          <label className="w-full" htmlFor="project_workspace">
             {t("createProject.name.workspace")}
-            <EnterpriseBadge className="ml-tight" />
           </label>
-          <Select placeholder={t("createProject.name.workspacePlaceholder")} disabled options={[]} triggerClassName="!flex-1" />
+          <Select
+            placeholder={t("createProject.name.workspacePlaceholder")}
+            value={workspace ?? null}
+            onChange={setWorkspace}
+            options={workspaces.map((w) => ({ label: w.title, value: w.id }))}
+            triggerClassName="!flex-1"
+          />
           <Typography size="small" className="mt-tight mb-wider">
-            {t("createProject.name.workspaceHint")}{" "}
-            <a
-              href={createURL(
-                "https://docs.humansignal.com/guide/manage_projects#Create-workspaces-to-organize-projects",
-                {
-                  experiment: "project_creation_dropdown",
-                  treatment: "simplify_project_management",
-                },
-              )}
-              target="_blank"
-              rel="noreferrer"
-              className="underline hover:no-underline"
-            >
-              {t("common.learnMore")}
-            </a>
+            {t("createProject.name.workspaceHint")}
           </Typography>
-          <HeidiTips collection="projectCreation" />
         </div>
       )}
     </form>
@@ -101,7 +99,17 @@ export const CreateProject = ({ onClose }) => {
   const [name, setName] = React.useState("");
   const [error, setError] = React.useState();
   const [description, setDescription] = React.useState("");
-  const [sample, setSample] = React.useState(null);
+  const [workspace, setWorkspace] = React.useState(null);
+  const [workspaces, setWorkspaces] = React.useState([]);
+
+  // Load the org's workspaces so the project can be created inside one.
+  React.useEffect(() => {
+    if (!isFF(FF_WORKSPACE)) return;
+    (async () => {
+      const data = await api.callApi("workspaces");
+      setWorkspaces(Array.isArray(data) ? data : (data?.results ?? []));
+    })();
+  }, [api]);
 
   const setStep = React.useCallback((step) => {
     _setStep(step);
@@ -117,15 +125,10 @@ export const CreateProject = ({ onClose }) => {
     setError(null);
   }, [name]);
 
-  const { columns, uploading, uploadDisabled, finishUpload, pageProps, uploadSample } = useImportPage(project, sample);
-
   const rootClass = cn("create-project");
   const tabClass = rootClass.elem("tab");
   const steps = {
     name: <span className={tabClass.mod({ disabled: !!error }).toClassName()}>{t("createProject.steps.name")}</span>,
-    import: (
-      <span className={tabClass.mod({ disabled: uploadDisabled }).toClassName()}>{t("createProject.steps.import")}</span>
-    ),
     config: t("createProject.steps.config"),
   };
 
@@ -140,35 +143,27 @@ export const CreateProject = ({ onClose }) => {
       title: name,
       description,
       label_config: project?.label_config ?? "<View></View>",
+      workspace: workspace ?? null,
     }),
-    [name, description, project?.label_config],
+    [name, description, project?.label_config, workspace],
   );
 
   const onCreate = React.useCallback(async () => {
-    // First, persist project with label_config so import/reimport validates against it
+    setWaitingStatus(true);
     const response = await api.callApi("updateProject", {
       params: {
         pk: project.id,
       },
       body: { ...projectBody, is_draft: false },
     });
+    setWaitingStatus(false);
 
     if (response === null) return;
 
-    const imported = await finishUpload();
-
-    if (!imported) return;
-
-    setWaitingStatus(true);
-
-    if (sample) await uploadSample(sample);
-
-    __lsa("create_project.create", { sample: sample?.url });
-
-    setWaitingStatus(false);
+    __lsa("create_project.create");
 
     history.push(`/projects/${response.id}/data`);
-  }, [project, projectBody, finishUpload]);
+  }, [project, projectBody]);
 
   const onSaveName = async () => {
     if (error) return;
@@ -223,9 +218,9 @@ export const CreateProject = ({ onClose }) => {
             <Button
               look="primary"
               onClick={onCreate}
-              waiting={waiting || uploading}
+              waiting={waiting}
               waitingClickable={false}
-              disabled={!project || uploadDisabled || error}
+              disabled={!project || error}
             >
               {t("common.save")}
             </Button>
@@ -239,15 +234,10 @@ export const CreateProject = ({ onClose }) => {
           onSubmit={onCreate}
           description={description}
           setDescription={setDescription}
+          workspaces={workspaces}
+          workspace={workspace}
+          setWorkspace={setWorkspace}
           show={step === "name"}
-        />
-        <ImportPage
-          project={project}
-          show={step === "import"}
-          sample={sample}
-          onSampleDatasetSelect={setSample}
-          openLabelingConfig={() => setStep("config")}
-          {...pageProps}
         />
         <ConfigPage
           project={project}
@@ -255,7 +245,7 @@ export const CreateProject = ({ onClose }) => {
             updateProject({ ...project, label_config: config });
           }}
           show={step === "config"}
-          columns={columns}
+          columns={[]}
           disableSaveButton={true}
         />
       </div>
