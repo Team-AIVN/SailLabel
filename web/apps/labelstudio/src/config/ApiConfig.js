@@ -68,6 +68,15 @@ export const API_CONFIG = {
     addWorkPoolItems: "POST:/workspaces/:pk/work-pools/:poolPk/items",
     removeWorkPoolItems: "DELETE:/workspaces/:pk/work-pools/:poolPk/items",
 
+    // Compensation
+    projectCompensationPolicy: "/projects/:pk/compensation-policy",
+    setProjectCompensationPolicy: "PUT:/projects/:pk/compensation-policy",
+    workspaceCompensation: "/workspaces/:pk/compensation",
+    memberCompensation: "/workspaces/:pk/compensation/members/:userPk",
+    workspacePayments: "/workspaces/:pk/payments",
+    createWorkspacePayment: "POST:/workspaces/:pk/payments",
+    deleteWorkspacePayment: "DELETE:/workspaces/:pk/payments/:paymentPk",
+
     // Workspace-scope cloud storage templates (provider in path: s3 | gcs | azure | localfiles)
     workspaceStorages: "/storages/:provider/workspace/?workspace=:workspacePk",
     createWorkspaceStorage: "POST:/storages/:provider/workspace/",

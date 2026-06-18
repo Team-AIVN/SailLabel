@@ -14,6 +14,8 @@ import { useDraftProject } from "./utils/useDraftProject";
 import { Input, TextArea } from "../../components/Form";
 import { FF_WORKSPACE, isFF } from "../../utils/feature-flags";
 
+const CURRENCY_OPTIONS = ["USD", "EUR", "KRW", "JPY"].map((c) => ({ label: c, value: c }));
+
 const ProjectName = ({
   name,
   setName,
@@ -29,6 +31,12 @@ const ProjectName = ({
   workPools = [],
   workPool,
   setWorkPool,
+  currency,
+  setCurrency,
+  annotationUnitPrice,
+  setAnnotationUnitPrice,
+  reviewUnitPrice,
+  setReviewUnitPrice,
   show = true,
 }) => {
   const { t } = useTranslation();
@@ -110,6 +118,60 @@ const ProjectName = ({
           </Typography>
         </div>
       )}
+      {isFF(FF_WORKSPACE) && workspace && (
+        <div className="w-full flex flex-col gap-2">
+          <label className="w-full" htmlFor="project_currency">
+            {t("createProject.name.currency", "Currency")}
+          </label>
+          <Select
+            placeholder={t("createProject.name.currencyPlaceholder", "Select a currency")}
+            value={currency ?? null}
+            onChange={setCurrency}
+            options={CURRENCY_OPTIONS}
+            triggerClassName="!flex-1"
+          />
+          <Typography size="small" className="mt-tight mb-wider">
+            {t(
+              "createProject.name.compensationHint",
+              "Workers are paid per qualified annotation and review in this currency.",
+            )}
+          </Typography>
+          <div className="w-full flex gap-4">
+            <div className="flex-1 flex flex-col gap-2">
+              <label htmlFor="project_annotation_unit_price">
+                {t("createProject.name.annotationUnitPrice", "Annotation Unit Price")}
+              </label>
+              <Input
+                name="annotation_unit_price"
+                id="project_annotation_unit_price"
+                type="number"
+                min="0"
+                step="0.0001"
+                placeholder="0.00"
+                value={annotationUnitPrice}
+                onChange={(e) => setAnnotationUnitPrice(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div className="flex-1 flex flex-col gap-2">
+              <label htmlFor="project_review_unit_price">
+                {t("createProject.name.reviewUnitPrice", "Review Unit Price")}
+              </label>
+              <Input
+                name="review_unit_price"
+                id="project_review_unit_price"
+                type="number"
+                min="0"
+                step="0.0001"
+                placeholder="0.00"
+                value={reviewUnitPrice}
+                onChange={(e) => setReviewUnitPrice(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 };
@@ -131,6 +193,10 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
   const [workspaces, setWorkspaces] = React.useState([]);
   const [workPool, setWorkPool] = React.useState(null);
   const [workPools, setWorkPools] = React.useState([]);
+  // Compensation policy (required when the project belongs to a workspace).
+  const [currency, setCurrency] = React.useState("USD");
+  const [annotationUnitPrice, setAnnotationUnitPrice] = React.useState("");
+  const [reviewUnitPrice, setReviewUnitPrice] = React.useState("");
   const workspaceLocked = workspaceId != null;
 
   // Load the org's workspaces so the project can be created inside one.
@@ -197,6 +263,12 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
   const workPoolRequired = isFF(FF_WORKSPACE) && !!workspace;
   const workPoolMissing = workPoolRequired && !workPool;
 
+  // Compensation must be configured for workspace projects.
+  const compensationRequired = isFF(FF_WORKSPACE) && !!workspace;
+  const annPriceValid = annotationUnitPrice !== "" && Number.parseFloat(annotationUnitPrice) >= 0;
+  const revPriceValid = reviewUnitPrice !== "" && Number.parseFloat(reviewUnitPrice) >= 0;
+  const compensationMissing = compensationRequired && (!currency || !annPriceValid || !revPriceValid);
+
   const onCreate = React.useCallback(async () => {
     setWaitingStatus(true);
     const response = await api.callApi("updateProject", {
@@ -205,6 +277,18 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
       },
       body: { ...projectBody, is_draft: false },
     });
+
+    // Persist the compensation policy for workspace projects (separate endpoint).
+    if (response !== null && compensationRequired) {
+      await api.callApi("setProjectCompensationPolicy", {
+        params: { pk: project.id },
+        body: {
+          currency,
+          annotation_unit_price: Number.parseFloat(annotationUnitPrice),
+          review_unit_price: Number.parseFloat(reviewUnitPrice),
+        },
+      });
+    }
     setWaitingStatus(false);
 
     if (response === null) return;
@@ -212,7 +296,7 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
     __lsa("create_project.create");
 
     history.push(`/projects/${response.id}/data`);
-  }, [project, projectBody]);
+  }, [project, projectBody, compensationRequired, currency, annotationUnitPrice, reviewUnitPrice]);
 
   const onSaveName = async () => {
     if (error) return;
@@ -269,7 +353,7 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
               onClick={onCreate}
               waiting={waiting}
               waitingClickable={false}
-              disabled={!project || error || workPoolMissing}
+              disabled={!project || error || workPoolMissing || compensationMissing}
             >
               {t("common.save")}
             </Button>
@@ -290,6 +374,12 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
           workPools={workPools}
           workPool={workPool}
           setWorkPool={setWorkPool}
+          currency={currency}
+          setCurrency={setCurrency}
+          annotationUnitPrice={annotationUnitPrice}
+          setAnnotationUnitPrice={setAnnotationUnitPrice}
+          reviewUnitPrice={reviewUnitPrice}
+          setReviewUnitPrice={setReviewUnitPrice}
           show={step === "name"}
         />
         <ConfigPage

@@ -1,0 +1,114 @@
+.compensation {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  &__loading {
+    padding: 40px;
+    text-align: center;
+    color: var(--color-neutral-content-subtler);
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--color-neutral-border);
+      font-size: 13px;
+    }
+    th {
+      color: var(--color-neutral-content-subtler);
+      font-weight: 500;
+    }
+  }
+
+  &__num {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__row {
+    cursor: pointer;
+    &:hover {
+      background: var(--color-neutral-emphasis, #f3f4f6);
+    }
+    &_active {
+      background: var(--color-primary-emphasis, #eef0ff);
+    }
+  }
+
+  &__badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    background: var(--color-neutral-emphasis, #eef0f4);
+    color: var(--color-neutral-content-subtler);
+
+    &_status_PAID {
+      background: var(--color-positive-emphasis, #e6f4ea);
+      color: var(--color-positive-surface-content, #2ea043);
+    }
+    &_status_PARTIALLY_PAID {
+      background: var(--color-warning-emphasis, #fff4e5);
+      color: var(--color-warning-surface-content, #b25e09);
+    }
+    &_status_UNPAID {
+      background: var(--color-negative-emphasis, #fdecec);
+      color: var(--color-negative-surface-content, #d1242f);
+    }
+  }
+
+  &__detail {
+    border: 1px solid var(--color-neutral-border);
+    border-radius: 8px;
+    background: var(--color-neutral-surface);
+    padding: 14px 16px;
+
+    h4 {
+      margin: 16px 0 6px;
+      font-size: 13px;
+      color: var(--color-neutral-content-subtler);
+    }
+  }
+
+  &__detail-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__muted {
+    color: var(--color-neutral-content-subtler);
+    text-align: center;
+    padding: 14px;
+  }
+
+  &__pay-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+
+    input {
+      height: 30px;
+      padding: 0 8px;
+      border: 1px solid var(--color-neutral-border);
+      border-radius: 6px;
+      background: var(--color-neutral-background);
+    }
+    input[type="number"] {
+      width: 120px;
+    }
+  }
+
+  &__pay-label {
+    font-size: 12px;
+    color: var(--color-neutral-content-subtler);
+  }
+}

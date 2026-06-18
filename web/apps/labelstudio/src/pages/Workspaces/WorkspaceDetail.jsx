@@ -8,16 +8,18 @@ import { Spinner } from "../../components/Spinner/Spinner";
 import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
 import { CreateProject } from "../CreateProject/CreateProject";
+import { Compensation } from "./Compensation";
 import { WorkPools } from "./WorkPools";
 import { WorkspaceImportPage } from "./WorkspaceImport";
 import "./WorkspaceDetail.prefix.css";
 
-const TABS = ["projects", "datasets", "workpools", "users"];
+const TABS = ["projects", "datasets", "workpools", "users", "compensation"];
 const TAB_LABEL_KEY = {
   projects: "workspaces.detail.projects",
   datasets: "workspaces.detail.dataset",
   workpools: "workspaces.detail.workpools",
   users: "workspaces.detail.members",
+  compensation: "workspaces.detail.compensation",
 };
 const WORKSPACE_ROLES = ["member", "workspace_manager"];
 
@@ -401,6 +403,12 @@ export const WorkspaceDetail = () => {
       {activeTab === "workpools" && (
         <section className={root.elem("panel").toClassName()}>
           <WorkPools workspaceId={Number(id)} />
+        </section>
+      )}
+
+      {activeTab === "compensation" && (
+        <section className={root.elem("panel").toClassName()}>
+          <Compensation workspaceId={Number(id)} />
         </section>
       )}
 

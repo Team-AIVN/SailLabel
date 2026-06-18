@@ -33,7 +33,8 @@
       "dataset": "Dataset",
       "workload": "Workload",
       "notFound": "Workspace not found",
-      "workpools": "Work Pools"
+      "workpools": "Work Pools",
+      "compensation": "Compensation"
     },
     "roles": {
       "member": "Member",
@@ -193,7 +194,12 @@
       "workspaceHint": "Simplify project management by organizing projects into workspaces.",
       "workPool": "Work Pool",
       "workPoolPlaceholder": "Select a work pool",
-      "workPoolHint": "Project tasks are created from the selected work pool. Datasets are managed by workspace admins."
+      "workPoolHint": "Project tasks are created from the selected work pool. Datasets are managed by workspace admins.",
+      "currency": "Currency",
+      "currencyPlaceholder": "Select a currency",
+      "compensationHint": "Workers are paid per qualified annotation and review in this currency.",
+      "annotationUnitPrice": "Annotation Unit Price",
+      "reviewUnitPrice": "Review Unit Price"
     },
     "import": {
       "datasetUrl": "Dataset URL",
@@ -328,5 +334,39 @@
     "empty": "No items in this pool",
     "renamePrompt": "New work pool name",
     "deleteConfirm": "Delete this work pool?"
+  },
+  "compensation": {
+    "memberName": "Member",
+    "role": "Role",
+    "currency": "Currency",
+    "totalEarned": "Total Earned",
+    "totalPaid": "Total Paid",
+    "remaining": "Remaining Balance",
+    "statusLabel": "Status",
+    "noData": "No compensation data yet.",
+    "projectEarnings": "Project Compensation",
+    "project": "Project",
+    "qAnnotations": "Qualified Annotations",
+    "annotationEarnings": "Annotation Earnings",
+    "qReviews": "Qualified Reviews",
+    "reviewEarnings": "Review Earnings",
+    "totalEarnings": "Total Earnings",
+    "noEarnings": "No earnings yet.",
+    "paymentHistory": "Payment History",
+    "paymentDate": "Date",
+    "amount": "Amount",
+    "notes": "Notes",
+    "noPayments": "No payments recorded.",
+    "recordPaymentIn": "Record payment in {{currency}}",
+    "record": "Record",
+    "paymentRecorded": "Payment recorded",
+    "amountInvalid": "Enter an amount greater than 0",
+    "actionFailed": "Action failed",
+    "deletePaymentConfirm": "Delete this payment record?",
+    "status": {
+      "PAID": "Paid",
+      "PARTIALLY_PAID": "Partially Paid",
+      "UNPAID": "Unpaid"
+    }
   }
 }

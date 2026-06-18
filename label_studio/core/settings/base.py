@@ -257,6 +257,7 @@ INSTALLED_APPS = [
     'audit',
     'tasks',
     'reviews',
+    'compensation',
     'data_manager',
     'io_storages',
     'ml',

@@ -33,7 +33,8 @@
       "dataset": "데이터셋",
       "workload": "작업량",
       "notFound": "워크스페이스를 찾을 수 없습니다",
-      "workpools": "작업집합"
+      "workpools": "작업집합",
+      "compensation": "보상"
     },
     "roles": {
       "member": "멤버",
@@ -193,7 +194,12 @@
       "workspaceHint": "프로젝트를 워크스페이스로 묶어 관리해 보세요.",
       "workPool": "작업집합",
       "workPoolPlaceholder": "작업집합 선택",
-      "workPoolHint": "선택한 작업집합의 항목으로 프로젝트 태스크가 생성됩니다. 데이터셋은 워크스페이스 관리자가 관리합니다."
+      "workPoolHint": "선택한 작업집합의 항목으로 프로젝트 태스크가 생성됩니다. 데이터셋은 워크스페이스 관리자가 관리합니다.",
+      "currency": "통화",
+      "currencyPlaceholder": "통화 선택",
+      "compensationHint": "작업자는 이 통화로 적격 어노테이션 및 검토 건당 보상을 받습니다.",
+      "annotationUnitPrice": "어노테이션 단가",
+      "reviewUnitPrice": "검토 단가"
     },
     "import": {
       "datasetUrl": "데이터셋 URL",
@@ -328,5 +334,39 @@
     "empty": "이 Pool에 항목이 없습니다",
     "renamePrompt": "새 작업집합 이름",
     "deleteConfirm": "이 작업집합을 삭제할까요?"
+  },
+  "compensation": {
+    "memberName": "멤버",
+    "role": "역할",
+    "currency": "통화",
+    "totalEarned": "총 적립액",
+    "totalPaid": "총 지급액",
+    "remaining": "잔액",
+    "statusLabel": "상태",
+    "noData": "아직 보상 데이터가 없습니다.",
+    "projectEarnings": "프로젝트별 보상",
+    "project": "프로젝트",
+    "qAnnotations": "적격 어노테이션 수",
+    "annotationEarnings": "어노테이션 적립액",
+    "qReviews": "적격 검토 수",
+    "reviewEarnings": "검토 적립액",
+    "totalEarnings": "합계",
+    "noEarnings": "아직 적립액이 없습니다.",
+    "paymentHistory": "지급 내역",
+    "paymentDate": "날짜",
+    "amount": "금액",
+    "notes": "메모",
+    "noPayments": "지급 기록이 없습니다.",
+    "recordPaymentIn": "{{currency}}(으)로 지급 기록",
+    "record": "기록",
+    "paymentRecorded": "지급을 기록했습니다",
+    "amountInvalid": "0보다 큰 금액을 입력하세요",
+    "actionFailed": "작업에 실패했습니다",
+    "deletePaymentConfirm": "이 지급 기록을 삭제할까요?",
+    "status": {
+      "PAID": "지급 완료",
+      "PARTIALLY_PAID": "부분 지급",
+      "UNPAID": "미지급"
+    }
   }
 }
