@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory, useLocation, useParams } from "react-router";
 import { Button, useToast } from "@humansignal/ui";
+import { Modal } from "../../components/Modal/Modal";
+import { Space } from "../../components/Space/Space";
 import { Spinner } from "../../components/Spinner/Spinner";
 import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
+import { WorkspaceImportPage } from "./WorkspaceImport";
 import "./WorkspaceDetail.prefix.css";
 
 const TABS = ["projects", "datasets", "users"];
@@ -40,7 +43,6 @@ export const WorkspaceDetail = () => {
   const history = useHistory();
   const location = useLocation();
   const root = useMemo(() => cn("workspace-detail"), []);
-  const fileInputRef = useRef();
 
   const activeTab = useMemo(() => {
     const tab = new URLSearchParams(location.search).get("tab");
@@ -72,6 +74,8 @@ export const WorkspaceDetail = () => {
   const [showInvite, setShowInvite] = useState(false);
   const [inviteUser, setInviteUser] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
+  const [showImport, setShowImport] = useState(false);
+  const [importUploading, setImportUploading] = useState(false);
 
   const loadSummary = useCallback(async () => {
     const res = await api.callApi("workspaceSummary", { params: { pk: id } });
@@ -160,24 +164,14 @@ export const WorkspaceDetail = () => {
     }
   }, [api, id, newProjectTitle, newProjectTags, toast, t, loadProjects, loadSummary]);
 
-  const uploadDataset = useCallback(
-    async (event) => {
-      const selected = Array.from(event.target.files ?? []);
-      if (!selected.length) return;
-      const fd = new FormData();
-      for (const file of selected) fd.append(file.name, file);
-      const res = await api.callApi("workspaceImportFiles", { params: { pk: id }, body: fd });
-      event.target.value = "";
-      if (res && !res.error) {
-        toast.show({ message: t("workspaces.dataset.uploaded", { count: selected.length }) });
-        loadDatasets();
-        loadSummary();
-      } else {
-        toast.show({ message: res?.detail ?? t("workspaces.dataset.uploadFailed"), type: "error" });
-      }
-    },
-    [api, id, toast, t, loadDatasets, loadSummary],
-  );
+  const openImport = useCallback(() => setShowImport(true), []);
+
+  const closeImport = useCallback(() => {
+    setShowImport(false);
+    // WorkspaceImport uploads files to the pool as they are dropped, so refresh on close.
+    loadDatasets();
+    loadSummary();
+  }, [loadDatasets, loadSummary]);
 
   const inviteMember = useCallback(async () => {
     if (!inviteUser) return;
@@ -223,14 +217,14 @@ export const WorkspaceDetail = () => {
         setShowNewProject(true);
       } else if (action === "dataset") {
         setTab("datasets");
-        fileInputRef.current?.click();
+        openImport();
       } else if (action === "user") {
         setTab("users");
         setShowInvite(true);
         loadOrgMembers();
       }
     },
-    [setTab, loadOrgMembers],
+    [setTab, loadOrgMembers, openImport],
   );
 
   if (loading && !summary) {
@@ -281,7 +275,6 @@ export const WorkspaceDetail = () => {
         <Button size="small" look="outlined" onClick={() => openQuickAction("user")}>
           {t("workspaces.dashboard.inviteUser", "Invite User")}
         </Button>
-        <input type="file" multiple ref={fileInputRef} onChange={uploadDataset} style={{ display: "none" }} />
       </div>
 
       {/* Tabs */}
@@ -402,7 +395,7 @@ export const WorkspaceDetail = () => {
               value={datasetSearch}
               onChange={(e) => setDatasetSearch(e.target.value)}
             />
-            <Button size="small" onClick={() => fileInputRef.current?.click()}>
+            <Button size="small" onClick={openImport}>
               {t("workspaces.dashboard.newDataset", "New Dataset")}
             </Button>
           </div>
@@ -504,6 +497,38 @@ export const WorkspaceDetail = () => {
             </tbody>
           </table>
         </section>
+      )}
+
+      {showImport && (
+        <Modal
+          title={t("workspaces.dashboard.importTitle", "Import data")}
+          onHide={closeImport}
+          fullscreen
+          visible
+          bare
+        >
+          <Modal.Header divided>
+            <div className={cn("modal").elem("title").toClassName()}>
+              {t("workspaces.dashboard.importTitle", "Import data")}
+            </div>
+            <Space>
+              <Button
+                size="small"
+                onClick={closeImport}
+                waiting={importUploading}
+                aria-label={t("common.close", "Close")}
+              >
+                {t("common.close", "Close")}
+              </Button>
+            </Space>
+          </Modal.Header>
+          <WorkspaceImportPage
+            workspace={summary ? { id: summary.id } : { id: Number(id) }}
+            show
+            onWaiting={setImportUploading}
+            onFileListUpdate={() => {}}
+          />
+        </Modal>
       )}
     </div>
   );

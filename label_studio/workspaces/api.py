@@ -331,9 +331,54 @@ class WorkspaceSummaryAPI(_WorkspaceScopedMixin, generics.RetrieveAPIView):
     name='get',
     decorator=extend_schema(tags=['Workspaces'], summary='List workspace file uploads'),
 )
-class WorkspaceFileUploadsAPI(_WorkspaceScopedMixin, generics.ListAPIView):
+def _store_workspace_files(workspace, user, request):
+    """Persist uploaded files (multipart) or a single `url` into a workspace's pool.
+
+    Shared by the workspace file-uploads POST and the import endpoint. Returns the
+    list of created :class:`WorkspaceFileUpload` rows.
+    """
+    uploaded = []
+    url = request.data.get('url') if hasattr(request.data, 'get') else None
+    if url:
+        filename = url.rstrip('/').split('/')[-1] or 'url-upload'
+        uploaded.append(
+            WorkspaceFileUpload.objects.create(
+                workspace=workspace,
+                user=user,
+                file=_remote_url_placeholder(filename, url),
+            )
+        )
+    else:
+        files = [f for _, f in request.FILES.items()]
+        if not files:
+            raise ValidationError('Provide at least one file (multipart) or a `url` field.')
+        for fileobj in files:
+            uploaded.append(
+                WorkspaceFileUpload.objects.create(workspace=workspace, user=user, file=fileobj)
+            )
+    return uploaded
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(tags=['Workspaces'], summary='List workspace file uploads'),
+)
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Workspaces'],
+        summary='Upload files to a workspace',
+        description='Workspace-scope analogue of `/api/projects/<id>/file-uploads`: stores '
+        'one or more files (multipart) or a single `url` into the workspace import pool.',
+    ),
+)
+class WorkspaceFileUploadsAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
     serializer_class = WorkspaceFileUploadSerializer
-    permission_required = ViewClassPermission(GET=all_permissions.workspaces_view)
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+    permission_required = ViewClassPermission(
+        GET=all_permissions.workspaces_view,
+        POST=all_permissions.workspaces_change,
+    )
 
     def get_queryset(self):
         workspace = self._get_workspace()
@@ -349,6 +394,17 @@ class WorkspaceFileUploadsAPI(_WorkspaceScopedMixin, generics.ListAPIView):
                 raise ValidationError('ids must be a JSON-encoded integer array')
             qs = qs.filter(id__in=ids)
         return qs
+
+    def post(self, request, *args, **kwargs):
+        workspace = self._get_workspace()
+        if not is_workspace_manager(request.user, workspace):
+            raise PermissionDenied('Only a workspace manager can upload files.')
+        uploaded = _store_workspace_files(workspace, request.user, request)
+        data = WorkspaceFileUploadSerializer(uploaded, many=True).data
+        return Response(
+            {'file_upload_ids': [item['id'] for item in data], 'files': data},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 @method_decorator(
@@ -391,30 +447,7 @@ class WorkspaceImportAPI(_WorkspaceScopedMixin, generics.GenericAPIView):
         if not is_workspace_manager(request.user, workspace):
             raise PermissionDenied('Only a workspace manager can import files.')
 
-        uploaded = []
-        # Case 1 — URL form payload
-        url = request.data.get('url') if hasattr(request.data, 'get') else None
-        if url:
-            filename = url.rstrip('/').split('/')[-1] or 'url-upload'
-            obj = WorkspaceFileUpload.objects.create(
-                workspace=workspace,
-                user=request.user,
-                file=_remote_url_placeholder(filename, url),
-            )
-            uploaded.append(obj)
-        else:
-            # Case 2 — multipart files
-            files = [f for _, f in request.FILES.items()]
-            if not files:
-                raise ValidationError('Provide at least one file (multipart) or a `url` field.')
-            for fileobj in files:
-                obj = WorkspaceFileUpload.objects.create(
-                    workspace=workspace,
-                    user=request.user,
-                    file=fileobj,
-                )
-                uploaded.append(obj)
-
+        uploaded = _store_workspace_files(workspace, request.user, request)
         data = WorkspaceFileUploadSerializer(uploaded, many=True).data
         return Response(
             {
@@ -422,6 +455,33 @@ class WorkspaceImportAPI(_WorkspaceScopedMixin, generics.GenericAPIView):
                 'files': data,
             },
             status=status.HTTP_201_CREATED,
+        )
+
+
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Workspaces'],
+        summary='Import predictions into a workspace',
+        description='Workspace-scope analogue of `/api/projects/<id>/import/predictions`. '
+        'Predictions attach to project tasks, which do not exist at the workspace '
+        'level, so import the dataset into a project first and POST predictions there.',
+    ),
+)
+class WorkspaceImportPredictionsAPI(_WorkspaceScopedMixin, generics.GenericAPIView):
+    serializer_class = WorkspaceFileUploadSerializer
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+    permission_required = ViewClassPermission(POST=all_permissions.workspaces_change)
+
+    def post(self, request, *args, **kwargs):
+        workspace = self._get_workspace()
+        if not is_workspace_manager(request.user, workspace):
+            raise PermissionDenied('Only a workspace manager can import predictions.')
+        # Predictions require concrete project tasks; the workspace only holds an
+        # un-assigned dataset pool. Direct the caller to the per-project endpoint.
+        raise ValidationError(
+            'Predictions cannot be imported at the workspace scope. Assign the dataset to a '
+            'project first, then POST to /api/projects/<project_id>/import/predictions.'
         )
 
 

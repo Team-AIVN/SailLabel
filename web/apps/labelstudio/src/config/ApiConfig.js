@@ -46,8 +46,10 @@ export const API_CONFIG = {
     createWorkspaceProject: "POST:/workspaces/:pk/projects",
     workspaceDatasets: "/workspaces/:pk/datasets",
     workspaceFileUploads: "/workspaces/:pk/file-uploads",
+    uploadWorkspaceFiles: "POST:/workspaces/:pk/file-uploads",
     deleteWorkspaceFileUpload: "DELETE:/workspaces/:pk/file-uploads/:uploadPk",
     workspaceImportFiles: "POST:/workspaces/:pk/import",
+    workspaceImportPredictions: "POST:/workspaces/:pk/import/predictions",
     assignWorkspaceDataset: "POST:/workspaces/:pk/assign",
     workspaceWorkload: "/workspaces/:pk/workload",
 

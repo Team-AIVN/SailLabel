@@ -30,6 +30,11 @@ _api_urlpatterns = [
     path('<int:pk>/assign/', api.WorkspaceAssignDatasetAPI.as_view(), name='workspace-assign-dataset'),
     path('<int:pk>/workload/', api.WorkspaceWorkloadAPI.as_view(), name='workspace-workload'),
     path('<int:pk>/import/', api.WorkspaceImportAPI.as_view(), name='workspace-import'),
+    path(
+        '<int:pk>/import/predictions/',
+        api.WorkspaceImportPredictionsAPI.as_view(),
+        name='workspace-import-predictions',
+    ),
     path('<int:pk>/file-uploads/', api.WorkspaceFileUploadsAPI.as_view(), name='workspace-file-uploads'),
     path(
         '<int:pk>/file-uploads/<int:upload_pk>/',
