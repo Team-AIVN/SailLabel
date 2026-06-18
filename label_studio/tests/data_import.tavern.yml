@@ -27,7 +27,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import'
+    url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/'
   response:
     json:
       annotation_count: 0
@@ -183,7 +183,7 @@ stages:
     headers:
       content-type: application/x-www-form-urlencoded
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import?commit_to_project=false'
+    url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/?commit_to_project=false'
   response:
     json:
       could_be_tasks_list: True
@@ -224,24 +224,6 @@ stages:
       prediction_count: 0
       task_count: 2
     status_code: 201
-- name: stage
-  request:
-    method: GET
-    url: '{django_live_url}/api/projects/{project_pk}/file-uploads'
-  response:
-    status_code: 200
-- name: check_list_of_file_uploads
-  request:
-    method: GET
-    url: '{django_live_url}/api/projects/{project_pk}/file-uploads'
-    params:
-      all: true
-  response:
-    status_code: 200
-    json:
-      - id: !anyint
-      - id: !anyint
-
 - name: stage
   request:
     method: GET
@@ -322,7 +304,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import?commit_to_project=false'
+    url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/?commit_to_project=false'
   response:
     json:
       annotation_count: null
@@ -351,18 +333,6 @@ stages:
     method: GET
     url: '{django_live_url}/api/projects/{project_pk}/tasks'
   response:
-    status_code: 200
-- name: stage
-  request:
-    headers:
-      content-type: application/json
-    json:
-      file_upload_ids: !force_format_include '{file_upload_ids}'
-    method: DELETE
-    url: '{django_live_url}/api/projects/{project_pk}/file-uploads'
-  response:
-    json:
-      deleted: 2
     status_code: 200
 
 ---
@@ -394,7 +364,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import'
+    url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/'
   response:
     status_code: 400
     json:
@@ -423,7 +393,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import'
+    url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/'
   response:
     status_code: 201
     json:
@@ -441,7 +411,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import'
+    url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/'
   response:
     status_code: 400
     json:
@@ -479,7 +449,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import?return_task_ids=true&preannotated_from_fields=label'
+    url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/?return_task_ids=true&preannotated_from_fields=label'
   response:
     status_code: 201
     save:
@@ -552,7 +522,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import?return_task_ids=true&preannotated_from_fields=bbox'
+    url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/?return_task_ids=true&preannotated_from_fields=bbox'
   response:
     status_code: 201
     save:
@@ -613,7 +583,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import?return_task_ids=true'
+    url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/?return_task_ids=true'
   response:
     status_code: 201
     save:
@@ -621,33 +591,39 @@ stages:
         first_task: "task_ids[0]"
         second_task: "task_ids[1]"
         third_task: "task_ids[2]"
-- name: Import bulk predictions
+# bulk /import/predictions was removed; create predictions individually via the predictions API
+- name: Create prediction for 1st task
   request:
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import/predictions'
+    url: '{django_live_url}/api/predictions/'
     json:
-      - task: !int '{first_task}'
-        result:
-          - from_name: label
-            to_name: image
-            type: choices
-            value:
-              choices:
-                - AAA
-        score: 0.123
-      - task: !int '{third_task}'
-        result:
-          - from_name: label
-            to_name: image
-            type: choices
-            value:
-              choices:
-                - BBB
-        model_version: abcdefgh
+      task: !int '{first_task}'
+      result:
+        - from_name: label
+          to_name: image
+          type: choices
+          value:
+            choices:
+              - AAA
+      score: 0.123
   response:
     status_code: 201
+- name: Create prediction for 3rd task
+  request:
+    method: POST
+    url: '{django_live_url}/api/predictions/'
     json:
-      created: 2
+      task: !int '{third_task}'
+      result:
+        - from_name: label
+          to_name: image
+          type: choices
+          value:
+            choices:
+              - BBB
+      model_version: abcdefgh
+  response:
+    status_code: 201
 - name: Check 1st task with prediction
   request:
     method: GET
@@ -729,7 +705,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import?return_task_ids=true'
+    url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/?return_task_ids=true'
   response:
     status_code: 201
     save:
@@ -773,7 +749,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import?commit_to_project=false'
+    url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/?commit_to_project=false'
   response:
     json:
       validation_errors:
@@ -809,7 +785,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{project_pk}/import?commit_to_project=false'
+    url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/?commit_to_project=false'
   response:
     json:
       validation_errors:

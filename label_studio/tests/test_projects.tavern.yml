@@ -240,7 +240,7 @@ stages:
       headers:
         content-type: multipart/form-data
       method: POST
-      url: '{django_live_url}/api/projects/{project_pk}/import?return_task_ids=true&preannotated_from_fields=bbox'
+      url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/?return_task_ids=true&preannotated_from_fields=bbox'
     response:
       status_code: 201
   - name: update_project_to_1_and_adjust_cohort_percentage
@@ -383,7 +383,7 @@ stages:
       headers:
         content-type: multipart/form-data
       method: POST
-      url: '{django_live_url}/api/projects/{project_pk}/import?return_task_ids=true'
+      url: '{django_live_url}/api/projects/{project_pk}/tasks/bulk/?return_task_ids=true'
     response:
       status_code: 201
       save:

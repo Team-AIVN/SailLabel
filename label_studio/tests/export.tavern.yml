@@ -28,7 +28,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     json:
       annotation_count: 0
