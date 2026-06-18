@@ -8,10 +8,17 @@ import { Spinner } from "../../components/Spinner/Spinner";
 import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
 import { CreateProject } from "../CreateProject/CreateProject";
+import { WorkPools } from "./WorkPools";
 import { WorkspaceImportPage } from "./WorkspaceImport";
 import "./WorkspaceDetail.prefix.css";
 
-const TABS = ["projects", "datasets", "users"];
+const TABS = ["projects", "datasets", "workpools", "users"];
+const TAB_LABEL_KEY = {
+  projects: "workspaces.detail.projects",
+  datasets: "workspaces.detail.dataset",
+  workpools: "workspaces.detail.workpools",
+  users: "workspaces.detail.members",
+};
 const WORKSPACE_ROLES = ["member", "workspace_manager"];
 
 const listOf = (response) => {
@@ -243,6 +250,10 @@ export const WorkspaceDetail = () => {
             <span className={root.elem("stat-value").toClassName()}>{summary?.total_projects ?? 0}</span>
             <span className={root.elem("stat-label").toClassName()}>{t("workspaces.detail.projects")}</span>
           </div>
+          <div className={root.elem("stat").toClassName()}>
+            <span className={root.elem("stat-value").toClassName()}>{summary?.total_work_pools ?? 0}</span>
+            <span className={root.elem("stat-label").toClassName()}>{t("workspaces.detail.workpools")}</span>
+          </div>
         </div>
       </header>
 
@@ -271,7 +282,7 @@ export const WorkspaceDetail = () => {
               .toClassName()}
             onClick={() => setTab(tab)}
           >
-            {t(`workspaces.detail.${tab === "users" ? "members" : tab === "datasets" ? "dataset" : "projects"}`)}
+            {t(TAB_LABEL_KEY[tab])}
           </button>
         ))}
       </nav>
@@ -383,6 +394,13 @@ export const WorkspaceDetail = () => {
               ))}
             </tbody>
           </table>
+        </section>
+      )}
+
+      {/* Work Pools tab */}
+      {activeTab === "workpools" && (
+        <section className={root.elem("panel").toClassName()}>
+          <WorkPools workspaceId={Number(id)} />
         </section>
       )}
 

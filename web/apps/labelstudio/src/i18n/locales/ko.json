@@ -32,7 +32,8 @@
       "members": "멤버",
       "dataset": "데이터셋",
       "workload": "작업량",
-      "notFound": "워크스페이스를 찾을 수 없습니다"
+      "notFound": "워크스페이스를 찾을 수 없습니다",
+      "workpools": "작업집합"
     },
     "roles": {
       "member": "멤버",
@@ -189,7 +190,10 @@
       "descriptionPlaceholder": "프로젝트 설명을 입력하세요 (선택)",
       "workspace": "워크스페이스",
       "workspacePlaceholder": "옵션 선택",
-      "workspaceHint": "프로젝트를 워크스페이스로 묶어 관리해 보세요."
+      "workspaceHint": "프로젝트를 워크스페이스로 묶어 관리해 보세요.",
+      "workPool": "작업집합",
+      "workPoolPlaceholder": "작업집합 선택",
+      "workPoolHint": "선택한 작업집합의 항목으로 프로젝트 태스크가 생성됩니다. 데이터셋은 워크스페이스 관리자가 관리합니다."
     },
     "import": {
       "datasetUrl": "데이터셋 URL",
@@ -305,5 +309,24 @@
       "reviewStatus": "리뷰 상태",
       "reviewer": "리뷰어"
     }
+  },
+  "workpools": {
+    "added": "항목을 추가했습니다",
+    "removed": "항목을 제거했습니다",
+    "created": "작업집합을 생성했습니다",
+    "actionFailed": "작업에 실패했습니다",
+    "datasetItems": "데이터셋 항목",
+    "allTypes": "전체 유형",
+    "search": "검색",
+    "included": "포함됨",
+    "noItems": "항목 없음",
+    "selectPool": "작업집합 선택",
+    "rename": "이름 변경",
+    "newPoolTitle": "새 작업집합 이름",
+    "create": "생성",
+    "itemCount": "항목 {{count}}개",
+    "empty": "이 Pool에 항목이 없습니다",
+    "renamePrompt": "새 작업집합 이름",
+    "deleteConfirm": "이 작업집합을 삭제할까요?"
   }
 }

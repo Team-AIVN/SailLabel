@@ -26,6 +26,9 @@ const ProjectName = ({
   workspace,
   setWorkspace,
   workspaceLocked = false,
+  workPools = [],
+  workPool,
+  setWorkPool,
   show = true,
 }) => {
   const { t } = useTranslation();
@@ -87,6 +90,26 @@ const ProjectName = ({
           </Typography>
         </div>
       )}
+      {isFF(FF_WORKSPACE) && workspace && (
+        <div className="w-full flex flex-col gap-2">
+          <label className="w-full" htmlFor="project_work_pool">
+            {t("createProject.name.workPool", "Work Pool")}
+          </label>
+          <Select
+            placeholder={t("createProject.name.workPoolPlaceholder", "Select a work pool")}
+            value={workPool ?? null}
+            onChange={setWorkPool}
+            options={workPools.map((p) => ({ label: `${p.title} (${p.item_count})`, value: p.id }))}
+            triggerClassName="!flex-1"
+          />
+          <Typography size="small" className="mt-tight mb-wider">
+            {t(
+              "createProject.name.workPoolHint",
+              "Project tasks are created from the selected work pool. Datasets are managed by workspace admins.",
+            )}
+          </Typography>
+        </div>
+      )}
     </form>
   );
 };
@@ -106,6 +129,8 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
   // When opened from a workspace, the workspace is preset and locked.
   const [workspace, setWorkspace] = React.useState(workspaceId);
   const [workspaces, setWorkspaces] = React.useState([]);
+  const [workPool, setWorkPool] = React.useState(null);
+  const [workPools, setWorkPools] = React.useState([]);
   const workspaceLocked = workspaceId != null;
 
   // Load the org's workspaces so the project can be created inside one.
@@ -116,6 +141,19 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
       setWorkspaces(Array.isArray(data) ? data : (data?.results ?? []));
     })();
   }, [api]);
+
+  // Load the chosen workspace's work pools. Projects pick a work pool, not raw datasets.
+  React.useEffect(() => {
+    if (!isFF(FF_WORKSPACE) || !workspace) {
+      setWorkPools([]);
+      return;
+    }
+    (async () => {
+      const data = await api.callApi("workPools", { params: { pk: workspace } });
+      setWorkPools(Array.isArray(data) ? data : (data?.results ?? []));
+    })();
+    setWorkPool(null);
+  }, [api, workspace]);
 
   const setStep = React.useCallback((step) => {
     _setStep(step);
@@ -150,9 +188,14 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
       description,
       label_config: project?.label_config ?? "<View></View>",
       workspace: workspace ?? null,
+      work_pool: workPool ?? null,
     }),
-    [name, description, project?.label_config, workspace],
+    [name, description, project?.label_config, workspace, workPool],
   );
+
+  // When a workspace is chosen, a work pool must be selected (no direct dataset access).
+  const workPoolRequired = isFF(FF_WORKSPACE) && !!workspace;
+  const workPoolMissing = workPoolRequired && !workPool;
 
   const onCreate = React.useCallback(async () => {
     setWaitingStatus(true);
@@ -226,7 +269,7 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
               onClick={onCreate}
               waiting={waiting}
               waitingClickable={false}
-              disabled={!project || error}
+              disabled={!project || error || workPoolMissing}
             >
               {t("common.save")}
             </Button>
@@ -244,6 +287,9 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
           workspace={workspace}
           setWorkspace={setWorkspace}
           workspaceLocked={workspaceLocked}
+          workPools={workPools}
+          workPool={workPool}
+          setWorkPool={setWorkPool}
           show={step === "name"}
         />
         <ConfigPage

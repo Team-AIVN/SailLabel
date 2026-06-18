@@ -32,7 +32,8 @@
       "members": "Members",
       "dataset": "Dataset",
       "workload": "Workload",
-      "notFound": "Workspace not found"
+      "notFound": "Workspace not found",
+      "workpools": "Work Pools"
     },
     "roles": {
       "member": "Member",
@@ -189,7 +190,10 @@
       "descriptionPlaceholder": "Optional description of your project",
       "workspace": "Workspace",
       "workspacePlaceholder": "Select an option",
-      "workspaceHint": "Simplify project management by organizing projects into workspaces."
+      "workspaceHint": "Simplify project management by organizing projects into workspaces.",
+      "workPool": "Work Pool",
+      "workPoolPlaceholder": "Select a work pool",
+      "workPoolHint": "Project tasks are created from the selected work pool. Datasets are managed by workspace admins."
     },
     "import": {
       "datasetUrl": "Dataset URL",
@@ -305,5 +309,24 @@
       "reviewStatus": "Review status",
       "reviewer": "Reviewer"
     }
+  },
+  "workpools": {
+    "added": "Items added",
+    "removed": "Items removed",
+    "created": "Work pool created",
+    "actionFailed": "Action failed",
+    "datasetItems": "Dataset items",
+    "allTypes": "All types",
+    "search": "Search",
+    "included": "Included",
+    "noItems": "No items",
+    "selectPool": "Select a work pool",
+    "rename": "Rename",
+    "newPoolTitle": "New work pool name",
+    "create": "Create",
+    "itemCount": "{{count}} items",
+    "empty": "No items in this pool",
+    "renamePrompt": "New work pool name",
+    "deleteConfirm": "Delete this work pool?"
   }
 }

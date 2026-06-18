@@ -57,5 +57,11 @@ _api_urlpatterns = [
 
 urlpatterns = [
     path('api/workspaces/', include((_api_urlpatterns, app_name), namespace='api')),
+    # Serve workspace uploads (the path WorkspaceFileUpload.url points at).
+    path(
+        'data/workspace-upload/<path:filename>',
+        api.WorkspaceUploadedFileResponse.as_view(),
+        name='workspace-data-upload',
+    ),
     *_page_urlpatterns,
 ]

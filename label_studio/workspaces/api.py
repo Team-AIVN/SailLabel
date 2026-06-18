@@ -5,15 +5,19 @@ import mimetypes
 
 from audit.models import AuditAction
 from audit.services import record_role_change, record_workspace_event
+from core.decorators import override_report_only_csp
 from core.mixins import GetParentObjectMixin
 from core.permissions import ViewClassPermission, all_permissions
+from csp.decorators import csp
 from django.conf import settings
 from django.db import transaction
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema
+from ranged_fileresponse import RangedFileResponse
 from rest_framework import generics, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Workspace, WorkspaceFileUpload, WorkspaceMember
@@ -581,6 +585,39 @@ class WorkspaceWorkloadAPI(_WorkspaceScopedMixin, generics.GenericAPIView):
             )
 
         return Response({'workspace': workspace.id, 'results': results})
+
+
+class WorkspaceUploadedFileResponse(generics.RetrieveAPIView):
+    """Serve a workspace upload by its media path.
+
+    Workspace-scope analogue of ``data_import.UploadedFileResponse``: the stored
+    ``WorkspaceFileUpload.url`` resolves to ``/data/workspace-upload/<ws>/<file>``,
+    so this view backs that path with a permission-checked file response.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    @override_report_only_csp
+    @csp(SANDBOX=[])
+    def get(self, *args, **kwargs):
+        request = self.request
+        # ``filename`` is everything after /data/workspace-upload/, e.g. "2/abcd-img.jpeg".
+        file = 'workspace-upload/' + kwargs['filename']
+        logger.debug(f'Fetch workspace upload by user {request.user} => {file}')
+        file_upload = WorkspaceFileUpload.objects.filter(file=file).last()
+
+        if file_upload is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        if not file_upload.has_permission(request.user):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        stored = file_upload.file
+        if stored.storage.exists(stored.name):
+            content_type, _ = mimetypes.guess_type(str(stored.name))
+            content_type = content_type or 'application/octet-stream'
+            return RangedFileResponse(request, stored.open(mode='rb'), content_type=content_type)
+
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 def _remote_url_placeholder(filename, url):

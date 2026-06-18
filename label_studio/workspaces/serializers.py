@@ -76,10 +76,20 @@ class WorkspaceSummarySerializer(serializers.ModelSerializer):
     total_users = serializers.SerializerMethodField()
     total_datasets = serializers.SerializerMethodField()
     total_projects = serializers.SerializerMethodField()
+    total_work_pools = serializers.SerializerMethodField()
 
     class Meta:
         model = Workspace
-        fields = ('id', 'title', 'description', 'created_at', 'total_users', 'total_datasets', 'total_projects')
+        fields = (
+            'id',
+            'title',
+            'description',
+            'created_at',
+            'total_users',
+            'total_datasets',
+            'total_projects',
+            'total_work_pools',
+        )
 
     def get_total_users(self, obj) -> int:
         return obj.members.filter(deleted_at__isnull=True).count()
@@ -89,6 +99,9 @@ class WorkspaceSummarySerializer(serializers.ModelSerializer):
 
     def get_total_projects(self, obj) -> int:
         return obj.projects.filter(deleted_at__isnull=True).count()
+
+    def get_total_work_pools(self, obj) -> int:
+        return obj.work_pools.count()
 
 
 class WorkspaceDatasetSerializer(serializers.ModelSerializer):
