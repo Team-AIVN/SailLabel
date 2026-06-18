@@ -1,11 +1,13 @@
 """This file and its contents are licensed under the Apache License 2.0. Please see the included NOTICE for copyright information and LICENSE for a copy of the license."""
 
 import logging
+import mimetypes
 
 from audit.models import AuditAction
 from audit.services import record_role_change, record_workspace_event
 from core.mixins import GetParentObjectMixin
 from core.permissions import ViewClassPermission, all_permissions
+from django.conf import settings
 from django.db import transaction
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema
@@ -331,6 +333,27 @@ class WorkspaceSummaryAPI(_WorkspaceScopedMixin, generics.RetrieveAPIView):
     name='get',
     decorator=extend_schema(tags=['Workspaces'], summary='List workspace file uploads'),
 )
+def _save_workspace_upload(workspace, user, fileobj):
+    """Create a WorkspaceFileUpload, sanitizing SVG content first.
+
+    Mirrors ``data_import.uploader.create_file_upload``: uploaded SVGs are run through
+    the allowlist cleaner so malicious markup (scripts, event handlers, external refs)
+    can't be served back from the workspace pool.
+    """
+    instance = WorkspaceFileUpload(workspace=workspace, user=user, file=fileobj)
+    if settings.SVG_SECURITY_CLEANUP:
+        content_type, _ = mimetypes.guess_type(str(instance.file.name))
+        if content_type in ['image/svg+xml']:
+            from data_import.uploader import allowlist_svg
+
+            clean_xml = allowlist_svg(instance.file.read().decode())
+            instance.file.seek(0)
+            instance.file.write(clean_xml.encode())
+            instance.file.truncate()
+    instance.save()
+    return instance
+
+
 def _store_workspace_files(workspace, user, request):
     """Persist uploaded files (multipart) or a single `url` into a workspace's pool.
 
@@ -353,9 +376,7 @@ def _store_workspace_files(workspace, user, request):
         if not files:
             raise ValidationError('Provide at least one file (multipart) or a `url` field.')
         for fileobj in files:
-            uploaded.append(
-                WorkspaceFileUpload.objects.create(workspace=workspace, user=user, file=fileobj)
-            )
+            uploaded.append(_save_workspace_upload(workspace, user, fileobj))
     return uploaded
 
 
