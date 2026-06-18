@@ -7,6 +7,7 @@ import { Space } from "../../components/Space/Space";
 import { Spinner } from "../../components/Spinner/Spinner";
 import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
+import { CreateProject } from "../CreateProject/CreateProject";
 import { WorkspaceImportPage } from "./WorkspaceImport";
 import "./WorkspaceDetail.prefix.css";
 
@@ -69,8 +70,6 @@ export const WorkspaceDetail = () => {
 
   // create affordances
   const [showNewProject, setShowNewProject] = useState(false);
-  const [newProjectTitle, setNewProjectTitle] = useState("");
-  const [newProjectTags, setNewProjectTags] = useState("");
   const [showInvite, setShowInvite] = useState(false);
   const [inviteUser, setInviteUser] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
@@ -141,28 +140,11 @@ export const WorkspaceDetail = () => {
   }, [projects]);
 
   // --- actions ---
-  const createProject = useCallback(async () => {
-    const title = newProjectTitle.trim();
-    if (title.length < 1) return;
-    const tags = newProjectTags
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const res = await api.callApi("createWorkspaceProject", {
-      params: { pk: id },
-      body: { title, tags },
-    });
-    if (res?.id) {
-      toast.show({ message: t("workspaces.dashboard.projectCreated", "Project created") });
-      setNewProjectTitle("");
-      setNewProjectTags("");
-      setShowNewProject(false);
-      loadProjects();
-      loadSummary();
-    } else {
-      toast.show({ message: res?.detail ?? t("workspaces.dashboard.actionFailed", "Action failed"), type: "error" });
-    }
-  }, [api, id, newProjectTitle, newProjectTags, toast, t, loadProjects, loadSummary]);
+  const closeNewProject = useCallback(() => {
+    setShowNewProject(false);
+    loadProjects();
+    loadSummary();
+  }, [loadProjects, loadSummary]);
 
   const openImport = useCallback(() => setShowImport(true), []);
 
@@ -324,28 +306,10 @@ export const WorkspaceDetail = () => {
               <option value="-progress">{t("workspaces.dashboard.sortProgress", "Progress")}</option>
               <option value="title">{t("workspaces.dashboard.sortTitle", "Title")}</option>
             </select>
-            <Button size="small" onClick={() => setShowNewProject((v) => !v)}>
+            <Button size="small" onClick={() => setShowNewProject(true)}>
               {t("workspaces.dashboard.newProject", "New Project")}
             </Button>
           </div>
-
-          {showNewProject && (
-            <div className={root.elem("inline-form").toClassName()}>
-              <input
-                placeholder={t("workspaces.fields.title")}
-                value={newProjectTitle}
-                onChange={(e) => setNewProjectTitle(e.target.value)}
-              />
-              <input
-                placeholder={t("workspaces.dashboard.tagsPlaceholder", "tags, comma separated")}
-                value={newProjectTags}
-                onChange={(e) => setNewProjectTags(e.target.value)}
-              />
-              <Button size="small" onClick={createProject} disabled={!newProjectTitle.trim()}>
-                {t("common.create", "Create")}
-              </Button>
-            </div>
-          )}
 
           {projects.length === 0 ? (
             <p className={root.elem("muted").toClassName()}>{t("workspaces.detail.noProjects")}</p>
@@ -530,6 +494,8 @@ export const WorkspaceDetail = () => {
           />
         </Modal>
       )}
+
+      {showNewProject && <CreateProject workspaceId={Number(id)} onClose={closeNewProject} />}
     </div>
   );
 };

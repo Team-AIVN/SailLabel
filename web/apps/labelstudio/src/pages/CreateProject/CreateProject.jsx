@@ -25,6 +25,7 @@ const ProjectName = ({
   workspaces = [],
   workspace,
   setWorkspace,
+  workspaceLocked = false,
   show = true,
 }) => {
   const { t } = useTranslation();
@@ -76,10 +77,13 @@ const ProjectName = ({
             value={workspace ?? null}
             onChange={setWorkspace}
             options={workspaces.map((w) => ({ label: w.title, value: w.id }))}
+            disabled={workspaceLocked}
             triggerClassName="!flex-1"
           />
           <Typography size="small" className="mt-tight mb-wider">
-            {t("createProject.name.workspaceHint")}
+            {workspaceLocked
+              ? t("createProject.name.workspaceLockedHint", "This project will be created in the current workspace.")
+              : t("createProject.name.workspaceHint")}
           </Typography>
         </div>
       )}
@@ -87,7 +91,7 @@ const ProjectName = ({
   );
 };
 
-export const CreateProject = ({ onClose }) => {
+export const CreateProject = ({ onClose, workspaceId = null }) => {
   const { t } = useTranslation();
   const [step, _setStep] = React.useState("name"); // name | import | config
   const [waiting, setWaitingStatus] = React.useState(false);
@@ -99,8 +103,10 @@ export const CreateProject = ({ onClose }) => {
   const [name, setName] = React.useState("");
   const [error, setError] = React.useState();
   const [description, setDescription] = React.useState("");
-  const [workspace, setWorkspace] = React.useState(null);
+  // When opened from a workspace, the workspace is preset and locked.
+  const [workspace, setWorkspace] = React.useState(workspaceId);
   const [workspaces, setWorkspaces] = React.useState([]);
+  const workspaceLocked = workspaceId != null;
 
   // Load the org's workspaces so the project can be created inside one.
   React.useEffect(() => {
@@ -237,6 +243,7 @@ export const CreateProject = ({ onClose }) => {
           workspaces={workspaces}
           workspace={workspace}
           setWorkspace={setWorkspace}
+          workspaceLocked={workspaceLocked}
           show={step === "name"}
         />
         <ConfigPage
