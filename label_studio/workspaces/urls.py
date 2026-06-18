@@ -2,7 +2,7 @@
 
 from django.urls import include, path
 
-from . import api, views
+from . import api, views, workpools_api
 
 app_name = 'workspaces'
 
@@ -27,7 +27,18 @@ _api_urlpatterns = [
     path('<int:pk>/summary/', api.WorkspaceSummaryAPI.as_view(), name='workspace-summary'),
     path('<int:pk>/projects/', api.WorkspaceProjectsAPI.as_view(), name='workspace-projects'),
     path('<int:pk>/datasets/', api.WorkspaceDatasetsAPI.as_view(), name='workspace-datasets'),
-    path('<int:pk>/assign/', api.WorkspaceAssignDatasetAPI.as_view(), name='workspace-assign-dataset'),
+    path('<int:pk>/dataset-items/', workpools_api.DatasetItemsAPI.as_view(), name='workspace-dataset-items'),
+    path('<int:pk>/work-pools/', workpools_api.WorkPoolListCreateAPI.as_view(), name='workspace-work-pools'),
+    path(
+        '<int:pk>/work-pools/<int:pool_pk>/',
+        workpools_api.WorkPoolDetailAPI.as_view(),
+        name='workspace-work-pool-detail',
+    ),
+    path(
+        '<int:pk>/work-pools/<int:pool_pk>/items/',
+        workpools_api.WorkPoolItemsAPI.as_view(),
+        name='workspace-work-pool-items',
+    ),
     path('<int:pk>/workload/', api.WorkspaceWorkloadAPI.as_view(), name='workspace-workload'),
     path('<int:pk>/import/', api.WorkspaceImportAPI.as_view(), name='workspace-import'),
     path(

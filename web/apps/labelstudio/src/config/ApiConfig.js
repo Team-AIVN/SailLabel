@@ -56,8 +56,17 @@ export const API_CONFIG = {
     deleteWorkspaceFileUpload: "DELETE:/workspaces/:pk/file-uploads/:uploadPk",
     workspaceImportFiles: "POST:/workspaces/:pk/import",
     workspaceImportPredictions: "POST:/workspaces/:pk/import/predictions",
-    assignWorkspaceDataset: "POST:/workspaces/:pk/assign",
     workspaceWorkload: "/workspaces/:pk/workload",
+
+    // Datasets / Work Pools
+    workspaceDatasetItems: "/workspaces/:pk/dataset-items",
+    workPools: "/workspaces/:pk/work-pools",
+    createWorkPool: "POST:/workspaces/:pk/work-pools",
+    workPool: "/workspaces/:pk/work-pools/:poolPk",
+    updateWorkPool: "PATCH:/workspaces/:pk/work-pools/:poolPk",
+    deleteWorkPool: "DELETE:/workspaces/:pk/work-pools/:poolPk",
+    addWorkPoolItems: "POST:/workspaces/:pk/work-pools/:poolPk/items",
+    removeWorkPoolItems: "DELETE:/workspaces/:pk/work-pools/:poolPk/items",
 
     // Workspace-scope cloud storage templates (provider in path: s3 | gcs | azure | localfiles)
     workspaceStorages: "/storages/:provider/workspace/?workspace=:workspacePk",

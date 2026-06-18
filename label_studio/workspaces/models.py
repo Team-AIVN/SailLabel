@@ -216,3 +216,88 @@ class WorkspaceFileUpload(models.Model):
 
     def has_permission(self, user):
         return self.workspace.has_permission(user)
+
+
+class DatasetItem(models.Model):
+    """An individual data item parsed from a dataset (WorkspaceFileUpload).
+
+    A "dataset" is a WorkspaceFileUpload; its items are the selectable units that
+    workspace admins curate into Work Pools. JSON/CSV uploads expand into many items;
+    a single media file becomes one item.
+    """
+
+    dataset = models.ForeignKey(
+        WorkspaceFileUpload,
+        on_delete=models.CASCADE,
+        related_name='items',
+        help_text='Dataset (workspace file upload) this item came from.',
+    )
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name='dataset_items',
+        help_text='Workspace that owns the item (denormalized for queries).',
+    )
+    data = models.JSONField(help_text='Task data for this item.')
+    data_type = models.CharField(_('data type'), max_length=32, default='file', db_index=True)
+    index = models.PositiveIntegerField(_('index'), default=0, help_text='Position within the source dataset.')
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+
+    class Meta:
+        db_table = 'dataset_item'
+        indexes = [
+            models.Index(fields=['workspace', 'data_type']),
+            models.Index(fields=['dataset', 'index']),
+        ]
+        ordering = ['dataset_id', 'index']
+
+
+class WorkPool(models.Model):
+    """A curated working set of dataset items, assignable to a project.
+
+    Projects select one Work Pool instead of raw datasets, so raw dataset access stays
+    with workspace administrators.
+    """
+
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name='work_pools',
+        help_text='Workspace that owns the work pool.',
+    )
+    title = models.CharField(_('title'), max_length=256)
+    description = models.TextField(_('description'), blank=True, default='')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='work_pools_created',
+    )
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+
+    class Meta:
+        db_table = 'work_pool'
+        constraints = [
+            models.UniqueConstraint(fields=['workspace', 'title'], name='uniq_work_pool_title_per_workspace'),
+        ]
+        indexes = [models.Index(fields=['workspace', '-created_at'])]
+
+    def has_permission(self, user):
+        return self.workspace.has_permission(user)
+
+
+class WorkPoolItem(models.Model):
+    """Membership of a dataset item in a work pool."""
+
+    work_pool = models.ForeignKey(WorkPool, on_delete=models.CASCADE, related_name='items')
+    dataset_item = models.ForeignKey(DatasetItem, on_delete=models.CASCADE, related_name='pool_items')
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+
+    class Meta:
+        db_table = 'work_pool_item'
+        constraints = [
+            models.UniqueConstraint(fields=['work_pool', 'dataset_item'], name='uniq_work_pool_item'),
+        ]
+        indexes = [models.Index(fields=['work_pool'])]

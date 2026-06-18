@@ -8,4 +8,4 @@ class WorkspacesConfig(AppConfig):
 
     def ready(self):
         # Register rules/predicates on app ready so django-rules picks them up.
-        from . import rules  # noqa: F401
+        from . import rules, signals  # noqa: F401

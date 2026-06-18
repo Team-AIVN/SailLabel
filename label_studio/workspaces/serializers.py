@@ -6,7 +6,7 @@ from projects.models import Project
 from rest_framework import serializers
 from users.serializers import UserSimpleSerializer
 
-from .models import Workspace, WorkspaceFileUpload, WorkspaceMember
+from .models import DatasetItem, Workspace, WorkPool, WorkspaceFileUpload, WorkspaceMember
 
 
 def _derive_label_type(parsed_label_config):
@@ -156,3 +156,48 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
         if not total:
             return 0
         return round(finished / total * 100)
+
+
+class DatasetItemSerializer(serializers.ModelSerializer):
+    """A dataset item for the Work Pool left-panel browser."""
+
+    thumbnail = serializers.SerializerMethodField()
+    included = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DatasetItem
+        fields = ('id', 'dataset', 'data', 'data_type', 'index', 'thumbnail', 'included')
+
+    def get_thumbnail(self, obj):
+        if isinstance(obj.data, dict):
+            for value in obj.data.values():
+                if isinstance(value, str) and ('://' in value or value.startswith('/')):
+                    return value
+        return None
+
+    def get_included(self, obj):
+        ids = self.context.get('included_item_ids')
+        return obj.id in ids if ids is not None else False
+
+
+class WorkPoolSerializer(serializers.ModelSerializer):
+    item_count = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = WorkPool
+        fields = ('id', 'workspace', 'title', 'description', 'item_count', 'created_by', 'created_at', 'updated_at')
+        read_only_fields = ('workspace', 'created_by', 'created_at', 'updated_at', 'item_count')
+
+    def get_item_count(self, obj) -> int:
+        return getattr(obj, 'item_count_annotated', None) if hasattr(obj, 'item_count_annotated') else obj.items.count()
+
+
+class WorkPoolDetailSerializer(WorkPoolSerializer):
+    items = serializers.SerializerMethodField()
+
+    class Meta(WorkPoolSerializer.Meta):
+        fields = WorkPoolSerializer.Meta.fields + ('items',)
+
+    def get_items(self, obj):
+        dataset_items = [pi.dataset_item for pi in obj.items.select_related('dataset_item').order_by('id')]
+        return DatasetItemSerializer(dataset_items, many=True, context=self.context).data

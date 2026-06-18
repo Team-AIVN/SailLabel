@@ -204,6 +204,14 @@ class Project(ProjectMixin, FsmHistoryStateModel):
         blank=True,
         help_text='Workspace that owns the project',
     )
+    work_pool = models.ForeignKey(
+        'workspaces.WorkPool',
+        on_delete=models.SET_NULL,
+        related_name='projects',
+        null=True,
+        blank=True,
+        help_text='Work pool whose items seed this project tasks (selected at creation).',
+    )
     due_date = models.DateTimeField(
         _('due date'),
         null=True,

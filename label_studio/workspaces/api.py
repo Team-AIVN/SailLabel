@@ -351,6 +351,13 @@ def _save_workspace_upload(workspace, user, fileobj):
             instance.file.write(clean_xml.encode())
             instance.file.truncate()
     instance.save()
+    # Parse the uploaded dataset into individual DatasetItems for Work Pool curation.
+    from .workpools import materialize_dataset_items
+
+    try:
+        materialize_dataset_items(instance)
+    except Exception:
+        logger.exception('Failed to materialize dataset items for upload %s', instance.pk)
     return instance
 
 
@@ -525,49 +532,6 @@ class WorkspaceFileUploadDetailAPI(_WorkspaceScopedMixin, generics.DestroyAPIVie
             raise PermissionDenied('Only a workspace manager can delete files.')
         instance.file.delete(save=False)
         instance.delete()
-
-
-@method_decorator(
-    name='post',
-    decorator=extend_schema(
-        tags=['Workspaces'],
-        summary='Assign workspace dataset to a project',
-        description='Distribute a slice of the workspace dataset to a project inside the '
-        'workspace. Provide exactly one of `count` (number of task records) or `ratio` '
-        '(0..1 fraction of the dataset). Optionally restrict the source with '
-        '`file_upload_ids`. The selected records are materialised as project tasks.',
-    ),
-)
-class WorkspaceAssignDatasetAPI(_WorkspaceScopedMixin, generics.GenericAPIView):
-    serializer_class = WorkspaceFileUploadSerializer  # input is validated manually below
-    permission_required = ViewClassPermission(POST=all_permissions.workspaces_change)
-
-    def post(self, request, *args, **kwargs):
-        from projects.models import Project
-
-        from .dataset import assign_workspace_dataset
-
-        workspace = self._get_workspace()
-        if not is_workspace_manager(request.user, workspace):
-            raise PermissionDenied('Only a workspace manager can assign datasets.')
-
-        project_id = request.data.get('project')
-        if not project_id:
-            raise ValidationError('`project` is required.')
-        try:
-            project = Project.objects.get(pk=project_id)
-        except (Project.DoesNotExist, ValueError, TypeError):
-            raise ValidationError('Project not found.')
-
-        result = assign_workspace_dataset(
-            workspace=workspace,
-            project=project,
-            user=request.user,
-            count=request.data.get('count'),
-            ratio=request.data.get('ratio'),
-            file_upload_ids=request.data.get('file_upload_ids'),
-        )
-        return Response(result, status=status.HTTP_201_CREATED)
 
 
 @method_decorator(
