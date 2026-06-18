@@ -1,0 +1,59 @@
+"""This file and its contents are licensed under the Apache License 2.0. Please see the included NOTICE for copyright information and LICENSE for a copy of the license."""
+
+from rest_framework import serializers
+from users.serializers import UserSimpleSerializer
+
+from .models import Review
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    reviewer_detail = UserSimpleSerializer(source='reviewer', read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ('id', 'annotation', 'project', 'reviewer', 'reviewer_detail', 'decision', 'comment', 'stage', 'created_at')
+        read_only_fields = ('project', 'reviewer', 'created_at')
+
+
+class ReviewSubmitSerializer(serializers.Serializer):
+    """Input for submitting a review decision on an annotation."""
+
+    decision = serializers.ChoiceField(choices=Review.Decision.choices)
+    comment = serializers.CharField(required=False, allow_blank=True, default='')
+    # required only for FIX_AND_ACCEPT — the corrected annotation result
+    content = serializers.JSONField(required=False)
+    stage = serializers.IntegerField(required=False, min_value=1, default=1)
+
+
+class ReviewCandidateSerializer(serializers.Serializer):
+    """A task whose current annotation is awaiting review (Task List UI source)."""
+
+    task_id = serializers.IntegerField(source='id')
+    current_annotation_id = serializers.IntegerField(source='current_annotation_id')
+    annotation_version = serializers.SerializerMethodField()
+    annotator = serializers.SerializerMethodField()
+    review_status = serializers.CharField()
+    reviewer = serializers.SerializerMethodField()
+
+    def get_annotation_version(self, task):
+        return getattr(task.current_annotation, 'version', None)
+
+    def get_annotator(self, task):
+        user = getattr(task.current_annotation, 'completed_by', None)
+        return UserSimpleSerializer(user).data if user else None
+
+    def get_reviewer(self, task):
+        # latest review on the current annotation, if any
+        ann = task.current_annotation
+        if not ann:
+            return None
+        review = ann.reviews.order_by('-created_at').first()
+        return UserSimpleSerializer(review.reviewer).data if review and review.reviewer else None
+
+
+class ReviewProgressSerializer(serializers.Serializer):
+    annotation_progress = serializers.IntegerField()
+    review_progress = serializers.IntegerField()
+    total_tasks = serializers.IntegerField()
+    review_selected = serializers.IntegerField()
+    review_completed = serializers.IntegerField()

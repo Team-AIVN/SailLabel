@@ -278,6 +278,8 @@ class ProjectSerializer(FlexFieldsModelSerializer):
             'show_annotation_history',
             'organization',
             'workspace',
+            'review_strategy',
+            'review_ratio',
             'color',
             'maximum_annotations',
             'is_published',
@@ -323,6 +325,13 @@ class ProjectSerializer(FlexFieldsModelSerializer):
         else:
             # Existing project is updated
             self.instance.validate_config(value)
+        return value
+
+    def validate_review_ratio(self, value):
+        if value is None:
+            return 0.0
+        if not 0 <= value <= 1:
+            raise serializers.ValidationError('review_ratio must be between 0 and 1.')
         return value
 
     def validate_workspace(self, value):

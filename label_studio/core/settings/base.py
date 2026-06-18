@@ -256,6 +256,7 @@ INSTALLED_APPS = [
     'workspaces',
     'audit',
     'tasks',
+    'reviews',
     'data_manager',
     'io_storages',
     'ml',

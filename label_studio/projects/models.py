@@ -216,6 +216,27 @@ class Project(ProjectMixin, FsmHistoryStateModel):
         blank=True,
         help_text='Free-form labels for filtering projects in the workspace dashboard',
     )
+
+    class ReviewStrategy(models.TextChoices):
+        NONE = 'NONE', _('No review')
+        RANDOM_SAMPLING = 'RANDOM_SAMPLING', _('Random sampling')
+        FULL_REVIEW = 'FULL_REVIEW', _('Full review')
+        CUSTOM_RULE = 'CUSTOM_RULE', _('Custom rule')
+
+    review_strategy = models.CharField(
+        _('review strategy'),
+        max_length=32,
+        choices=ReviewStrategy.choices,
+        default=ReviewStrategy.NONE,
+        help_text='How completed annotations are selected for review. Review runs as a '
+        'workflow inside the project, not as a separate review project.',
+    )
+    review_ratio = models.FloatField(
+        _('review ratio'),
+        default=0.0,
+        help_text='Fraction (0..1) of completed annotations sampled for review. '
+        'Used only when review_strategy is RANDOM_SAMPLING.',
+    )
     label_config = models.TextField(
         _('label config'),
         blank=True,

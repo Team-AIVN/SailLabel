@@ -60,6 +60,7 @@ urlpatterns = [
     re_path(r'^', include('projects.urls')),
     re_path(r'^', include('workspaces.urls')),
     re_path(r'^', include('audit.urls')),
+    re_path(r'^', include('reviews.urls')),
     re_path(r'^', include('data_import.urls')),
     re_path(r'^', include('data_manager.urls')),
     re_path(r'^', include('data_export.urls')),
