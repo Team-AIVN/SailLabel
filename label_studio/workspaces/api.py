@@ -361,12 +361,12 @@ def _store_workspace_files(workspace, user, request):
 
 @method_decorator(
     name='get',
-    decorator=extend_schema(tags=['Workspaces'], summary='List workspace file uploads'),
+    decorator=extend_schema(tags=['Import', 'Workspaces'], summary='List workspace file uploads'),
 )
 @method_decorator(
     name='post',
     decorator=extend_schema(
-        tags=['Workspaces'],
+        tags=['Import', 'Workspaces'],
         summary='Upload files to a workspace',
         description='Workspace-scope analogue of `/api/projects/<id>/file-uploads`: stores '
         'one or more files (multipart) or a single `url` into the workspace import pool.',
@@ -431,7 +431,7 @@ class WorkspaceDatasetsAPI(_WorkspaceScopedMixin, generics.ListAPIView):
 @method_decorator(
     name='post',
     decorator=extend_schema(
-        tags=['Workspaces'],
+        tags=['Import', 'Workspaces'],
         summary='Import files into a workspace',
         description='Store one or more files (multipart) or a single `url` (application/x-www-form-urlencoded) '
         'as workspace-scoped file uploads. Files become the workspace default import pool.',
@@ -461,7 +461,7 @@ class WorkspaceImportAPI(_WorkspaceScopedMixin, generics.GenericAPIView):
 @method_decorator(
     name='post',
     decorator=extend_schema(
-        tags=['Workspaces'],
+        tags=['Import', 'Workspaces'],
         summary='Import predictions into a workspace',
         description='Workspace-scope analogue of `/api/projects/<id>/import/predictions`. '
         'Predictions attach to project tasks, which do not exist at the workspace '
@@ -487,7 +487,7 @@ class WorkspaceImportPredictionsAPI(_WorkspaceScopedMixin, generics.GenericAPIVi
 
 @method_decorator(
     name='delete',
-    decorator=extend_schema(tags=['Workspaces'], summary='Delete workspace file upload'),
+    decorator=extend_schema(tags=['Import', 'Workspaces'], summary='Delete workspace file upload'),
 )
 class WorkspaceFileUploadDetailAPI(_WorkspaceScopedMixin, generics.DestroyAPIView):
     serializer_class = WorkspaceFileUploadSerializer

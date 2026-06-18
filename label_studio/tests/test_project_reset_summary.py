@@ -27,14 +27,8 @@ def test_reset_summary_empty_project(business_client):
 def test_reset_summary_project_has_drafts(business_client):
     project = make_project(project_choices(), business_client.user, use_ml_backend=False)
 
-    r = business_client.post(
-        f'/api/projects/{project.id}/import',
-        data=json.dumps({'data': {'image': 'kittens.jpg'}}),
-        content_type='application/json',
-    )
-    assert r.status_code == 201
-    task = Task.objects.filter(project=project).first()
-    assert task
+    # project-level import was removed; create the task directly
+    task = Task.objects.create(project=project, data={'image': 'kittens.jpg'})
 
     s = project.summary
     r = business_client.post(
@@ -63,14 +57,8 @@ def test_reset_summary_project_has_drafts(business_client):
 def test_reset_summary_project_has_annotations(business_client):
     project = make_project(project_choices(), business_client.user, use_ml_backend=False)
 
-    r = business_client.post(
-        f'/api/projects/{project.id}/import',
-        data=json.dumps({'data': {'image': 'kittens.jpg'}}),
-        content_type='application/json',
-    )
-    assert r.status_code == 201
-    task = Task.objects.filter(project=project).first()
-    assert task
+    # project-level import was removed; create the task directly
+    task = Task.objects.create(project=project, data={'image': 'kittens.jpg'})
 
     s = project.summary
     r = business_client.post(
@@ -98,14 +86,8 @@ def test_reset_summary_project_has_annotations(business_client):
 def test_delete_tasks_and_annotations_clears_created_drafts_annotations_and_labels(business_client):
     project = make_project(project_choices(), business_client.user, use_ml_backend=False)
 
-    r = business_client.post(
-        f'/api/projects/{project.id}/import',
-        data=json.dumps({'data': {'image': 'kittens.jpg'}}),
-        content_type='application/json',
-    )
-    assert r.status_code == 201
-    task = Task.objects.filter(project=project).first()
-    assert task
+    # project-level import was removed; create the task directly
+    task = Task.objects.create(project=project, data={'image': 'kittens.jpg'})
 
     s = project.summary
 
