@@ -341,7 +341,9 @@
     "itemCount": "{{count}} items",
     "empty": "No items in this pool",
     "renamePrompt": "New work pool name",
-    "deleteConfirm": "Delete this work pool?"
+    "deleteConfirm": "Delete this work pool?",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all"
   },
   "compensation": {
     "memberName": "Member",

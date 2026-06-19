@@ -38,6 +38,18 @@
     }
   }
 
+  &__panel-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__selected-count {
+    color: var(--color-neutral-content-subtler);
+    font-weight: 400;
+  }
+
   &__filters {
     display: flex;
     gap: 8px;

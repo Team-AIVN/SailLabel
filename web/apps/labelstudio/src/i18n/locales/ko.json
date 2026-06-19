@@ -341,7 +341,9 @@
     "itemCount": "항목 {{count}}개",
     "empty": "이 Pool에 항목이 없습니다",
     "renamePrompt": "새 작업집합 이름",
-    "deleteConfirm": "이 작업집합을 삭제할까요?"
+    "deleteConfirm": "이 작업집합을 삭제할까요?",
+    "selectAll": "전체 선택",
+    "deselectAll": "전체 해제"
   },
   "compensation": {
     "memberName": "멤버",

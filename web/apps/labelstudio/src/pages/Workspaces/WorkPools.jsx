@@ -97,6 +97,21 @@ export const WorkPools = ({ workspaceId }) => {
   const toggleLeft = toggle(setLeftSelected);
   const toggleRight = toggle(setRightSelected);
 
+  // Items selectable on the left = those not already included in the current pool.
+  const selectableIds = useMemo(() => items.filter((it) => !it.included).map((it) => it.id), [items]);
+  const allSelected = selectableIds.length > 0 && selectableIds.every((id) => leftSelected.has(id));
+  const toggleSelectAll = useCallback(() => {
+    setLeftSelected((prev) => {
+      const allChosen = selectableIds.length > 0 && selectableIds.every((id) => prev.has(id));
+      if (allChosen) {
+        const next = new Set(prev);
+        selectableIds.forEach((id) => next.delete(id));
+        return next;
+      }
+      return new Set([...prev, ...selectableIds]);
+    });
+  }, [selectableIds]);
+
   const refreshAll = useCallback(async () => {
     await Promise.all([loadItems(), loadPoolDetail(selectedPoolId), loadPools()]);
     setLeftSelected(new Set());
@@ -176,7 +191,17 @@ export const WorkPools = ({ workspaceId }) => {
       {/* LEFT: dataset browser */}
       <section className={root.elem("panel").mod({ side: "left" }).toClassName()}>
         <header className={root.elem("panel-head").toClassName()}>
-          <strong>{t("workpools.datasetItems", "Dataset items")}</strong>
+          <div className={root.elem("panel-title").toClassName()}>
+            <strong>
+              {t("workpools.datasetItems", "Dataset items")}
+              {leftSelected.size > 0 && (
+                <span className={root.elem("selected-count").toClassName()}> ({leftSelected.size})</span>
+              )}
+            </strong>
+            <Button size="smaller" look="string" onClick={toggleSelectAll} disabled={selectableIds.length === 0}>
+              {allSelected ? t("workpools.deselectAll", "Deselect all") : t("workpools.selectAll", "Select all")}
+            </Button>
+          </div>
           <div className={root.elem("filters").toClassName()}>
             <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
               {DATA_TYPES.map((tp) => (
