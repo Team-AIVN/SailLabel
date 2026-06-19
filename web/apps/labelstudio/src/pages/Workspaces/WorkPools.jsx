@@ -5,7 +5,7 @@ import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
 import "./WorkPools.prefix.css";
 
-const DATA_TYPES = ["", "image", "audio", "video", "text", "json", "csv", "html", "pdf", "file"];
+const DATA_TYPES = ["", "image", "audio", "video", "text", "json", "csv", "html", "pdf", "pair", "file"];
 
 const listOf = (response) => {
   if (!response) return [];

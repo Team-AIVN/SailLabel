@@ -10,6 +10,7 @@ import io
 import json
 import logging
 import os
+from collections import defaultdict
 
 from django.db import transaction
 from projects.models import ProjectSummary
@@ -17,6 +18,10 @@ from projects.models import ProjectSummary
 from .models import DatasetItem, WorkPoolItem
 
 logger = logging.getLogger(__name__)
+
+# data_type for a merged image + tabular item (sibling keys: {"image": url, "data": [rows]}).
+PAIR_DATA_TYPE = 'pair'
+_TABULAR_EXTS = ('csv', 'tsv')
 
 _MEDIA_BY_EXT = {
     'jpg': 'image', 'jpeg': 'image', 'png': 'image', 'gif': 'image', 'bmp': 'image', 'webp': 'image', 'svg': 'image',
@@ -34,6 +39,10 @@ def _media_type_for_ext(ext):
     return _MEDIA_BY_EXT.get(ext, 'file')
 
 
+def _basename(name):
+    return os.path.splitext(name or '')[0]
+
+
 def _infer_item_type(data, default):
     """Infer a media type from an item's values (e.g. an image URL -> 'image')."""
     if isinstance(data, dict):
@@ -43,6 +52,39 @@ def _infer_item_type(data, default):
                 if t and t not in ('json', 'csv', 'text'):
                     return t
     return default
+
+
+def _read_upload_bytes(upload):
+    try:
+        upload.file.open('rb')
+        return upload.file.read()
+    finally:
+        upload.file.close()
+
+
+def parse_tabular_rows(raw, ext):
+    """Parse csv/tsv bytes into the WHOLE file as a list of row dicts.
+
+    Raises on malformed input (e.g. non-UTF-8 bytes); callers decide the fallback.
+    """
+    delimiter = '\t' if ext == 'tsv' else ','
+    reader = csv.DictReader(io.StringIO(raw.decode('utf-8')), delimiter=delimiter)
+    return [dict(r) for r in reader]
+
+
+def create_paired_dataset_item(image_upload, rows):
+    """Create ONE 'pair' DatasetItem merging an image upload with parsed CSV rows.
+
+    Uses sibling keys so the target config ($image + $data) resolves directly:
+    ``{"image": <served url>, "data": [ {<col>: <val>, ...}, ... ]}``.
+    """
+    return DatasetItem.objects.create(
+        dataset=image_upload,
+        workspace=image_upload.workspace,
+        data={'image': image_upload.url, 'data': rows},
+        data_type=PAIR_DATA_TYPE,
+        index=0,
+    )
 
 
 def materialize_dataset_items(upload, max_items=10000):
@@ -98,6 +140,51 @@ def materialize_dataset_items(upload, max_items=10000):
 
     DatasetItem.objects.bulk_create(items)
     return len(items)
+
+
+def materialize_uploads_with_pairing(named_uploads):
+    """Materialize a single upload request, auto-pairing same-basename image + csv/tsv.
+
+    ``named_uploads`` is a list of ``(original_filename, WorkspaceFileUpload)`` — the
+    original filename is required because the stored name carries a UUID prefix.
+
+    Same-basename groups of exactly one image + one tabular file merge into a single
+    ``pair`` DatasetItem (sibling keys ``{"image": url, "data": [rows]}``). Every other
+    upload — and any pair whose CSV fails to parse — falls back to the unchanged
+    per-file :func:`materialize_dataset_items` path. Regression-safe for the common
+    single-file case (a lone file is just an unpaired group).
+    """
+    groups = defaultdict(list)  # basename -> [(ext, upload), ...]
+    for name, upload in named_uploads:
+        groups[_basename(name)].append((_ext(name), upload))
+
+    consumed = set()  # upload pks already turned into a pair item
+    for members in groups.values():
+        if len(members) != 2:
+            continue
+        images = [u for ext, u in members if _media_type_for_ext(ext) == 'image']
+        tabulars = [(ext, u) for ext, u in members if ext in _TABULAR_EXTS]
+        if len(images) != 1 or len(tabulars) != 1:
+            continue
+        image_upload = images[0]
+        tab_ext, tab_upload = tabulars[0]
+        try:
+            rows = parse_tabular_rows(_read_upload_bytes(tab_upload), tab_ext)
+        except Exception:
+            # Malformed tabular file: leave both files to per-file materialization.
+            logger.exception('Failed to parse tabular file for pairing (upload %s)', tab_upload.pk)
+            continue
+        create_paired_dataset_item(image_upload, rows)
+        consumed.add(image_upload.pk)
+        consumed.add(tab_upload.pk)
+
+    for _name, upload in named_uploads:
+        if upload.pk in consumed:
+            continue
+        try:
+            materialize_dataset_items(upload)
+        except Exception:
+            logger.exception('Failed to materialize dataset items for upload %s', upload.pk)
 
 
 @transaction.atomic

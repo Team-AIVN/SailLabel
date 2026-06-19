@@ -341,12 +341,16 @@ class WorkspaceSummaryAPI(_WorkspaceScopedMixin, generics.RetrieveAPIView):
     name='get',
     decorator=extend_schema(tags=['Workspaces'], summary='List workspace file uploads'),
 )
-def _save_workspace_upload(workspace, user, fileobj):
+def _save_workspace_upload(workspace, user, fileobj, materialize=True):
     """Create a WorkspaceFileUpload, sanitizing SVG content first.
 
     Mirrors ``data_import.uploader.create_file_upload``: uploaded SVGs are run through
     the allowlist cleaner so malicious markup (scripts, event handlers, external refs)
     can't be served back from the workspace pool.
+
+    When ``materialize`` is False the file is stored but NOT parsed into DatasetItems,
+    so callers can group files across an upload request first (e.g. image + csv pairing)
+    and materialize explicitly afterwards.
     """
     instance = WorkspaceFileUpload(workspace=workspace, user=user, file=fileobj)
     if settings.SVG_SECURITY_CLEANUP:
@@ -359,6 +363,8 @@ def _save_workspace_upload(workspace, user, fileobj):
             instance.file.write(clean_xml.encode())
             instance.file.truncate()
     instance.save()
+    if not materialize:
+        return instance
     # Parse the uploaded dataset into individual DatasetItems for Work Pool curation.
     from .workpools import materialize_dataset_items
 
@@ -390,8 +396,18 @@ def _store_workspace_files(workspace, user, request):
         files = [f for _, f in request.FILES.items()]
         if not files:
             raise ValidationError('Provide at least one file (multipart) or a `url` field.')
+        # Save all files first WITHOUT materializing, keeping their original names, so we
+        # can detect same-basename image + csv/tsv pairs across the request and merge each
+        # into a single 'pair' DatasetItem before materializing the remaining files.
+        from .workpools import materialize_uploads_with_pairing
+
+        named_uploads = []
         for fileobj in files:
-            uploaded.append(_save_workspace_upload(workspace, user, fileobj))
+            original_name = fileobj.name
+            upload = _save_workspace_upload(workspace, user, fileobj, materialize=False)
+            named_uploads.append((original_name, upload))
+            uploaded.append(upload)
+        materialize_uploads_with_pairing(named_uploads)
     return uploaded
 
 
