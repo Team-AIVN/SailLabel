@@ -253,7 +253,15 @@
       "labelingConfigurationLink": "labeling configuration",
       "setupLabelingTrailing": " first to preview the expected JSON data format"
     },
-    "cancelAriaLabel": "Cancel project creation"
+    "cancelAriaLabel": "Cancel project creation",
+    "validation": {
+      "title": "Please complete the following before saving:",
+      "name": "Enter a project name",
+      "workPool": "Select a work pool",
+      "currency": "Select a currency",
+      "annotationUnitPrice": "Enter an annotation unit price (0 or more)",
+      "reviewUnitPrice": "Enter a review unit price (0 or more)"
+    }
   },
   "accountSettings": {
     "pageTitle": "My Account",

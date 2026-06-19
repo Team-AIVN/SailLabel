@@ -200,6 +200,8 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
 
   const [name, setName] = React.useState("");
   const [error, setError] = React.useState();
+  // Missing-field messages shown at the bottom when Save is pressed with an incomplete form.
+  const [validationErrors, setValidationErrors] = React.useState([]);
   const [description, setDescription] = React.useState("");
   // When opened from a workspace, the workspace is preset and locked.
   const [workspace, setWorkspace] = React.useState(workspaceId);
@@ -282,15 +284,39 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
 
   // When a workspace is chosen, a work pool must be selected (no direct dataset access).
   const workPoolRequired = isFF(FF_WORKSPACE) && !!workspace;
-  const workPoolMissing = workPoolRequired && !workPool;
-
   // Compensation must be configured for workspace projects.
   const compensationRequired = isFF(FF_WORKSPACE) && !!workspace;
   const annPriceValid = annotationUnitPrice !== "" && Number.parseFloat(annotationUnitPrice) >= 0;
   const revPriceValid = reviewUnitPrice !== "" && Number.parseFloat(reviewUnitPrice) >= 0;
-  const compensationMissing = compensationRequired && (!currency || !annPriceValid || !revPriceValid);
+
+  // Collect missing/invalid fields so we can both gate Save and tell the user what to fix.
+  const validate = React.useCallback(() => {
+    const errs = [];
+    if (!name || !name.trim()) errs.push(t("createProject.validation.name", "Enter a project name"));
+    if (error) errs.push(error);
+    if (workPoolRequired && !workPool) errs.push(t("createProject.validation.workPool", "Select a work pool"));
+    if (compensationRequired) {
+      if (!currency) errs.push(t("createProject.validation.currency", "Select a currency"));
+      if (!annPriceValid)
+        errs.push(t("createProject.validation.annotationUnitPrice", "Enter an annotation unit price (0 or more)"));
+      if (!revPriceValid)
+        errs.push(t("createProject.validation.reviewUnitPrice", "Enter a review unit price (0 or more)"));
+    }
+    return errs;
+  }, [name, error, workPoolRequired, workPool, compensationRequired, currency, annPriceValid, revPriceValid, t]);
+
+  // Clear stale feedback as the user edits the relevant fields.
+  React.useEffect(() => {
+    setValidationErrors([]);
+  }, [name, workspace, workPool, currency, annotationUnitPrice, reviewUnitPrice]);
 
   const onCreate = React.useCallback(async () => {
+    const errs = validate();
+    if (errs.length > 0) {
+      setValidationErrors(errs);
+      return;
+    }
+    setValidationErrors([]);
     setWaitingStatus(true);
     const response = await api.callApi("updateProject", {
       params: {
@@ -317,7 +343,7 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
     __lsa("create_project.create");
 
     history.push(`/projects/${response.id}/data`);
-  }, [project, projectBody, compensationRequired, currency, annotationUnitPrice, reviewUnitPrice]);
+  }, [validate, project, projectBody, compensationRequired, currency, annotationUnitPrice, reviewUnitPrice]);
 
   const onSaveName = async () => {
     if (error) return;
@@ -369,13 +395,7 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
             >
               {t("common.cancel")}
             </Button>
-            <Button
-              look="primary"
-              onClick={onCreate}
-              waiting={waiting}
-              waitingClickable={false}
-              disabled={!project || error || workPoolMissing || compensationMissing}
-            >
+            <Button look="primary" onClick={onCreate} waiting={waiting} waitingClickable={false} disabled={!project}>
               {t("common.save")}
             </Button>
           </Space>
@@ -415,6 +435,16 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
           columns={[]}
           disableSaveButton={true}
         />
+        {validationErrors.length > 0 && (
+          <div className={rootClass.elem("validation").toClassName()} role="alert">
+            <strong>{t("createProject.validation.title", "Please complete the following before saving:")}</strong>
+            <ul>
+              {validationErrors.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </Modal>
   );
