@@ -17,6 +17,18 @@ import { FF_WORKSPACE, isFF } from "../../utils/feature-flags";
 
 const CURRENCY_OPTIONS = ["USD", "EUR", "KRW", "JPY"].map((c) => ({ label: c, value: c }));
 
+// Decimal places per currency: KRW/JPY have no minor unit, USD/EUR use 2.
+const CURRENCY_DECIMALS = { USD: 2, EUR: 2, KRW: 0, JPY: 0 };
+
+// Input step + placeholder formatted for the currency (e.g. "0" for KRW, "0.00" for USD).
+const priceFormat = (currency) => {
+  const decimals = CURRENCY_DECIMALS[currency] ?? 2;
+  return {
+    step: decimals === 0 ? "1" : `0.${"0".repeat(decimals - 1)}1`,
+    placeholder: decimals === 0 ? "0" : `0.${"0".repeat(decimals)}`,
+  };
+};
+
 const ProjectName = ({
   name,
   setName,
@@ -147,8 +159,8 @@ const ProjectName = ({
                 id="project_annotation_unit_price"
                 type="number"
                 min="0"
-                step="0.0001"
-                placeholder="0.00"
+                step={priceFormat(currency).step}
+                placeholder={priceFormat(currency).placeholder}
                 value={annotationUnitPrice}
                 onChange={(e) => setAnnotationUnitPrice(e.target.value)}
                 className="w-full"
@@ -163,8 +175,8 @@ const ProjectName = ({
                 id="project_review_unit_price"
                 type="number"
                 min="0"
-                step="0.0001"
-                placeholder="0.00"
+                step={priceFormat(currency).step}
+                placeholder={priceFormat(currency).placeholder}
                 value={reviewUnitPrice}
                 onChange={(e) => setReviewUnitPrice(e.target.value)}
                 className="w-full"
