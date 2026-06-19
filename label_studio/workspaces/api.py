@@ -291,12 +291,12 @@ class WorkspaceProjectsAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
         workspace = self._get_workspace()
         # with_counts() is a manager method (adds task_number / finished_task_number
         # annotations); call it before filtering.
-        # is_draft=False hides projects still being created (the create modal makes a
-        # draft on open and only flips it on Save), so unsaved projects never appear.
+        # Mirror the main /api/projects list (which does not filter is_draft) so the
+        # workspace tab shows exactly the same projects as the global projects page.
         qs = (
             Project.objects.with_counts()
-            .select_related('work_pool')
-            .filter(workspace=workspace, deleted_at__isnull=True, is_draft=False)
+            .select_related('work_pool', 'created_by')
+            .filter(workspace=workspace, deleted_at__isnull=True)
         )
 
         params = self.request.query_params

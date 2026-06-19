@@ -98,8 +98,9 @@ class WorkspaceSummarySerializer(serializers.ModelSerializer):
         return obj.file_uploads.count()
 
     def get_total_projects(self, obj) -> int:
-        # Exclude unsaved draft projects (created on the create-modal open, before Save).
-        return obj.projects.filter(deleted_at__isnull=True, is_draft=False).count()
+        # Match the workspace Projects tab list (and the main projects page), which
+        # counts all non-deleted projects regardless of draft state.
+        return obj.projects.filter(deleted_at__isnull=True).count()
 
     def get_total_work_pools(self, obj) -> int:
         return obj.work_pools.count()

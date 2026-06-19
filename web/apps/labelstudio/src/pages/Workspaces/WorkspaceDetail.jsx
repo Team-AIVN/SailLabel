@@ -334,7 +334,7 @@ export const WorkspaceDetail = () => {
                 return (
                   <a key={p.id} href={`/projects/${p.id}/data`} className={root.elem("card").toClassName()}>
                     <div className={root.elem("card-head").toClassName()}>
-                      <h3>{p.title}</h3>
+                      <h3>{p.title || t("projects.newProject", "New Project")}</h3>
                       {p.label_type && <span className={root.elem("badge").toClassName()}>{p.label_type}</span>}
                     </div>
                     <div className={root.elem("card-counts").toClassName()}>
