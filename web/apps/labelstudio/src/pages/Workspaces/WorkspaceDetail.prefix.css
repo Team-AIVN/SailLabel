@@ -196,6 +196,32 @@
     border-radius: 999px;
   }
 
+  &__card-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 12px;
+    color: var(--color-neutral-content-subtler);
+
+    b {
+      color: var(--color-neutral-content);
+      font-weight: 600;
+    }
+  }
+
+  &__stat-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+    color: var(--color-neutral-content);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__stat-sep {
+    color: var(--color-neutral-content-subtler);
+  }
+
   &__card-meta {
     display: flex;
     justify-content: space-between;

@@ -11,6 +11,7 @@ import { cn } from "../../utils/bem";
 import { ConfigPage } from "./Config/Config";
 import "./CreateProject.prefix.css";
 import { useDraftProject } from "./utils/useDraftProject";
+import { WorkerAssignment } from "./WorkerAssignment";
 import { Input, TextArea } from "../../components/Form";
 import { FF_WORKSPACE, isFF } from "../../utils/feature-flags";
 
@@ -177,7 +178,7 @@ const ProjectName = ({
 };
 
 export const CreateProject = ({ onClose, workspaceId = null }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [step, _setStep] = React.useState("name"); // name | import | config
   const [waiting, setWaitingStatus] = React.useState(false);
 
@@ -194,7 +195,10 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
   const [workPool, setWorkPool] = React.useState(null);
   const [workPools, setWorkPools] = React.useState([]);
   // Compensation policy (required when the project belongs to a workspace).
-  const [currency, setCurrency] = React.useState("USD");
+  // Default the currency to the UI language: Korean -> KRW, otherwise USD.
+  const [currency, setCurrency] = React.useState(() =>
+    (i18n.language || "").toLowerCase().startsWith("ko") ? "KRW" : "USD",
+  );
   const [annotationUnitPrice, setAnnotationUnitPrice] = React.useState("");
   const [reviewUnitPrice, setReviewUnitPrice] = React.useState("");
   const workspaceLocked = workspaceId != null;
@@ -225,6 +229,7 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
     _setStep(step);
     const eventNameMap = {
       name: "project_name",
+      assign: "worker_assignment",
       import: "data_import",
       config: "labeling_setup",
     };
@@ -237,8 +242,12 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
 
   const rootClass = cn("create-project");
   const tabClass = rootClass.elem("tab");
+  // Worker assignment lives between Project Name and Labeling Setup, and only for
+  // workspace projects (the left pool is the workspace's members).
+  const showAssign = isFF(FF_WORKSPACE) && !!workspace;
   const steps = {
     name: <span className={tabClass.mod({ disabled: !!error }).toClassName()}>{t("createProject.steps.name")}</span>,
+    ...(showAssign ? { assign: t("createProject.steps.assign", "Worker Assignment") } : {}),
     config: t("createProject.steps.config"),
   };
 
@@ -382,6 +391,9 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
           setReviewUnitPrice={setReviewUnitPrice}
           show={step === "name"}
         />
+        {showAssign && project?.id && (
+          <WorkerAssignment projectId={project.id} workspaceId={workspace} show={step === "assign"} />
+        )}
         <ConfigPage
           project={project}
           onUpdate={(config) => {

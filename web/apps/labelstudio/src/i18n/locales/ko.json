@@ -91,7 +91,14 @@
       "lastUpdated": "마지막 업데이트",
       "projectCreated": "프로젝트를 생성했습니다",
       "actionFailed": "작업에 실패했습니다",
-      "importTitle": "데이터 가져오기"
+      "importTitle": "데이터 가져오기",
+      "poolItems": "작업집합 데이터",
+      "annotators": "어노테이터",
+      "reviewers": "검수자",
+      "annotationProgress": "어노테이션 진행도",
+      "reviewProgressLine": "검수 진행도",
+      "approved": "승인됨",
+      "rejected": "반려됨"
     }
   },
   "locale": {
@@ -183,7 +190,8 @@
     "steps": {
       "name": "프로젝트 이름",
       "import": "데이터 가져오기",
-      "config": "레이블링 설정"
+      "config": "레이블링 설정",
+      "assign": "작업자 할당"
     },
     "name": {
       "projectName": "프로젝트 이름",
@@ -368,5 +376,19 @@
       "PARTIALLY_PAID": "부분 지급",
       "UNPAID": "미지급"
     }
+  },
+  "assign": {
+    "workspaceMembers": "워크스페이스 멤버",
+    "search": "검색",
+    "annotators": "어노테이터",
+    "reviewers": "검수자",
+    "annotator": "어노테이터",
+    "reviewer": "검수자",
+    "active": "활성",
+    "none": "없음",
+    "noMembers": "멤버가 없습니다",
+    "added": "작업자를 배정했습니다",
+    "removed": "작업자를 제거했습니다",
+    "actionFailed": "배정을 변경하지 못했습니다"
   }
 }

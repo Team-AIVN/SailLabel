@@ -10,7 +10,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:mozilla-django-oidc.readthedocs.io)",
       "Bash(git ls-files *)",
-      "Bash(git ls-tree *)"
+      "Bash(git ls-tree *)",
+      "Bash(grep -rn \"value=\\\\\"\\\\$\\\\|from_name\\\\|to_name\" /Users/jinki/Documents/GitHub/SailLabel/label_studio/core/label_config.py)"
     ]
   }
 }

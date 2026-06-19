@@ -91,7 +91,14 @@
       "lastUpdated": "Last updated",
       "projectCreated": "Project created",
       "actionFailed": "Action failed",
-      "importTitle": "Import data"
+      "importTitle": "Import data",
+      "poolItems": "Pool items",
+      "annotators": "Annotators",
+      "reviewers": "Reviewers",
+      "annotationProgress": "Annotation Progress",
+      "reviewProgressLine": "Review Progress",
+      "approved": "Approved",
+      "rejected": "Rejected"
     }
   },
   "locale": {
@@ -183,7 +190,8 @@
     "steps": {
       "name": "Project Name",
       "import": "Data Import",
-      "config": "Labeling Setup"
+      "config": "Labeling Setup",
+      "assign": "Worker Assignment"
     },
     "name": {
       "projectName": "Project Name",
@@ -368,5 +376,19 @@
       "PARTIALLY_PAID": "Partially Paid",
       "UNPAID": "Unpaid"
     }
+  },
+  "assign": {
+    "workspaceMembers": "Workspace members",
+    "search": "Search",
+    "annotators": "Annotators",
+    "reviewers": "Reviewers",
+    "annotator": "Annotator",
+    "reviewer": "Reviewer",
+    "active": "Active",
+    "none": "None",
+    "noMembers": "No members",
+    "added": "Workers assigned",
+    "removed": "Workers removed",
+    "actionFailed": "Could not update assignment"
   }
 }

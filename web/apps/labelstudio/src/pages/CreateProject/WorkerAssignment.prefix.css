@@ -1,0 +1,146 @@
+.worker-assign {
+  display: grid;
+  grid-template-columns: 1fr 56px 1fr;
+  gap: 12px;
+  align-items: start;
+  min-height: 420px;
+  width: 100%;
+
+  &__loading {
+    padding: 40px;
+    text-align: center;
+    color: var(--color-neutral-content-subtler);
+  }
+
+  &__panel,
+  &__box {
+    border: 1px solid var(--color-neutral-border);
+    border-radius: 8px;
+    background: var(--color-neutral-surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  &__panel {
+    max-height: 70vh;
+  }
+
+  &__roles {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__box {
+    cursor: pointer;
+    max-height: 34vh;
+
+    &_active {
+      border-color: var(--color-primary-border, #6b7cff);
+      box-shadow: 0 0 0 1px var(--color-primary-border, #6b7cff);
+    }
+  }
+
+  &__panel-head,
+  &__box-head {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--color-neutral-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    input {
+      height: 28px;
+      padding: 0 8px;
+      border: 1px solid var(--color-neutral-border);
+      border-radius: 6px;
+      background: var(--color-neutral-background);
+      flex: 1;
+      max-width: 55%;
+    }
+  }
+
+  &__count {
+    margin-left: 4px;
+    color: var(--color-neutral-content-subtler);
+    font-weight: 400;
+  }
+
+  &__active-tag {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--color-primary-emphasis, #eef0ff);
+    color: var(--color-primary-surface-content, #4250d3);
+  }
+
+  &__items {
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+
+    &:hover {
+      background: var(--color-neutral-emphasis, #f3f4f6);
+    }
+    &_selected {
+      background: var(--color-primary-emphasis, #eef0ff);
+    }
+    &_included {
+      opacity: 0.55;
+    }
+  }
+
+  &__item-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    white-space: nowrap;
+    background: var(--color-neutral-emphasis, #eef0f4);
+    color: var(--color-neutral-content-subtler);
+
+    &_role_annotator {
+      background: var(--color-primary-emphasis, #eef0ff);
+      color: var(--color-primary-surface-content, #4250d3);
+    }
+    &_role_reviewer {
+      background: var(--color-positive-emphasis, #e6f4ea);
+      color: var(--color-positive-surface-content, #2ea043);
+    }
+  }
+
+  &__controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding-top: 60px;
+  }
+
+  &__muted {
+    padding: 12px;
+    color: var(--color-neutral-content-subtler);
+    list-style: none;
+  }
+}

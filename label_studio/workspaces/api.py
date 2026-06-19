@@ -291,7 +291,11 @@ class WorkspaceProjectsAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
         workspace = self._get_workspace()
         # with_counts() is a manager method (adds task_number / finished_task_number
         # annotations); call it before filtering.
-        qs = Project.objects.with_counts().filter(workspace=workspace, deleted_at__isnull=True)
+        qs = (
+            Project.objects.with_counts()
+            .select_related('work_pool')
+            .filter(workspace=workspace, deleted_at__isnull=True)
+        )
 
         params = self.request.query_params
         search = params.get('search')

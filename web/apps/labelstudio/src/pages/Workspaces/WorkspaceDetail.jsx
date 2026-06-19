@@ -328,35 +328,59 @@ export const WorkspaceDetail = () => {
             <p className={root.elem("muted").toClassName()}>{t("workspaces.detail.noProjects")}</p>
           ) : (
             <div className={root.elem("cards").toClassName()}>
-              {projects.map((p) => (
-                <a key={p.id} href={`/projects/${p.id}/data`} className={root.elem("card").toClassName()}>
-                  <div className={root.elem("card-head").toClassName()}>
-                    <h3>{p.title}</h3>
-                    {p.label_type && <span className={root.elem("badge").toClassName()}>{p.label_type}</span>}
-                  </div>
-                  <div className={root.elem("progress").toClassName()}>
-                    <div
-                      className={root.elem("progress-bar").toClassName()}
-                      style={{ width: `${p.review_progress ?? 0}%` }}
-                    />
-                  </div>
-                  <div className={root.elem("card-meta").toClassName()}>
-                    <span>
-                      {t("workspaces.dashboard.reviewProgress", "{{p}}% reviewed", { p: p.review_progress ?? 0 })}
-                    </span>
-                    <span>{formatDate(p.due_date)}</span>
-                  </div>
-                  {Array.isArray(p.tags) && p.tags.length > 0 && (
-                    <div className={root.elem("tags").toClassName()}>
-                      {p.tags.map((tag) => (
-                        <span key={tag} className={root.elem("tag").toClassName()}>
-                          {tag}
-                        </span>
-                      ))}
+              {projects.map((p) => {
+                const ann = p.stats?.annotation ?? { done: 0, total: 0, percent: 0 };
+                const rev = p.stats?.review ?? { done: 0, total: 0, percent: 0 };
+                return (
+                  <a key={p.id} href={`/projects/${p.id}/data`} className={root.elem("card").toClassName()}>
+                    <div className={root.elem("card-head").toClassName()}>
+                      <h3>{p.title}</h3>
+                      {p.label_type && <span className={root.elem("badge").toClassName()}>{p.label_type}</span>}
                     </div>
-                  )}
-                </a>
-              ))}
+                    <div className={root.elem("card-counts").toClassName()}>
+                      <span>
+                        {t("workspaces.dashboard.poolItems", "Pool items")}: <b>{p.work_pool_item_count ?? 0}</b>
+                      </span>
+                      <span>
+                        {t("workspaces.dashboard.annotators", "Annotators")}: <b>{p.annotator_count ?? 0}</b>
+                      </span>
+                      <span>
+                        {t("workspaces.dashboard.reviewers", "Reviewers")}: <b>{p.reviewer_count ?? 0}</b>
+                      </span>
+                    </div>
+                    <div className={root.elem("progress").toClassName()}>
+                      <div className={root.elem("progress-bar").toClassName()} style={{ width: `${ann.percent}%` }} />
+                    </div>
+                    <div className={root.elem("stat-lines").toClassName()}>
+                      <div>
+                        {t("workspaces.dashboard.annotationProgress", "Annotation Progress")}: {ann.done} / {ann.total}{" "}
+                        ({ann.percent}%)
+                      </div>
+                      <div>
+                        {t("workspaces.dashboard.reviewProgressLine", "Review Progress")}: {rev.done} / {rev.total} (
+                        {rev.percent}%)
+                      </div>
+                      <div>
+                        {t("workspaces.dashboard.approved", "Approved")}: {p.stats?.approved ?? 0}
+                        <span className={root.elem("stat-sep").toClassName()}> · </span>
+                        {t("workspaces.dashboard.rejected", "Rejected")}: {p.stats?.rejected ?? 0}
+                      </div>
+                    </div>
+                    <div className={root.elem("card-meta").toClassName()}>
+                      <span>{formatDate(p.due_date)}</span>
+                    </div>
+                    {Array.isArray(p.tags) && p.tags.length > 0 && (
+                      <div className={root.elem("tags").toClassName()}>
+                        {p.tags.map((tag) => (
+                          <span key={tag} className={root.elem("tag").toClassName()}>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </a>
+                );
+              })}
             </div>
           )}
         </section>

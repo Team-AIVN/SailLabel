@@ -144,6 +144,10 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
     review_progress = serializers.SerializerMethodField()
     task_number = serializers.IntegerField(read_only=True, default=None)
     finished_task_number = serializers.IntegerField(read_only=True, default=None)
+    work_pool_item_count = serializers.SerializerMethodField()
+    annotator_count = serializers.SerializerMethodField()
+    reviewer_count = serializers.SerializerMethodField()
+    stats = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -157,6 +161,10 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
             'tags',
             'task_number',
             'finished_task_number',
+            'work_pool_item_count',
+            'annotator_count',
+            'reviewer_count',
+            'stats',
             'created_at',
         )
 
@@ -169,6 +177,70 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
         if not total:
             return 0
         return round(finished / total * 100)
+
+    def _task_stats(self, obj):
+        """One join-free aggregate of task counts (cached per instance).
+
+        All filters target Task fields (id, is_labeled, review_status) so no
+        relational join inflates the counts.
+        """
+        cached = getattr(obj, '_card_task_stats', None)
+        if cached is None:
+            from django.db.models import Count, Q
+            from tasks.models import Task
+
+            rs = Task.ReviewStatus
+            cached = Task.objects.filter(project=obj).aggregate(
+                total=Count('id'),
+                annotated=Count('id', filter=Q(is_labeled=True)),
+                approved=Count('id', filter=Q(review_status__in=[rs.ACCEPTED, rs.FIXED_AND_ACCEPTED])),
+                rejected=Count('id', filter=Q(review_status=rs.REJECTED)),
+                reviewed=Count(
+                    'id',
+                    filter=Q(review_status__in=[rs.ACCEPTED, rs.REJECTED, rs.FIXED_AND_ACCEPTED]),
+                ),
+                selected=Count('id', filter=~Q(review_status=rs.NOT_SELECTED)),
+            )
+            obj._card_task_stats = cached
+        return cached
+
+    def _member_counts(self, obj):
+        cached = getattr(obj, '_card_member_counts', None)
+        if cached is None:
+            from django.db.models import Count, Q
+            from projects.models import ProjectMember
+            from users.constants import ProjectRole
+
+            cached = ProjectMember.objects.filter(project=obj, deleted_at__isnull=True).aggregate(
+                annotators=Count('id', filter=Q(role=ProjectRole.ANNOTATOR)),
+                reviewers=Count('id', filter=Q(role=ProjectRole.REVIEWER)),
+            )
+            obj._card_member_counts = cached
+        return cached
+
+    def get_work_pool_item_count(self, obj) -> int:
+        if obj.work_pool_id is None:
+            return 0
+        return obj.work_pool.items.count()
+
+    def get_annotator_count(self, obj) -> int:
+        return self._member_counts(obj)['annotators'] or 0
+
+    def get_reviewer_count(self, obj) -> int:
+        return self._member_counts(obj)['reviewers'] or 0
+
+    def get_stats(self, obj):
+        s = self._task_stats(obj)
+
+        def pct(done, total):
+            return round(done / total * 100) if total else 0
+
+        return {
+            'annotation': {'done': s['annotated'], 'total': s['total'], 'percent': pct(s['annotated'], s['total'])},
+            'review': {'done': s['reviewed'], 'total': s['selected'], 'percent': pct(s['reviewed'], s['selected'])},
+            'approved': s['approved'],
+            'rejected': s['rejected'],
+        }
 
 
 class DatasetItemSerializer(serializers.ModelSerializer):
