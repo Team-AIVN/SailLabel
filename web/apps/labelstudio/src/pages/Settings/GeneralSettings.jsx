@@ -54,9 +54,10 @@ export const GeneralSettings = () => {
                     label="Workspace"
                     placeholder="Select a workspace"
                     options={workspaceOptions}
+                    disabled
                   />
                   <Typography size="small" className="my-tight">
-                    Organize this project under a workspace.
+                    The workspace this project belongs to.
                   </Typography>
                 </div>
               )}

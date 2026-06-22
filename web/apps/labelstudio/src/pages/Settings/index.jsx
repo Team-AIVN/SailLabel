@@ -1,7 +1,9 @@
 import { SidebarMenu } from "../../components/SidebarMenu/SidebarMenu";
+import { FF_WORKSPACE, isFF } from "../../utils/feature-flags";
 import { WebhookPage } from "../WebhookPage/WebhookPage";
 import { DangerZone } from "./DangerZone";
 import { GeneralSettings } from "./GeneralSettings";
+import { WorkersSettings } from "./WorkersSettings";
 import { AnnotationSettings } from "./AnnotationSettings";
 import { LabelingSettings } from "./LabelingSettings";
 import { MachineLearningSettings } from "./MachineLearningSettings/MachineLearningSettings";
@@ -14,6 +16,7 @@ export const MenuLayout = ({ children, ...routeProps }) => {
     <SidebarMenu
       menuItems={[
         GeneralSettings,
+        isFF(FF_WORKSPACE) && WorkersSettings,
         LabelingSettings,
         AnnotationSettings,
         MachineLearningSettings,
@@ -29,6 +32,7 @@ export const MenuLayout = ({ children, ...routeProps }) => {
 };
 
 const pages = {
+  WorkersSettings,
   AnnotationSettings,
   LabelingSettings,
   MachineLearningSettings,
