@@ -25,6 +25,10 @@ export const create = (columns) => {
     ...(isFF(FF_DEV_2536) ? { comment_authors: types.optional(types.array(Assignee), []) } : {}),
     annotators: types.optional(types.array(Assignee), []),
     reviewers: types.optional(types.array(Assignee), []),
+    // Latest reviewer of the task (single user, rendered with the user-list cell).
+    reviewed_by: types.optional(types.array(Assignee), []),
+    // Raw review version records for the task (rendered as links by the Reviews cell).
+    reviews: types.frozen([]),
     annotations: types.optional(types.array(CustomJSON), []),
     predictions: types.optional(types.array(CustomJSON), []),
     drafts: types.frozen(),

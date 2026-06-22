@@ -31,6 +31,8 @@ export const ReviewPage = () => {
   const [progress, setProgress] = useState(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  // Optional ?task=<id> deep-link from the Data Manager "Reviews" column focuses one task.
+  const taskFilter = useMemo(() => new URLSearchParams(window.location.search).get("task") ?? "", []);
 
   const loadProgress = useCallback(async () => {
     const res = await api.callApi("reviewProgress", { params: { pk: id } });
@@ -40,9 +42,10 @@ export const ReviewPage = () => {
   const loadTasks = useCallback(async () => {
     const params = { pk: id };
     if (statusFilter) params.review_status = statusFilter;
+    if (taskFilter) params.task = taskFilter;
     const res = await api.callApi("reviewTasks", { params });
     setTasks(listOf(res));
-  }, [api, id, statusFilter]);
+  }, [api, id, statusFilter, taskFilter]);
 
   useEffect(() => {
     (async () => {

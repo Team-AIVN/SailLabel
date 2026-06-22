@@ -7,6 +7,10 @@ export const valueToString = (value) => {
   if (value === undefined || value === null) return "";
   if (value instanceof Date && isValid(value)) return format(value, dateTimeFormat);
 
+  /* empty collections render as nothing rather than "[]" / "{}" */
+  if (Array.isArray(value)) return value.length === 0 ? "" : JSON.stringify(value);
+  if (typeof value === "object" && Object.keys(value).length === 0) return "";
+
   try {
     /* JSON.stringify will handle JSON and non-strings, non-null, non-undefined */
     return JSON.stringify(value);

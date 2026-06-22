@@ -85,6 +85,10 @@ class ReviewTasksAPI(generics.ListAPIView):
             if review_status not in valid:
                 raise ValidationError(f'invalid review_status; one of {sorted(valid)}')
             qs = qs.filter(review_status=review_status)
+        # Focus a single task (used by the Data Manager "Reviews" column deep-link).
+        task_id = self.request.query_params.get('task')
+        if task_id:
+            qs = qs.filter(id=task_id)
         return qs.order_by('id')
 
 
