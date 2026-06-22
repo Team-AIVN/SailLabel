@@ -39,15 +39,23 @@ class ReviewCandidateSerializer(serializers.Serializer):
         return getattr(task.current_annotation, 'version', None)
 
     def get_annotator(self, task):
-        user = getattr(task.current_annotation, 'completed_by', None)
+        # The original annotator = earliest annotation in the task. For FIX_AND_ACCEPT the
+        # task's current_annotation is a reviewer-authored revision, so reading current
+        # would wrongly show the reviewer as the annotator.
+        root = task.annotations.order_by('id').first()
+        user = getattr(root, 'completed_by', None) if root else None
         return UserSimpleSerializer(user).data if user else None
 
     def get_reviewer(self, task):
-        # latest review on the current annotation, if any
-        ann = task.current_annotation
-        if not ann:
-            return None
-        review = ann.reviews.order_by('-created_at').first()
+        # Latest review across ALL of the task's annotation revisions. For FIX_AND_ACCEPT
+        # the Review is attached to the original annotation while current_annotation points
+        # at the new revision, so looking only at current_annotation.reviews misses it.
+        review = (
+            Review.objects.filter(annotation__task=task)
+            .select_related('reviewer')
+            .order_by('-created_at', '-id')
+            .first()
+        )
         return UserSimpleSerializer(review.reviewer).data if review and review.reviewer else None
 
 

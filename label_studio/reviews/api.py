@@ -151,7 +151,15 @@ class AnnotationReviewAPI(generics.GenericAPIView):
 
         if data['decision'] == Review.Decision.FIX_AND_ACCEPT and 'content' not in data:
             raise ValidationError({'content': 'content (corrected result) is required for FIX_AND_ACCEPT.'})
-        if not annotation.task.current_annotation_id == annotation.id:
+
+        task = annotation.task
+        if task.current_annotation_id is None:
+            # Projects without an auto-review strategy (review_strategy=NONE) never run the
+            # selection signal, so the task has no current_annotation. A reviewer was still
+            # explicitly assigned and is reviewing this annotation manually — adopt it as the
+            # task's current revision so the workflow can proceed.
+            services.assign_revision(annotation)
+        elif task.current_annotation_id != annotation.id:
             raise ValidationError('Only the task current annotation revision can be reviewed.')
 
         review = services.review_annotation(

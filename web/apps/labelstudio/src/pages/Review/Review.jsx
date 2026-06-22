@@ -24,8 +24,15 @@ const userLabel = (user) => {
 export const ReviewPage = () => {
   const { t } = useTranslation();
   const api = useAPI();
-  const { id } = useParams();
+  const routeParams = useParams();
   const root = useMemo(() => cn("review-page"), []);
+
+  // Resolve the project id reliably: the routing context's params may be empty on a
+  // direct/deep-link load, so fall back to parsing it from the URL path.
+  const id = useMemo(
+    () => routeParams.id ?? window.location.pathname.match(/\/projects\/(\d+)/)?.[1] ?? null,
+    [routeParams.id],
+  );
 
   const [tasks, setTasks] = useState([]);
   const [progress, setProgress] = useState(null);
@@ -35,11 +42,13 @@ export const ReviewPage = () => {
   const taskFilter = useMemo(() => new URLSearchParams(window.location.search).get("task") ?? "", []);
 
   const loadProgress = useCallback(async () => {
+    if (!id) return;
     const res = await api.callApi("reviewProgress", { params: { pk: id } });
     setProgress(res && !res.error ? res : null);
   }, [api, id]);
 
   const loadTasks = useCallback(async () => {
+    if (!id) return;
     const params = { pk: id };
     if (statusFilter) params.review_status = statusFilter;
     if (taskFilter) params.task = taskFilter;

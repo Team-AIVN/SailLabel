@@ -132,8 +132,10 @@ def fix_and_accept(annotation, reviewer, content=None, comment='', stage=1):
         parent_annotation=annotation,
         status=Annotation.Status.APPROVED,
     )
-    # The post_save signal assigned version + current_annotation for new_revision and
-    # (because status != COMPLETED) skipped re-selection.
+    # Point the task at the new revision and stamp its version explicitly. The post_save
+    # signal does this for review-enabled projects, but not for review_strategy=NONE
+    # projects (where the signal is not connected), so do it here to be self-sufficient.
+    assign_revision(new_revision)
     review = Review.objects.create(
         annotation=annotation,
         project=annotation.project,
