@@ -515,6 +515,13 @@ class ProjectStateAPI(APIView):
         self.check_object_permissions(request, project)
         data = ProjectSerializer(project).data
 
+        from projects.models import ProjectMember
+
+        current_user_role = (
+            ProjectMember.objects.filter(project=project, user=request.user, deleted_at__isnull=True)
+            .values_list('role', flat=True)
+            .first()
+        )
         data.update(
             {
                 'can_delete_tasks': True,
@@ -525,6 +532,9 @@ class ProjectStateAPI(APIView):
                 'task_count': project.tasks.count(),
                 'annotation_count': Annotation.objects.filter(project=project).count(),
                 'config_has_control_tags': len(project.get_parsed_config()) > 0,
+                # The requesting user's project-scoped role (annotator/reviewer/...), so the
+                # Data Manager can switch the labeling UI into reviewer mode.
+                'current_user_role': current_user_role,
             }
         )
         return Response(data)
