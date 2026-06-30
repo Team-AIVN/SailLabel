@@ -34,6 +34,7 @@ class ReviewCandidateSerializer(serializers.Serializer):
     annotator = serializers.SerializerMethodField()
     review_status = serializers.CharField()
     reviewer = serializers.SerializerMethodField()
+    comments = serializers.SerializerMethodField()
 
     def get_annotation_version(self, task):
         return getattr(task.current_annotation, 'version', None)
@@ -57,6 +58,25 @@ class ReviewCandidateSerializer(serializers.Serializer):
             .first()
         )
         return UserSimpleSerializer(review.reviewer).data if review and review.reviewer else None
+
+    def get_comments(self, task):
+        # All non-empty review comments left on the task (across revisions), oldest first.
+        reviews = (
+            Review.objects.filter(annotation__task=task)
+            .exclude(comment='')
+            .select_related('reviewer')
+            .order_by('created_at', 'id')
+        )
+        return [
+            {
+                'id': r.id,
+                'comment': r.comment,
+                'decision': r.decision,
+                'reviewer': UserSimpleSerializer(r.reviewer).data if r.reviewer else None,
+                'created_at': r.created_at,
+            }
+            for r in reviews
+        ]
 
 
 class ReviewProgressSerializer(serializers.Serializer):

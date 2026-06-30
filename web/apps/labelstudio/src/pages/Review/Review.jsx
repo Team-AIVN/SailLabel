@@ -21,6 +21,31 @@ const userLabel = (user) => {
   return name || user.email || user.username || `User ${user.id}`;
 };
 
+const FIX_COMMENT_PREFIX = "[Fix + Accept]";
+
+const prettyJSON = (raw) => {
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2);
+  } catch {
+    return raw;
+  }
+};
+
+// Parse a "[Fix + Accept]\nOriginal: ...\nUpdated: ..." auto-comment into before/after.
+const parseFixComment = (text) => {
+  if (typeof text !== "string" || !text.startsWith(FIX_COMMENT_PREFIX)) return null;
+  const original = text.match(/Original:\s*(.*)/)?.[1]?.trim();
+  const updated = text.match(/Updated:\s*([\s\S]*)$/)?.[1]?.trim();
+  if (original === undefined || updated === undefined) return null;
+  return { original: prettyJSON(original), updated: prettyJSON(updated) };
+};
+
+const signLines = (block, sign) =>
+  block
+    .split("\n")
+    .map((line) => `${sign} ${line}`)
+    .join("\n");
+
 export const ReviewPage = () => {
   const { t } = useTranslation();
   const api = useAPI();
@@ -79,6 +104,19 @@ export const ReviewPage = () => {
 
   const statusLabel = (s) => t(`review.status.${s}`, s.replace(/_/g, " ").toLowerCase());
 
+  // Render a review comment; a "[Fix + Accept]" auto-comment becomes a code-diff block.
+  const renderCommentBody = (text) => {
+    const fix = parseFixComment(text);
+    if (!fix) return text;
+    return (
+      <div className={root.elem("diff").toClassName()}>
+        <div className={root.elem("diff-title").toClassName()}>Fix + Accept</div>
+        <pre className={root.elem("diff-line").mod({ kind: "del" }).toClassName()}>{signLines(fix.original, "-")}</pre>
+        <pre className={root.elem("diff-line").mod({ kind: "add" }).toClassName()}>{signLines(fix.updated, "+")}</pre>
+      </div>
+    );
+  };
+
   return (
     <div className={root.toClassName()}>
       <header className={root.elem("header").toClassName()}>
@@ -126,6 +164,7 @@ export const ReviewPage = () => {
             <th>{t("review.col.annotator", "Annotator")}</th>
             <th>{t("review.col.reviewStatus", "Review status")}</th>
             <th>{t("review.col.reviewer", "Reviewer")}</th>
+            <th>{t("review.col.comments", "Comments")}</th>
           </tr>
         </thead>
         <tbody>
@@ -142,6 +181,20 @@ export const ReviewPage = () => {
                 </span>
               </td>
               <td>{userLabel(row.reviewer)}</td>
+              <td>
+                {Array.isArray(row.comments) && row.comments.length > 0 ? (
+                  <ul className={root.elem("comments").toClassName()}>
+                    {row.comments.map((c) => (
+                      <li key={c.id} className={root.elem("comment").toClassName()}>
+                        <span className={root.elem("comment-author").toClassName()}>{userLabel(c.reviewer)}:</span>{" "}
+                        {renderCommentBody(c.comment)}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  "—"
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

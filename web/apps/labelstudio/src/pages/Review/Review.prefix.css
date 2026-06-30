@@ -81,6 +81,63 @@
     }
   }
 
+  &__comments {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 360px;
+  }
+
+  &__comment {
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--color-neutral-content);
+  }
+
+  &__comment-author {
+    font-weight: 600;
+    color: var(--color-neutral-content-subtler);
+  }
+
+  &__diff {
+    margin-top: 4px;
+    border: 1px solid var(--color-neutral-border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  &__diff-title {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    color: var(--color-neutral-content-subtler);
+    background: var(--color-neutral-emphasis, #eef0f4);
+    border-bottom: 1px solid var(--color-neutral-border);
+  }
+
+  &__diff-line {
+    margin: 0;
+    padding: 2px 8px;
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+
+    &_kind_del {
+      background: var(--color-negative-background, #fdecec);
+      color: var(--color-negative-content, #b3261e);
+    }
+    &_kind_add {
+      background: var(--color-positive-background, #e7f6ec);
+      color: var(--color-positive-content, #1b7f3b);
+    }
+  }
+
   &__badge {
     font-size: 11px;
     padding: 2px 8px;
