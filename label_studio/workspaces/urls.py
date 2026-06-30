@@ -2,7 +2,7 @@
 
 from django.urls import include, path
 
-from . import api, views, workpools_api
+from . import api, views, taskpools_api
 
 app_name = 'workspaces'
 
@@ -27,17 +27,17 @@ _api_urlpatterns = [
     path('<int:pk>/summary/', api.WorkspaceSummaryAPI.as_view(), name='workspace-summary'),
     path('<int:pk>/projects/', api.WorkspaceProjectsAPI.as_view(), name='workspace-projects'),
     path('<int:pk>/datasets/', api.WorkspaceDatasetsAPI.as_view(), name='workspace-datasets'),
-    path('<int:pk>/dataset-items/', workpools_api.DatasetItemsAPI.as_view(), name='workspace-dataset-items'),
-    path('<int:pk>/work-pools/', workpools_api.WorkPoolListCreateAPI.as_view(), name='workspace-work-pools'),
+    path('<int:pk>/task-source-items/', taskpools_api.TaskSourceItemsAPI.as_view(), name='workspace-task-source-items'),
+    path('<int:pk>/task-pools/', taskpools_api.TaskPoolListCreateAPI.as_view(), name='workspace-task-pools'),
     path(
-        '<int:pk>/work-pools/<int:pool_pk>/',
-        workpools_api.WorkPoolDetailAPI.as_view(),
-        name='workspace-work-pool-detail',
+        '<int:pk>/task-pools/<int:pool_pk>/',
+        taskpools_api.TaskPoolDetailAPI.as_view(),
+        name='workspace-task-pool-detail',
     ),
     path(
-        '<int:pk>/work-pools/<int:pool_pk>/items/',
-        workpools_api.WorkPoolItemsAPI.as_view(),
-        name='workspace-work-pool-items',
+        '<int:pk>/task-pools/<int:pool_pk>/items/',
+        taskpools_api.TaskPoolItemsAPI.as_view(),
+        name='workspace-task-pool-items',
     ),
     path('<int:pk>/workload/', api.WorkspaceWorkloadAPI.as_view(), name='workspace-workload'),
     path('<int:pk>/import/', api.WorkspaceImportAPI.as_view(), name='workspace-import'),

@@ -10,20 +10,20 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=Project)
-def materialize_work_pool_on_project(sender, instance, **kwargs):
-    """Seed a project's tasks from its selected Work Pool once it is published.
+def materialize_task_pool_on_project(sender, instance, **kwargs):
+    """Seed a project's tasks from its selected Task Pool once it is published.
 
     Fires for any project save but returns immediately unless the project has a work
     pool, is published, and has no tasks yet — so it runs exactly once at setup and
     does not disturb non-pool projects.
     """
-    if not instance.work_pool_id or instance.is_draft:
+    if not instance.task_pool_id or instance.is_draft:
         return
     if instance.tasks.exists():
         return
     try:
-        from .workpools import materialize_pool_to_project
+        from .taskpools import materialize_pool_to_project
 
         materialize_pool_to_project(instance)
     except Exception:
-        logger.exception('Failed to materialize work pool for project %s', instance.pk)
+        logger.exception('Failed to materialize task pool for project %s', instance.pk)

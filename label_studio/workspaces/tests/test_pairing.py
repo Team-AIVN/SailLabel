@@ -7,7 +7,7 @@ from projects.models import Project
 from projects.tests.factories import ProjectFactory
 from rest_framework.test import APITestCase
 from tasks.models import Task
-from workspaces.models import DatasetItem, Workspace, WorkPool, WorkPoolItem, WorkspaceFileUpload, WorkspaceMember
+from workspaces.models import TaskSourceItem, Workspace, TaskPool, TaskPoolItem, WorkspaceFileUpload, WorkspaceMember
 
 PAIR_CONFIG = (
     '<View><Image name="image" value="$image"/><Table name="data" value="$data"/>'
@@ -45,7 +45,7 @@ class PairingUploadTests(APITestCase):
         return SimpleUploadedFile(name, content, content_type=content_type)
 
     def _items(self):
-        return list(DatasetItem.objects.filter(workspace=self.ws).order_by('id'))
+        return list(TaskSourceItem.objects.filter(workspace=self.ws).order_by('id'))
 
     def _upload_by_suffix(self, suffix):
         return WorkspaceFileUpload.objects.get(workspace=self.ws, file__endswith=suffix)
@@ -74,7 +74,7 @@ class PairingUploadTests(APITestCase):
         assert item.data['data'][0]['col2'] == 'v2'
 
         # No per-row csv items, no standalone image item for this basename.
-        assert DatasetItem.objects.filter(workspace=self.ws).count() == 1
+        assert TaskSourceItem.objects.filter(workspace=self.ws).count() == 1
 
     def test_pair_item_materializes_to_one_task(self):
         self._upload(
@@ -84,15 +84,15 @@ class PairingUploadTests(APITestCase):
             }
         )
         item = self._items()[0]
-        pool = WorkPool.objects.create(workspace=self.ws, title='P', created_by=self.owner)
-        WorkPoolItem.objects.create(work_pool=pool, dataset_item=item)
+        pool = TaskPool.objects.create(workspace=self.ws, title='P', created_by=self.owner)
+        TaskPoolItem.objects.create(task_pool=pool, task_source_item=item)
 
         project = ProjectFactory(
             organization=self.org,
             workspace=self.ws,
             created_by=self.owner,
             label_config=PAIR_CONFIG,
-            work_pool=pool,
+            task_pool=pool,
             is_draft=False,
         )
         tasks = list(Task.objects.filter(project=project))
@@ -120,12 +120,12 @@ class PairingUploadTests(APITestCase):
         assert len(items) == 1
         assert items[0].data_type == 'image'
         assert 'image' in items[0].data
-        assert DatasetItem.objects.filter(workspace=self.ws, data_type='pair').count() == 0
+        assert TaskSourceItem.objects.filter(workspace=self.ws, data_type='pair').count() == 0
 
     def test_csv_only_materializes_per_row(self):
         self._upload({'rows.csv': self._file('rows.csv', b'c\nr1\nr2\nr3\n', 'text/csv')})
         items = self._items()
-        assert len(items) == 3  # one DatasetItem per CSV row, unchanged path
+        assert len(items) == 3  # one TaskSourceItem per CSV row, unchanged path
         assert all(it.data_type != 'pair' for it in items)
 
     def test_mismatched_basenames_do_not_pair(self):
@@ -135,10 +135,10 @@ class PairingUploadTests(APITestCase):
                 'b.csv': self._file('b.csv', b'k\n1\n2\n', 'text/csv'),
             }
         )
-        assert DatasetItem.objects.filter(workspace=self.ws, data_type='pair').count() == 0
+        assert TaskSourceItem.objects.filter(workspace=self.ws, data_type='pair').count() == 0
         # image -> 1 image item; csv -> 2 per-row items
-        assert DatasetItem.objects.filter(workspace=self.ws, data_type='image').count() == 1
-        assert DatasetItem.objects.filter(workspace=self.ws).count() == 3
+        assert TaskSourceItem.objects.filter(workspace=self.ws, data_type='image').count() == 1
+        assert TaskSourceItem.objects.filter(workspace=self.ws).count() == 3
 
     def test_three_files_same_basename_do_not_pair(self):
         self._upload(
@@ -148,7 +148,7 @@ class PairingUploadTests(APITestCase):
                 'dup.csv': self._file('dup.csv', b'k\n1\n', 'text/csv'),
             }
         )
-        assert DatasetItem.objects.filter(workspace=self.ws, data_type='pair').count() == 0
+        assert TaskSourceItem.objects.filter(workspace=self.ws, data_type='pair').count() == 0
 
     # --- defensive parsing ---
 
@@ -161,7 +161,7 @@ class PairingUploadTests(APITestCase):
                 'sample_003.csv': self._file('sample_003.csv', bad_csv, 'text/csv'),
             }
         )
-        assert DatasetItem.objects.filter(workspace=self.ws, data_type='pair').count() == 0
+        assert TaskSourceItem.objects.filter(workspace=self.ws, data_type='pair').count() == 0
         # Both files still materialized via the unchanged per-file path.
-        assert DatasetItem.objects.filter(workspace=self.ws, data_type='image').count() == 1
-        assert DatasetItem.objects.filter(workspace=self.ws).count() >= 2
+        assert TaskSourceItem.objects.filter(workspace=self.ws, data_type='image').count() == 1
+        assert TaskSourceItem.objects.filter(workspace=self.ws).count() >= 2

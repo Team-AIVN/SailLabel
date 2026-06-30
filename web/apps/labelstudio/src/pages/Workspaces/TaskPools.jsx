@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button, useToast } from "@humansignal/ui";
 import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
-import "./WorkPools.prefix.css";
+import "./TaskPools.prefix.css";
 
 const DATA_TYPES = ["", "image", "audio", "video", "text", "json", "csv", "html", "pdf", "pair", "file"];
 
@@ -23,12 +23,12 @@ const itemPreview = (item) => {
   return "";
 };
 
-/** Two-panel Work Pool manager: dataset items (left) <-> work pool items (right). */
-export const WorkPools = ({ workspaceId }) => {
+/** Two-panel Task Pool manager: dataset items (left) <-> task pool items (right). */
+export const TaskPools = ({ workspaceId }) => {
   const { t } = useTranslation();
   const api = useAPI();
   const toast = useToast();
-  const root = useMemo(() => cn("work-pools"), []);
+  const root = useMemo(() => cn("task-pools"), []);
 
   const [pools, setPools] = useState([]);
   const [selectedPoolId, setSelectedPoolId] = useState(null);
@@ -42,7 +42,7 @@ export const WorkPools = ({ workspaceId }) => {
   const [loading, setLoading] = useState(true);
 
   const loadPools = useCallback(async () => {
-    const res = await api.callApi("workPools", { params: { pk: workspaceId } });
+    const res = await api.callApi("taskPools", { params: { pk: workspaceId } });
     const rows = listOf(res);
     setPools(rows);
     return rows;
@@ -54,7 +54,7 @@ export const WorkPools = ({ workspaceId }) => {
         setPoolDetail(null);
         return;
       }
-      const res = await api.callApi("workPool", { params: { pk: workspaceId, poolPk: poolId } });
+      const res = await api.callApi("taskPool", { params: { pk: workspaceId, poolPk: poolId } });
       setPoolDetail(res && !res.error ? res : null);
     },
     [api, workspaceId],
@@ -64,8 +64,8 @@ export const WorkPools = ({ workspaceId }) => {
     const params = { pk: workspaceId };
     if (typeFilter) params.data_type = typeFilter;
     if (search) params.search = search;
-    if (selectedPoolId) params.work_pool = selectedPoolId;
-    const res = await api.callApi("workspaceDatasetItems", { params });
+    if (selectedPoolId) params.task_pool = selectedPoolId;
+    const res = await api.callApi("workspaceTaskSourceItems", { params });
     setItems(listOf(res));
   }, [api, workspaceId, typeFilter, search, selectedPoolId]);
 
@@ -120,26 +120,26 @@ export const WorkPools = ({ workspaceId }) => {
 
   const addItems = useCallback(async () => {
     if (!selectedPoolId || leftSelected.size === 0) return;
-    const res = await api.callApi("addWorkPoolItems", {
+    const res = await api.callApi("addTaskPoolItems", {
       params: { pk: workspaceId, poolPk: selectedPoolId },
-      body: { dataset_item_ids: Array.from(leftSelected) },
+      body: { task_source_item_ids: Array.from(leftSelected) },
     });
     if (res && !res.error) {
-      toast.show({ message: t("workpools.added", "Items added") });
+      toast.show({ message: t("taskpools.added", "Items added") });
       refreshAll();
     } else {
-      toast.show({ message: res?.detail ?? t("workpools.actionFailed", "Action failed"), type: "error" });
+      toast.show({ message: res?.detail ?? t("taskpools.actionFailed", "Action failed"), type: "error" });
     }
   }, [api, workspaceId, selectedPoolId, leftSelected, toast, t, refreshAll]);
 
   const removeItems = useCallback(async () => {
     if (!selectedPoolId || rightSelected.size === 0) return;
-    const res = await api.callApi("removeWorkPoolItems", {
+    const res = await api.callApi("removeTaskPoolItems", {
       params: { pk: workspaceId, poolPk: selectedPoolId },
-      body: { dataset_item_ids: Array.from(rightSelected) },
+      body: { task_source_item_ids: Array.from(rightSelected) },
     });
     if (res && !res.error) {
-      toast.show({ message: t("workpools.removed", "Items removed") });
+      toast.show({ message: t("taskpools.removed", "Items removed") });
       refreshAll();
     }
   }, [api, workspaceId, selectedPoolId, rightSelected, toast, t, refreshAll]);
@@ -147,23 +147,23 @@ export const WorkPools = ({ workspaceId }) => {
   const createPool = useCallback(async () => {
     const title = newPoolTitle.trim();
     if (!title) return;
-    const res = await api.callApi("createWorkPool", { params: { pk: workspaceId }, body: { title } });
+    const res = await api.callApi("createTaskPool", { params: { pk: workspaceId }, body: { title } });
     if (res?.id) {
       setNewPoolTitle("");
       const rows = await loadPools();
       setSelectedPoolId(res.id);
-      toast.show({ message: t("workpools.created", "Work pool created") });
+      toast.show({ message: t("taskpools.created", "Task pool created") });
       void rows;
     } else {
-      toast.show({ message: res?.detail ?? t("workpools.actionFailed", "Action failed"), type: "error" });
+      toast.show({ message: res?.detail ?? t("taskpools.actionFailed", "Action failed"), type: "error" });
     }
   }, [api, workspaceId, newPoolTitle, loadPools, toast, t]);
 
   const renamePool = useCallback(async () => {
     if (!poolDetail) return;
-    const title = window.prompt(t("workpools.renamePrompt", "New work pool name"), poolDetail.title);
+    const title = window.prompt(t("taskpools.renamePrompt", "New task pool name"), poolDetail.title);
     if (!title || !title.trim()) return;
-    const res = await api.callApi("updateWorkPool", {
+    const res = await api.callApi("updateTaskPool", {
       params: { pk: workspaceId, poolPk: poolDetail.id },
       body: { title: title.trim() },
     });
@@ -175,8 +175,8 @@ export const WorkPools = ({ workspaceId }) => {
 
   const deletePool = useCallback(async () => {
     if (!poolDetail) return;
-    if (!window.confirm(t("workpools.deleteConfirm", "Delete this work pool?"))) return;
-    await api.callApi("deleteWorkPool", { params: { pk: workspaceId, poolPk: poolDetail.id } });
+    if (!window.confirm(t("taskpools.deleteConfirm", "Delete this task pool?"))) return;
+    await api.callApi("deleteTaskPool", { params: { pk: workspaceId, poolPk: poolDetail.id } });
     setSelectedPoolId(null);
     const rows = await loadPools();
     setSelectedPoolId(rows[0]?.id ?? null);
@@ -193,25 +193,25 @@ export const WorkPools = ({ workspaceId }) => {
         <header className={root.elem("panel-head").toClassName()}>
           <div className={root.elem("panel-title").toClassName()}>
             <strong>
-              {t("workpools.datasetItems", "Dataset items")}
+              {t("taskpools.datasetItems", "Dataset items")}
               {leftSelected.size > 0 && (
                 <span className={root.elem("selected-count").toClassName()}> ({leftSelected.size})</span>
               )}
             </strong>
             <Button size="smaller" look="string" onClick={toggleSelectAll} disabled={selectableIds.length === 0}>
-              {allSelected ? t("workpools.deselectAll", "Deselect all") : t("workpools.selectAll", "Select all")}
+              {allSelected ? t("taskpools.deselectAll", "Deselect all") : t("taskpools.selectAll", "Select all")}
             </Button>
           </div>
           <div className={root.elem("filters").toClassName()}>
             <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
               {DATA_TYPES.map((tp) => (
                 <option key={tp || "all"} value={tp}>
-                  {tp || t("workpools.allTypes", "All types")}
+                  {tp || t("taskpools.allTypes", "All types")}
                 </option>
               ))}
             </select>
             <input
-              placeholder={t("workpools.search", "Search")}
+              placeholder={t("taskpools.search", "Search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -247,13 +247,13 @@ export const WorkPools = ({ workspaceId }) => {
                   <span className={root.elem("item-text").toClassName()}>{preview}</span>
                 </span>
                 {it.included && (
-                  <span className={root.elem("badge").toClassName()}>{t("workpools.included", "Included")}</span>
+                  <span className={root.elem("badge").toClassName()}>{t("taskpools.included", "Included")}</span>
                 )}
               </li>
             );
           })}
           {items.length === 0 && (
-            <li className={root.elem("muted").toClassName()}>{t("workpools.noItems", "No items")}</li>
+            <li className={root.elem("muted").toClassName()}>{t("taskpools.noItems", "No items")}</li>
           )}
         </ul>
       </section>
@@ -274,14 +274,14 @@ export const WorkPools = ({ workspaceId }) => {
         </Button>
       </div>
 
-      {/* RIGHT: work pool manager */}
+      {/* RIGHT: task pool manager */}
       <section className={root.elem("panel").mod({ side: "right" }).toClassName()}>
         <header className={root.elem("panel-head").toClassName()}>
           <select
             value={selectedPoolId ?? ""}
             onChange={(e) => setSelectedPoolId(e.target.value ? Number(e.target.value) : null)}
           >
-            <option value="">{t("workpools.selectPool", "Select a work pool")}</option>
+            <option value="">{t("taskpools.selectPool", "Select a task pool")}</option>
             {pools.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.title} ({p.item_count})
@@ -291,7 +291,7 @@ export const WorkPools = ({ workspaceId }) => {
           {poolDetail && (
             <div className={root.elem("pool-actions").toClassName()}>
               <Button size="smaller" look="string" onClick={renamePool}>
-                {t("workpools.rename", "Rename")}
+                {t("taskpools.rename", "Rename")}
               </Button>
               <Button size="smaller" look="string" variant="negative" onClick={deletePool}>
                 {t("common.delete", "Delete")}
@@ -302,19 +302,19 @@ export const WorkPools = ({ workspaceId }) => {
 
         <div className={root.elem("create").toClassName()}>
           <input
-            placeholder={t("workpools.newPoolTitle", "New work pool name")}
+            placeholder={t("taskpools.newPoolTitle", "New task pool name")}
             value={newPoolTitle}
             onChange={(e) => setNewPoolTitle(e.target.value)}
           />
           <Button size="small" onClick={createPool} disabled={!newPoolTitle.trim()}>
-            {t("workpools.create", "Create")}
+            {t("taskpools.create", "Create")}
           </Button>
         </div>
 
         {poolDetail && (
           <>
             <div className={root.elem("count").toClassName()}>
-              {t("workpools.itemCount", "{{count}} items", { count: poolDetail.item_count ?? poolItems.length })}
+              {t("taskpools.itemCount", "{{count}} items", { count: poolDetail.item_count ?? poolItems.length })}
             </div>
             <ul className={root.elem("items").toClassName()}>
               {poolItems.map((it) => (
@@ -333,7 +333,7 @@ export const WorkPools = ({ workspaceId }) => {
                 </li>
               ))}
               {poolItems.length === 0 && (
-                <li className={root.elem("muted").toClassName()}>{t("workpools.empty", "No items in this pool")}</li>
+                <li className={root.elem("muted").toClassName()}>{t("taskpools.empty", "No items in this pool")}</li>
               )}
             </ul>
           </>

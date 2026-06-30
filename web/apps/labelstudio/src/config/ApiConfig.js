@@ -58,15 +58,15 @@ export const API_CONFIG = {
     workspaceImportPredictions: "POST:/workspaces/:pk/import/predictions",
     workspaceWorkload: "/workspaces/:pk/workload",
 
-    // Datasets / Work Pools
-    workspaceDatasetItems: "/workspaces/:pk/dataset-items",
-    workPools: "/workspaces/:pk/work-pools",
-    createWorkPool: "POST:/workspaces/:pk/work-pools",
-    workPool: "/workspaces/:pk/work-pools/:poolPk",
-    updateWorkPool: "PATCH:/workspaces/:pk/work-pools/:poolPk",
-    deleteWorkPool: "DELETE:/workspaces/:pk/work-pools/:poolPk",
-    addWorkPoolItems: "POST:/workspaces/:pk/work-pools/:poolPk/items",
-    removeWorkPoolItems: "DELETE:/workspaces/:pk/work-pools/:poolPk/items",
+    // Datasets / Task Pools
+    workspaceTaskSourceItems: "/workspaces/:pk/task-source-items",
+    taskPools: "/workspaces/:pk/task-pools",
+    createTaskPool: "POST:/workspaces/:pk/task-pools",
+    taskPool: "/workspaces/:pk/task-pools/:poolPk",
+    updateTaskPool: "PATCH:/workspaces/:pk/task-pools/:poolPk",
+    deleteTaskPool: "DELETE:/workspaces/:pk/task-pools/:poolPk",
+    addTaskPoolItems: "POST:/workspaces/:pk/task-pools/:poolPk/items",
+    removeTaskPoolItems: "DELETE:/workspaces/:pk/task-pools/:poolPk/items",
 
     // Compensation
     projectCompensationPolicy: "/projects/:pk/compensation-policy",

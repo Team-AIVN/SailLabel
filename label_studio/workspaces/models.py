@@ -218,11 +218,11 @@ class WorkspaceFileUpload(models.Model):
         return self.workspace.has_permission(user)
 
 
-class DatasetItem(models.Model):
+class TaskSourceItem(models.Model):
     """An individual data item parsed from a dataset (WorkspaceFileUpload).
 
     A "dataset" is a WorkspaceFileUpload; its items are the selectable units that
-    workspace admins curate into Work Pools. JSON/CSV uploads expand into many items;
+    workspace admins curate into Task Pools. JSON/CSV uploads expand into many items;
     a single media file becomes one item.
     """
 
@@ -235,7 +235,7 @@ class DatasetItem(models.Model):
     workspace = models.ForeignKey(
         Workspace,
         on_delete=models.CASCADE,
-        related_name='dataset_items',
+        related_name='task_source_items',
         help_text='Workspace that owns the item (denormalized for queries).',
     )
     data = models.JSONField(help_text='Task data for this item.')
@@ -244,6 +244,7 @@ class DatasetItem(models.Model):
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
 
     class Meta:
+        # db_table kept as the original name to avoid a table rename on existing data.
         db_table = 'dataset_item'
         indexes = [
             models.Index(fields=['workspace', 'data_type']),
@@ -252,18 +253,18 @@ class DatasetItem(models.Model):
         ordering = ['dataset_id', 'index']
 
 
-class WorkPool(models.Model):
-    """A curated working set of dataset items, assignable to a project.
+class TaskPool(models.Model):
+    """A curated working set of task source items, assignable to a project.
 
-    Projects select one Work Pool instead of raw datasets, so raw dataset access stays
+    Projects select one Task Pool instead of raw datasets, so raw dataset access stays
     with workspace administrators.
     """
 
     workspace = models.ForeignKey(
         Workspace,
         on_delete=models.CASCADE,
-        related_name='work_pools',
-        help_text='Workspace that owns the work pool.',
+        related_name='task_pools',
+        help_text='Workspace that owns the task pool.',
     )
     title = models.CharField(_('title'), max_length=256)
     description = models.TextField(_('description'), blank=True, default='')
@@ -272,12 +273,13 @@ class WorkPool(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='work_pools_created',
+        related_name='task_pools_created',
     )
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated at'), auto_now=True)
 
     class Meta:
+        # db_table / constraint names kept to avoid renaming objects on existing data.
         db_table = 'work_pool'
         constraints = [
             models.UniqueConstraint(fields=['workspace', 'title'], name='uniq_work_pool_title_per_workspace'),
@@ -288,16 +290,18 @@ class WorkPool(models.Model):
         return self.workspace.has_permission(user)
 
 
-class WorkPoolItem(models.Model):
-    """Membership of a dataset item in a work pool."""
+class TaskPoolItem(models.Model):
+    """Membership of a task source item in a task pool."""
 
-    work_pool = models.ForeignKey(WorkPool, on_delete=models.CASCADE, related_name='items')
-    dataset_item = models.ForeignKey(DatasetItem, on_delete=models.CASCADE, related_name='pool_items')
+    task_pool = models.ForeignKey(TaskPool, on_delete=models.CASCADE, related_name='items')
+    task_source_item = models.ForeignKey(TaskSourceItem, on_delete=models.CASCADE, related_name='pool_items')
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
 
     class Meta:
+        # db_table / constraint name kept to avoid renaming the table on existing data;
+        # the FK columns are renamed (work_pool_id -> task_pool_id, etc.) by the migration.
         db_table = 'work_pool_item'
         constraints = [
-            models.UniqueConstraint(fields=['work_pool', 'dataset_item'], name='uniq_work_pool_item'),
+            models.UniqueConstraint(fields=['task_pool', 'task_source_item'], name='uniq_work_pool_item'),
         ]
-        indexes = [models.Index(fields=['work_pool'])]
+        indexes = [models.Index(fields=['task_pool'])]

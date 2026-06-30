@@ -41,9 +41,9 @@ const ProjectName = ({
   workspace,
   setWorkspace,
   workspaceLocked = false,
-  workPools = [],
-  workPool,
-  setWorkPool,
+  taskPools = [],
+  taskPool,
+  setTaskPool,
   currency,
   setCurrency,
   annotationUnitPrice,
@@ -113,20 +113,20 @@ const ProjectName = ({
       )}
       {isFF(FF_WORKSPACE) && workspace && (
         <div className="w-full flex flex-col gap-2">
-          <label className="w-full" htmlFor="project_work_pool">
-            {t("createProject.name.workPool", "Work Pool")}
+          <label className="w-full" htmlFor="project_task_pool">
+            {t("createProject.name.taskPool", "Task Pool")}
           </label>
           <Select
-            placeholder={t("createProject.name.workPoolPlaceholder", "Select a work pool")}
-            value={workPool ?? null}
-            onChange={setWorkPool}
-            options={workPools.map((p) => ({ label: `${p.title} (${p.item_count})`, value: p.id }))}
+            placeholder={t("createProject.name.taskPoolPlaceholder", "Select a task pool")}
+            value={taskPool ?? null}
+            onChange={setTaskPool}
+            options={taskPools.map((p) => ({ label: `${p.title} (${p.item_count})`, value: p.id }))}
             triggerClassName="!flex-1"
           />
           <Typography size="small" className="mt-tight mb-wider">
             {t(
-              "createProject.name.workPoolHint",
-              "Project tasks are created from the selected work pool. Datasets are managed by workspace admins.",
+              "createProject.name.taskPoolHint",
+              "Project tasks are created from the selected task pool. Datasets are managed by workspace admins.",
             )}
           </Typography>
         </div>
@@ -206,8 +206,8 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
   // When opened from a workspace, the workspace is preset and locked.
   const [workspace, setWorkspace] = React.useState(workspaceId);
   const [workspaces, setWorkspaces] = React.useState([]);
-  const [workPool, setWorkPool] = React.useState(null);
-  const [workPools, setWorkPools] = React.useState([]);
+  const [taskPool, setTaskPool] = React.useState(null);
+  const [taskPools, setTaskPools] = React.useState([]);
   // Compensation policy (required when the project belongs to a workspace).
   // Default the currency to the UI language: Korean -> KRW, otherwise USD.
   const [currency, setCurrency] = React.useState(() =>
@@ -226,17 +226,17 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
     })();
   }, [api]);
 
-  // Load the chosen workspace's work pools. Projects pick a work pool, not raw datasets.
+  // Load the chosen workspace's task pools. Projects pick a task pool, not raw datasets.
   React.useEffect(() => {
     if (!isFF(FF_WORKSPACE) || !workspace) {
-      setWorkPools([]);
+      setTaskPools([]);
       return;
     }
     (async () => {
-      const data = await api.callApi("workPools", { params: { pk: workspace } });
-      setWorkPools(Array.isArray(data) ? data : (data?.results ?? []));
+      const data = await api.callApi("taskPools", { params: { pk: workspace } });
+      setTaskPools(Array.isArray(data) ? data : (data?.results ?? []));
     })();
-    setWorkPool(null);
+    setTaskPool(null);
   }, [api, workspace]);
 
   const setStep = React.useCallback((step) => {
@@ -277,13 +277,13 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
       description,
       label_config: project?.label_config ?? "<View></View>",
       workspace: workspace ?? null,
-      work_pool: workPool ?? null,
+      task_pool: taskPool ?? null,
     }),
-    [name, description, project?.label_config, workspace, workPool],
+    [name, description, project?.label_config, workspace, taskPool],
   );
 
-  // When a workspace is chosen, a work pool must be selected (no direct dataset access).
-  const workPoolRequired = isFF(FF_WORKSPACE) && !!workspace;
+  // When a workspace is chosen, a task pool must be selected (no direct dataset access).
+  const taskPoolRequired = isFF(FF_WORKSPACE) && !!workspace;
   // Compensation must be configured for workspace projects.
   const compensationRequired = isFF(FF_WORKSPACE) && !!workspace;
   const annPriceValid = annotationUnitPrice !== "" && Number.parseFloat(annotationUnitPrice) >= 0;
@@ -294,7 +294,7 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
     const errs = [];
     if (!name || !name.trim()) errs.push(t("createProject.validation.name", "Enter a project name"));
     if (error) errs.push(error);
-    if (workPoolRequired && !workPool) errs.push(t("createProject.validation.workPool", "Select a work pool"));
+    if (taskPoolRequired && !taskPool) errs.push(t("createProject.validation.taskPool", "Select a task pool"));
     if (compensationRequired) {
       if (!currency) errs.push(t("createProject.validation.currency", "Select a currency"));
       if (!annPriceValid)
@@ -303,12 +303,12 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
         errs.push(t("createProject.validation.reviewUnitPrice", "Enter a review unit price (0 or more)"));
     }
     return errs;
-  }, [name, error, workPoolRequired, workPool, compensationRequired, currency, annPriceValid, revPriceValid, t]);
+  }, [name, error, taskPoolRequired, taskPool, compensationRequired, currency, annPriceValid, revPriceValid, t]);
 
   // Clear stale feedback as the user edits the relevant fields.
   React.useEffect(() => {
     setValidationErrors([]);
-  }, [name, workspace, workPool, currency, annotationUnitPrice, reviewUnitPrice]);
+  }, [name, workspace, taskPool, currency, annotationUnitPrice, reviewUnitPrice]);
 
   const onCreate = React.useCallback(async () => {
     const errs = validate();
@@ -412,9 +412,9 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
           workspace={workspace}
           setWorkspace={setWorkspace}
           workspaceLocked={workspaceLocked}
-          workPools={workPools}
-          workPool={workPool}
-          setWorkPool={setWorkPool}
+          taskPools={taskPools}
+          taskPool={taskPool}
+          setTaskPool={setTaskPool}
           currency={currency}
           setCurrency={setCurrency}
           annotationUnitPrice={annotationUnitPrice}

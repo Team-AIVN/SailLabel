@@ -16,7 +16,7 @@ from rest_framework import generics, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from workspaces.rules import is_workspace_manager, is_workspace_member
-from workspaces.workpools_api import _get_workspace, _require_manager
+from workspaces.taskpools_api import _get_workspace, _require_manager
 
 from .models import PaymentRecord, ProjectCompensationPolicy
 from .serializers import PaymentRecordSerializer, ProjectCompensationPolicySerializer

@@ -6,7 +6,7 @@ from projects.models import Project
 from rest_framework import serializers
 from users.serializers import UserSimpleSerializer
 
-from .models import DatasetItem, Workspace, WorkPool, WorkspaceFileUpload, WorkspaceMember
+from .models import TaskSourceItem, Workspace, TaskPool, WorkspaceFileUpload, WorkspaceMember
 
 
 def _derive_label_type(parsed_label_config):
@@ -76,7 +76,7 @@ class WorkspaceSummarySerializer(serializers.ModelSerializer):
     total_users = serializers.SerializerMethodField()
     total_datasets = serializers.SerializerMethodField()
     total_projects = serializers.SerializerMethodField()
-    total_work_pools = serializers.SerializerMethodField()
+    total_task_pools = serializers.SerializerMethodField()
 
     class Meta:
         model = Workspace
@@ -88,7 +88,7 @@ class WorkspaceSummarySerializer(serializers.ModelSerializer):
             'total_users',
             'total_datasets',
             'total_projects',
-            'total_work_pools',
+            'total_task_pools',
         )
 
     def get_total_users(self, obj) -> int:
@@ -102,8 +102,8 @@ class WorkspaceSummarySerializer(serializers.ModelSerializer):
         # counts all non-deleted projects regardless of draft state.
         return obj.projects.filter(deleted_at__isnull=True).count()
 
-    def get_total_work_pools(self, obj) -> int:
-        return obj.work_pools.count()
+    def get_total_task_pools(self, obj) -> int:
+        return obj.task_pools.count()
 
 
 class WorkspaceDatasetSerializer(serializers.ModelSerializer):
@@ -146,7 +146,7 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
     review_progress = serializers.SerializerMethodField()
     task_number = serializers.IntegerField(read_only=True, default=None)
     finished_task_number = serializers.IntegerField(read_only=True, default=None)
-    work_pool_item_count = serializers.SerializerMethodField()
+    task_pool_item_count = serializers.SerializerMethodField()
     annotator_count = serializers.SerializerMethodField()
     reviewer_count = serializers.SerializerMethodField()
     stats = serializers.SerializerMethodField()
@@ -163,7 +163,7 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
             'tags',
             'task_number',
             'finished_task_number',
-            'work_pool_item_count',
+            'task_pool_item_count',
             'annotator_count',
             'reviewer_count',
             'stats',
@@ -220,10 +220,10 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
             obj._card_member_counts = cached
         return cached
 
-    def get_work_pool_item_count(self, obj) -> int:
-        if obj.work_pool_id is None:
+    def get_task_pool_item_count(self, obj) -> int:
+        if obj.task_pool_id is None:
             return 0
-        return obj.work_pool.items.count()
+        return obj.task_pool.items.count()
 
     def get_annotator_count(self, obj) -> int:
         return self._member_counts(obj)['annotators'] or 0
@@ -245,14 +245,14 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
         }
 
 
-class DatasetItemSerializer(serializers.ModelSerializer):
-    """A dataset item for the Work Pool left-panel browser."""
+class TaskSourceItemSerializer(serializers.ModelSerializer):
+    """A dataset item for the Task Pool left-panel browser."""
 
     thumbnail = serializers.SerializerMethodField()
     included = serializers.SerializerMethodField()
 
     class Meta:
-        model = DatasetItem
+        model = TaskSourceItem
         fields = ('id', 'dataset', 'data', 'data_type', 'index', 'thumbnail', 'included')
 
     def get_thumbnail(self, obj):
@@ -267,11 +267,11 @@ class DatasetItemSerializer(serializers.ModelSerializer):
         return obj.id in ids if ids is not None else False
 
 
-class WorkPoolSerializer(serializers.ModelSerializer):
+class TaskPoolSerializer(serializers.ModelSerializer):
     item_count = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
-        model = WorkPool
+        model = TaskPool
         fields = ('id', 'workspace', 'title', 'description', 'item_count', 'created_by', 'created_at', 'updated_at')
         read_only_fields = ('workspace', 'created_by', 'created_at', 'updated_at', 'item_count')
 
@@ -279,12 +279,12 @@ class WorkPoolSerializer(serializers.ModelSerializer):
         return getattr(obj, 'item_count_annotated', None) if hasattr(obj, 'item_count_annotated') else obj.items.count()
 
 
-class WorkPoolDetailSerializer(WorkPoolSerializer):
+class TaskPoolDetailSerializer(TaskPoolSerializer):
     items = serializers.SerializerMethodField()
 
-    class Meta(WorkPoolSerializer.Meta):
-        fields = WorkPoolSerializer.Meta.fields + ('items',)
+    class Meta(TaskPoolSerializer.Meta):
+        fields = TaskPoolSerializer.Meta.fields + ('items',)
 
     def get_items(self, obj):
-        dataset_items = [pi.dataset_item for pi in obj.items.select_related('dataset_item').order_by('id')]
-        return DatasetItemSerializer(dataset_items, many=True, context=self.context).data
+        task_source_items = [pi.task_source_item for pi in obj.items.select_related('task_source_item').order_by('id')]
+        return TaskSourceItemSerializer(task_source_items, many=True, context=self.context).data

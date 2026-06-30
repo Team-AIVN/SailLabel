@@ -295,7 +295,7 @@ class WorkspaceProjectsAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
         # workspace tab shows exactly the same projects as the global projects page.
         qs = (
             Project.objects.with_counts()
-            .select_related('work_pool', 'created_by')
+            .select_related('task_pool', 'created_by')
             .filter(workspace=workspace, deleted_at__isnull=True)
         )
 
@@ -350,7 +350,7 @@ def _save_workspace_upload(workspace, user, fileobj, materialize=True):
     the allowlist cleaner so malicious markup (scripts, event handlers, external refs)
     can't be served back from the workspace pool.
 
-    When ``materialize`` is False the file is stored but NOT parsed into DatasetItems,
+    When ``materialize`` is False the file is stored but NOT parsed into TaskSourceItems,
     so callers can group files across an upload request first (e.g. image + csv pairing)
     and materialize explicitly afterwards.
     """
@@ -367,11 +367,11 @@ def _save_workspace_upload(workspace, user, fileobj, materialize=True):
     instance.save()
     if not materialize:
         return instance
-    # Parse the uploaded dataset into individual DatasetItems for Work Pool curation.
-    from .workpools import materialize_dataset_items
+    # Parse the uploaded dataset into individual TaskSourceItems for Task Pool curation.
+    from .taskpools import materialize_task_source_items
 
     try:
-        materialize_dataset_items(instance)
+        materialize_task_source_items(instance)
     except Exception:
         logger.exception('Failed to materialize dataset items for upload %s', instance.pk)
     return instance
@@ -400,8 +400,8 @@ def _store_workspace_files(workspace, user, request):
             raise ValidationError('Provide at least one file (multipart) or a `url` field.')
         # Save all files first WITHOUT materializing, keeping their original names, so we
         # can detect same-basename image + csv/tsv pairs across the request and merge each
-        # into a single 'pair' DatasetItem before materializing the remaining files.
-        from .workpools import materialize_uploads_with_pairing
+        # into a single 'pair' TaskSourceItem before materializing the remaining files.
+        from .taskpools import materialize_uploads_with_pairing
 
         named_uploads = []
         for fileobj in files:

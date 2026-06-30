@@ -1,7 +1,7 @@
-"""Work Pool services: dataset-item materialization and pool-to-project task seeding.
+"""Task Pool services: dataset-item materialization and pool-to-project task seeding.
 
-A "dataset" is a :class:`WorkspaceFileUpload`; its :class:`DatasetItem` rows are the
-selectable units curated into :class:`WorkPool` s. Projects bind to one Work Pool and
+A "dataset" is a :class:`WorkspaceFileUpload`; its :class:`TaskSourceItem` rows are the
+selectable units curated into :class:`TaskPool` s. Projects bind to one Task Pool and
 its items are materialised into project tasks.
 """
 
@@ -15,7 +15,7 @@ from collections import defaultdict
 from django.db import transaction
 from projects.models import ProjectSummary
 
-from .models import DatasetItem, WorkPoolItem
+from .models import TaskSourceItem, TaskPoolItem
 
 logger = logging.getLogger(__name__)
 
@@ -72,13 +72,13 @@ def parse_tabular_rows(raw, ext):
     return [dict(r) for r in reader]
 
 
-def create_paired_dataset_item(image_upload, rows):
-    """Create ONE 'pair' DatasetItem merging an image upload with parsed CSV rows.
+def create_paired_task_source_item(image_upload, rows):
+    """Create ONE 'pair' TaskSourceItem merging an image upload with parsed CSV rows.
 
     Uses sibling keys so the target config ($image + $data) resolves directly:
     ``{"image": <served url>, "data": [ {<col>: <val>, ...}, ... ]}``.
     """
-    return DatasetItem.objects.create(
+    return TaskSourceItem.objects.create(
         dataset=image_upload,
         workspace=image_upload.workspace,
         data={'image': image_upload.url, 'data': rows},
@@ -87,8 +87,8 @@ def create_paired_dataset_item(image_upload, rows):
     )
 
 
-def materialize_dataset_items(upload, max_items=10000):
-    """Parse a WorkspaceFileUpload into DatasetItem rows. Returns the count created."""
+def materialize_task_source_items(upload, max_items=10000):
+    """Parse a WorkspaceFileUpload into TaskSourceItem rows. Returns the count created."""
     name = upload.file_name
     ext = _ext(name)
     try:
@@ -117,7 +117,7 @@ def materialize_dataset_items(upload, max_items=10000):
         for i, rec in enumerate(records[:max_items]):
             data = rec.get('data', rec) if isinstance(rec, dict) else {'value': rec}
             items.append(
-                DatasetItem(
+                TaskSourceItem(
                     dataset=upload,
                     workspace=upload.workspace,
                     data=data,
@@ -129,7 +129,7 @@ def materialize_dataset_items(upload, max_items=10000):
         media = _media_type_for_ext(ext)
         key = media if media in ('image', 'audio', 'video', 'text', 'pdf', 'html') else 'url'
         items.append(
-            DatasetItem(
+            TaskSourceItem(
                 dataset=upload,
                 workspace=upload.workspace,
                 data={key: upload.url or name},
@@ -138,7 +138,7 @@ def materialize_dataset_items(upload, max_items=10000):
             )
         )
 
-    DatasetItem.objects.bulk_create(items)
+    TaskSourceItem.objects.bulk_create(items)
     return len(items)
 
 
@@ -149,9 +149,9 @@ def materialize_uploads_with_pairing(named_uploads):
     original filename is required because the stored name carries a UUID prefix.
 
     Same-basename groups of exactly one image + one tabular file merge into a single
-    ``pair`` DatasetItem (sibling keys ``{"image": url, "data": [rows]}``). Every other
+    ``pair`` TaskSourceItem (sibling keys ``{"image": url, "data": [rows]}``). Every other
     upload — and any pair whose CSV fails to parse — falls back to the unchanged
-    per-file :func:`materialize_dataset_items` path. Regression-safe for the common
+    per-file :func:`materialize_task_source_items` path. Regression-safe for the common
     single-file case (a lone file is just an unpaired group).
     """
     groups = defaultdict(list)  # basename -> [(ext, upload), ...]
@@ -174,7 +174,7 @@ def materialize_uploads_with_pairing(named_uploads):
             # Malformed tabular file: leave both files to per-file materialization.
             logger.exception('Failed to parse tabular file for pairing (upload %s)', tab_upload.pk)
             continue
-        create_paired_dataset_item(image_upload, rows)
+        create_paired_task_source_item(image_upload, rows)
         consumed.add(image_upload.pk)
         consumed.add(tab_upload.pk)
 
@@ -182,25 +182,25 @@ def materialize_uploads_with_pairing(named_uploads):
         if upload.pk in consumed:
             continue
         try:
-            materialize_dataset_items(upload)
+            materialize_task_source_items(upload)
         except Exception:
             logger.exception('Failed to materialize dataset items for upload %s', upload.pk)
 
 
 @transaction.atomic
 def materialize_pool_to_project(project):
-    """Create project tasks from the project's selected Work Pool items.
+    """Create project tasks from the project's selected Task Pool items.
 
     Returns the number of tasks created. Safe to call once at project setup; callers
     should guard against re-running (e.g. only when the project has no tasks yet).
     """
-    pool = project.work_pool
+    pool = project.task_pool
     if pool is None:
         return 0
     from data_import.serializers import ImportApiSerializer
 
-    dataset_items = DatasetItem.objects.filter(pool_items__work_pool=pool).order_by('id')
-    tasks = [{'data': it.data} for it in dataset_items]
+    task_source_items = TaskSourceItem.objects.filter(pool_items__task_pool=pool).order_by('id')
+    tasks = [{'data': it.data} for it in task_source_items]
     if not tasks:
         return 0
 

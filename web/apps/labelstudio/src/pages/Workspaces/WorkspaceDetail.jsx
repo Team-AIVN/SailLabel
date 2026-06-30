@@ -9,15 +9,15 @@ import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
 import { CreateProject } from "../CreateProject/CreateProject";
 import { Compensation } from "./Compensation";
-import { WorkPools } from "./WorkPools";
+import { TaskPools } from "./TaskPools";
 import { WorkspaceImportPage } from "./WorkspaceImport";
 import "./WorkspaceDetail.prefix.css";
 
-const TABS = ["projects", "datasets", "workpools", "users", "compensation"];
+const TABS = ["projects", "datasets", "taskpools", "users", "compensation"];
 const TAB_LABEL_KEY = {
   projects: "workspaces.detail.projects",
   datasets: "workspaces.detail.dataset",
-  workpools: "workspaces.detail.workpools",
+  taskpools: "workspaces.detail.taskpools",
   users: "workspaces.detail.members",
   compensation: "workspaces.detail.compensation",
 };
@@ -253,8 +253,8 @@ export const WorkspaceDetail = () => {
             <span className={root.elem("stat-label").toClassName()}>{t("workspaces.detail.projects")}</span>
           </div>
           <div className={root.elem("stat").toClassName()}>
-            <span className={root.elem("stat-value").toClassName()}>{summary?.total_work_pools ?? 0}</span>
-            <span className={root.elem("stat-label").toClassName()}>{t("workspaces.detail.workpools")}</span>
+            <span className={root.elem("stat-value").toClassName()}>{summary?.total_task_pools ?? 0}</span>
+            <span className={root.elem("stat-label").toClassName()}>{t("workspaces.detail.taskpools")}</span>
           </div>
         </div>
       </header>
@@ -339,7 +339,7 @@ export const WorkspaceDetail = () => {
                     </div>
                     <div className={root.elem("card-counts").toClassName()}>
                       <span>
-                        {t("workspaces.dashboard.poolItems", "Pool items")}: <b>{p.work_pool_item_count ?? 0}</b>
+                        {t("workspaces.dashboard.poolItems", "Pool items")}: <b>{p.task_pool_item_count ?? 0}</b>
                       </span>
                       <span>
                         {t("workspaces.dashboard.annotators", "Annotators")}: <b>{p.annotator_count ?? 0}</b>
@@ -423,10 +423,10 @@ export const WorkspaceDetail = () => {
         </section>
       )}
 
-      {/* Work Pools tab */}
-      {activeTab === "workpools" && (
+      {/* Task Pools tab */}
+      {activeTab === "taskpools" && (
         <section className={root.elem("panel").toClassName()}>
-          <WorkPools workspaceId={Number(id)} />
+          <TaskPools workspaceId={Number(id)} />
         </section>
       )}
 

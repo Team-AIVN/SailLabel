@@ -21,7 +21,7 @@ const userLabel = (detail) => {
 };
 
 /**
- * Two-panel worker assignment (mirrors the Work Pool UI): workspace members on the
+ * Two-panel worker assignment (mirrors the Task Pool UI): workspace members on the
  * left, the project's Annotators / Reviewers on the right. Pick a right-side list to
  * activate it, then add (→) selected members or remove (←) them — exactly like pools.
  */

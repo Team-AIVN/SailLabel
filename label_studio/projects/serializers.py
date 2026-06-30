@@ -278,7 +278,7 @@ class ProjectSerializer(FlexFieldsModelSerializer):
             'show_annotation_history',
             'organization',
             'workspace',
-            'work_pool',
+            'task_pool',
             'review_strategy',
             'review_ratio',
             'color',
@@ -335,14 +335,14 @@ class ProjectSerializer(FlexFieldsModelSerializer):
             raise serializers.ValidationError('review_ratio must be between 0 and 1.')
         return value
 
-    def validate_work_pool(self, value):
-        # A project may only use a work pool from its own organization's workspace.
+    def validate_task_pool(self, value):
+        # A project may only use a task pool from its own organization's workspace.
         if value is None:
             return value
         request = self.context.get('request')
         active_org_id = getattr(getattr(request, 'user', None), 'active_organization_id', None)
         if active_org_id and value.workspace.organization_id != active_org_id:
-            raise serializers.ValidationError('Work pool does not belong to your active organization.')
+            raise serializers.ValidationError('Task pool does not belong to your active organization.')
         return value
 
     def validate_workspace(self, value):

@@ -33,7 +33,7 @@
       "dataset": "데이터셋",
       "workload": "작업량",
       "notFound": "워크스페이스를 찾을 수 없습니다",
-      "workpools": "작업집합",
+      "taskpools": "작업집합",
       "compensation": "보상"
     },
     "roles": {
@@ -200,9 +200,9 @@
       "workspace": "워크스페이스",
       "workspacePlaceholder": "옵션 선택",
       "workspaceHint": "프로젝트를 워크스페이스로 묶어 관리해 보세요.",
-      "workPool": "작업집합",
-      "workPoolPlaceholder": "작업집합 선택",
-      "workPoolHint": "선택한 작업집합의 항목으로 프로젝트 태스크가 생성됩니다. 데이터셋은 워크스페이스 관리자가 관리합니다.",
+      "taskPool": "작업집합",
+      "taskPoolPlaceholder": "작업집합 선택",
+      "taskPoolHint": "선택한 작업집합의 항목으로 프로젝트 태스크가 생성됩니다. 데이터셋은 워크스페이스 관리자가 관리합니다.",
       "currency": "통화",
       "currencyPlaceholder": "통화 선택",
       "compensationHint": "작업자는 이 통화로 적격 어노테이션 및 검토 건당 보상을 받습니다.",
@@ -257,7 +257,7 @@
     "validation": {
       "title": "저장하기 전에 다음 항목을 입력하세요:",
       "name": "프로젝트 이름을 입력하세요",
-      "workPool": "작업집합을 선택하세요",
+      "taskPool": "작업집합을 선택하세요",
       "currency": "통화를 선택하세요",
       "annotationUnitPrice": "어노테이션 단가를 입력하세요 (0 이상)",
       "reviewUnitPrice": "검수 단가를 입력하세요 (0 이상)"
@@ -332,7 +332,7 @@
       "reviewer": "리뷰어"
     }
   },
-  "workpools": {
+  "taskpools": {
     "added": "항목을 추가했습니다",
     "removed": "항목을 제거했습니다",
     "created": "작업집합을 생성했습니다",
