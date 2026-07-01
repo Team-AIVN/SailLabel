@@ -7,7 +7,7 @@ interface EmptyStateProps {
   // Role-based props (optional)
   userRole?: string;
   project?: {
-    // Project-scoped dataset import is removed; data comes from an assigned Work Pool.
+    // Project-scoped dataset import is removed; data comes from an assigned Task Pool.
     work_pool?: number | string | null;
     assignment_settings?: {
       label_stream_task_distribution?: "auto_distribution" | "assigned_only" | string;
@@ -119,7 +119,7 @@ const renderEmptyStateLayout = ({
  *
  * Project-scoped dataset import is intentionally NOT offered here: datasets are
  * imported and managed at the workspace level, then assigned to a project as a
- * Work Pool. The default state reports the project's work pool status instead.
+ * Task Pool. The default state reports the project's Task pool status instead.
  *
  * Props:
  * - userRole: string — User role (REVIEWER, ANNOTATOR, etc.) - optional
@@ -212,14 +212,14 @@ export const EmptyState: FC<EmptyStateProps> = ({
   }
 
   // Default case: project-scoped data import is disabled. Datasets are imported at the
-  // workspace level and assigned to a project as a Work Pool, so we only report the
-  // work pool status here — no import / cloud-storage affordances.
+  // workspace level and assigned to a project as a Task Pool, so we only report the
+  // Task pool status here — no import / cloud-storage affordances.
   const hasWorkPool = Boolean(project?.work_pool);
   return renderEmptyStateLayout({
     icon: <IconInbox />,
-    title: hasWorkPool ? "No data to display" : "No work pool assigned",
+    title: hasWorkPool ? "No data to display" : "No Task pool assigned",
     description: hasWorkPool
-      ? "This project's work pool has no items yet."
-      : "No work pool is assigned to this project. Datasets are imported and managed in the workspace, then assigned to a project as a work pool.",
+      ? "This project's Task pool has no items yet."
+      : "No Task pool is assigned to this project. Datasets are imported and managed in the workspace, then assigned to a project as a Task pool.",
   });
 };

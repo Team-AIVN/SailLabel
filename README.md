@@ -23,8 +23,8 @@ review platform on top.
 
 - **Workspaces** — an Organization → Workspace → Project tenancy layer with
   workspace-scoped roles, dashboards, and dataset management.
-- **Datasets & Work Pools** — upload datasets at the workspace level and curate
-  them into reusable Work Pools that seed project tasks (including automatic
+- **Datasets & Task Pools** — upload datasets at the workspace level and curate
+  them into reusable Task Pools that seed project tasks (including automatic
   pairing of same-name image + CSV uploads).
 - **Annotation review workflow** — assign reviewers, review tasks with
   **Accept / Reject / Fix-and-Accept**, keep full review history, and track

@@ -114,7 +114,7 @@ class Migration(migrations.Migration):
                 (
                     "workspace",
                     models.ForeignKey(
-                        help_text="Workspace that owns the work pool.",
+                        help_text="Workspace that owns the task pool.",
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="work_pools",
                         to="workspaces.workspace",

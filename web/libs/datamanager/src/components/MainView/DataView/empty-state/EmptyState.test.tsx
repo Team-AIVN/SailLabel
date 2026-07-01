@@ -30,22 +30,22 @@ describe("EmptyState Component", () => {
   });
 
   describe("Default (no project-level import) state", () => {
-    it("shows 'No work pool assigned' when the project has no work pool", () => {
+    it("shows 'No Task pool assigned' when the project has no Task pool", () => {
       render(<EmptyState project={{}} />);
 
-      expect(screen.getByText("No work pool assigned")).toBeInTheDocument();
+      expect(screen.getByText("No Task pool assigned")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "No work pool is assigned to this project. Datasets are imported and managed in the workspace, then assigned to a project as a work pool.",
+          "No Task pool is assigned to this project. Datasets are imported and managed in the workspace, then assigned to a project as a Task pool.",
         ),
       ).toBeInTheDocument();
     });
 
-    it("shows a neutral no-data message when a work pool is assigned but empty", () => {
+    it("shows a neutral no-data message when a Task pool is assigned but empty", () => {
       render(<EmptyState project={{ work_pool: 7 }} />);
 
       expect(screen.getByText("No data to display")).toBeInTheDocument();
-      expect(screen.getByText("This project's work pool has no items yet.")).toBeInTheDocument();
+      expect(screen.getByText("This project's Task pool has no items yet.")).toBeInTheDocument();
     });
 
     it("never renders any data-import affordances", () => {
@@ -149,7 +149,7 @@ describe("EmptyState Component", () => {
     it("should render the no-work-pool state when no project is provided", () => {
       render(<EmptyState />);
 
-      expect(screen.getByText("No work pool assigned")).toBeInTheDocument();
+      expect(screen.getByText("No Task pool assigned")).toBeInTheDocument();
     });
   });
 });

@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
             name="work_pool",
             field=models.ForeignKey(
                 blank=True,
-                help_text="Work pool whose items seed this project tasks (selected at creation).",
+                help_text="Task pool whose items seed this project tasks (selected at creation).",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="projects",

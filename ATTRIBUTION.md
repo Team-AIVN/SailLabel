@@ -67,7 +67,7 @@ LabelSea builds on Label Studio and adds, among other things:
 
 - An Organization → **Workspace** → Project multi-tenancy layer with
   workspace-scoped roles, dashboards, and dataset management.
-- **Work Pools**: curated sets of dataset items bound to projects.
+- **Task Pools**: curated sets of dataset items bound to projects.
 - An in-project **annotation review workflow** (reviewer assignment,
   accept / reject / fix-and-accept, review history and progress) plus a
   reviewer task view and a review page.
