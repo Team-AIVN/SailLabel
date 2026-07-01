@@ -1,4 +1,4 @@
-"""Role constants for the SailLabel RBAC model.
+"""Role constants for the LabelSea RBAC model.
 
 Roles are grouped in two scopes:
 - Organization scope: ``OrganizationRole`` — applies to ``OrganizationMember.role``.

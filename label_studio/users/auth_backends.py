@@ -61,8 +61,8 @@ def _attach_default_organization(user):
         )
         org.add_user(user)
     else:
-        logger.info('Keycloak: no organizations exist yet — creating default "SailLabel" for %s', user.email)
-        org = create_organization(title='SailLabel', created_by=user)
+        logger.info('Keycloak: no organizations exist yet — creating default "LabelSea" for %s', user.email)
+        org = create_organization(title='LabelSea', created_by=user)
     user.active_organization = org
     user.save(update_fields=['active_organization'])
 

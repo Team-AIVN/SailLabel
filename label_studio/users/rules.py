@@ -1,4 +1,4 @@
-"""Role predicates for SailLabel RBAC.
+"""Role predicates for LabelSea RBAC.
 
 Predicates are unary (``user``) or binary (``user, obj``). django-rules composes them
 via ``&``/``|`` — see ``projects/rules.py`` and ``workspaces/rules.py`` for the

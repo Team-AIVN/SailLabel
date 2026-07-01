@@ -1,21 +1,21 @@
-SailLabel
-Copyright (c) 2025-2026 SailLabel contributors. All Rights Reserved.
+LabelSea
+Copyright (c) 2025-2026 LabelSea contributors. All Rights Reserved.
 
-SailLabel is a derivative work based on Label Studio
+LabelSea is a derivative work based on Label Studio
 (https://github.com/HumanSignal/label-studio), an open source data
-labeling tool. SailLabel is distributed under the Apache License,
-Version 2.0. Modifications and additions made by the SailLabel project
+labeling tool. LabelSea is distributed under the Apache License,
+Version 2.0. Modifications and additions made by the LabelSea project
 are also licensed under the Apache License, Version 2.0. Please see the
 LICENSE file for the full terms.
 
 This product includes software developed by HumanSignal, Inc. (formerly
-Heartex, Inc.) and the Label Studio contributors. SailLabel is an
+Heartex, Inc.) and the Label Studio contributors. LabelSea is an
 independent project and is NOT affiliated with, sponsored by, or
 endorsed by HumanSignal, Inc. "Label Studio" is a trademark of
 HumanSignal, Inc.; it is referenced here only to identify the upstream
-project from which SailLabel is derived (nominative use).
+project from which LabelSea is derived (nominative use).
 
-A summary of the changes SailLabel makes to the original work, together
+A summary of the changes LabelSea makes to the original work, together
 with the full attribution and license-compliance details, is recorded
 in the ATTRIBUTION.md file at the root of this repository.
 

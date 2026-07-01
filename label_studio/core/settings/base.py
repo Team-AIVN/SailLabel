@@ -652,7 +652,7 @@ if KEYCLOAK_ENABLED:
     if KEYCLOAK_PUBLIC_CLIENT:
         OIDC_USE_PKCE = True
         OIDC_PKCE_CODE_CHALLENGE_METHOD = 'S256'
-    # Post-logout redirect: send user back to SailLabel after Keycloak ends the SSO session.
+    # Post-logout redirect: send user back to LabelSea after Keycloak ends the SSO session.
     LOGOUT_REDIRECT_URL = get_env('OIDC_LOGOUT_REDIRECT_URL', '/')
     OIDC_OP_LOGOUT_URL_METHOD = 'users.auth_backends.keycloak_logout_url'
     # Our /logout/ view redirects via GET; allow the OIDC logout endpoint to respond to GET.

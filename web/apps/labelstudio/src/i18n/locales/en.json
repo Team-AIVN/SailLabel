@@ -107,8 +107,8 @@
     "korean": "한국어"
   },
   "app": {
-    "brand": "SailLabel",
-    "logoAlt": "SailLabel Logo"
+    "brand": "LabelSea",
+    "logoAlt": "LabelSea Logo"
   },
   "common": {
     "save": "Save",
@@ -166,7 +166,7 @@
       "blog": "LabelStud.io Blog",
       "slackCommunity": "Slack Community"
     },
-    "versionLabel": "SailLabel Version: {{edition}}"
+    "versionLabel": "LabelSea Version: {{edition}}"
   },
   "projects": {
     "pageTitle": "Projects",
