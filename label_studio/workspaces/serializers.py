@@ -22,6 +22,7 @@ def _derive_label_type(parsed_label_config):
 
 class WorkspaceSerializer(serializers.ModelSerializer):
     project_count = serializers.SerializerMethodField(read_only=True)
+    current_user_role = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Workspace
@@ -34,6 +35,7 @@ class WorkspaceSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'project_count',
+            'current_user_role',
         )
         read_only_fields = ('organization', 'created_by', 'created_at', 'updated_at', 'project_count')
 
@@ -43,6 +45,13 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         if projects is None:
             return 0
         return projects.filter(deleted_at__isnull=True).count()
+
+    def get_current_user_role(self, obj: Workspace):
+        from users.roles import resolve_workspace_role
+
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        return resolve_workspace_role(user, obj)
 
 
 class WorkspaceMemberSerializer(serializers.ModelSerializer):

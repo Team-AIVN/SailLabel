@@ -103,12 +103,18 @@ class BaseUserSerializerUpdate(BaseUserSerializer):
 
 class BaseWhoAmIUserSerializer(BaseUserSerializer):
     permissions = serializers.SerializerMethodField()
+    is_super_admin = serializers.SerializerMethodField()
 
     class Meta(BaseUserSerializer.Meta):
-        fields = BaseUserSerializer.Meta.fields + ('permissions',)
+        fields = BaseUserSerializer.Meta.fields + ('permissions', 'is_super_admin')
 
     def get_permissions(self, user) -> list[str]:
         return [perm for _, perm in all_permissions]
+
+    def get_is_super_admin(self, user) -> bool:
+        from users.rules import is_super_admin
+
+        return bool(is_super_admin.test(user))
 
 
 class UserSimpleSerializer(BaseUserSerializer):

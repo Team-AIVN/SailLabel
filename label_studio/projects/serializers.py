@@ -149,6 +149,9 @@ class ProjectSerializer(FlexFieldsModelSerializer):
     queue_total = serializers.SerializerMethodField()
     queue_done = serializers.SerializerMethodField()
     state = FSMStateField(read_only=True)  # FSM state - automatically uses annotation if present
+    current_user_role = serializers.SerializerMethodField(
+        read_only=True, help_text="Current user's effective role in this project (null if no access)"
+    )
 
     @property
     def user_id(self):
@@ -223,6 +226,13 @@ class ProjectSerializer(FlexFieldsModelSerializer):
     def get_start_training_on_annotation_update(self, instance) -> bool:
         # FIXME: remake this logic with start_training_on_annotation_update
         return True if instance.min_annotations_to_start_training else False
+
+    def get_current_user_role(self, project):
+        from users.roles import resolve_project_role
+
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        return resolve_project_role(user, project)
 
     def to_internal_value(self, data):
         # FIXME: remake this logic with start_training_on_annotation_update
@@ -317,6 +327,7 @@ class ProjectSerializer(FlexFieldsModelSerializer):
             'queue_done',
             'config_suitable_for_bulk_annotation',
             'state',
+            'current_user_role',
         ]
 
     def validate_label_config(self, value):
