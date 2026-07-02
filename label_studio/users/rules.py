@@ -58,7 +58,11 @@ def is_super_admin(user):
     org_id = getattr(user, 'active_organization_id', None)
     if not org_id:
         return False
-    from organizations.models import OrganizationMember
+    from organizations.models import Organization, OrganizationMember
+
+    # The organization owner (creator) is the super admin for their organization.
+    if Organization.objects.filter(id=org_id, created_by=user).exists():
+        return True
 
     return OrganizationMember.objects.filter(
         user=user,
