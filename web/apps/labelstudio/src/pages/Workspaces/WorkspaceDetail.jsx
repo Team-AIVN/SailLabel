@@ -342,7 +342,7 @@ export const WorkspaceDetail = () => {
                         {t("workspaces.dashboard.poolItems", "Pool items")}: <b>{p.task_pool_item_count ?? 0}</b>
                       </span>
                       <span>
-                        {t("workspaces.dashboard.annotators", "Annotators")}: <b>{p.annotator_count ?? 0}</b>
+                        {t("workspaces.dashboard.annotators", "Labelers")}: <b>{p.annotator_count ?? 0}</b>
                       </span>
                       <span>
                         {t("workspaces.dashboard.reviewers", "Reviewers")}: <b>{p.reviewer_count ?? 0}</b>

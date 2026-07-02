@@ -22,7 +22,7 @@ const userLabel = (detail) => {
 
 /**
  * Two-panel worker assignment (mirrors the Task Pool UI): workspace members on the
- * left, the project's Annotators / Reviewers on the right. Pick a right-side list to
+ * left, the project's Labelers / Reviewers on the right. Pick a right-side list to
  * activate it, then add (→) selected members or remove (←) them — exactly like pools.
  */
 export const WorkerAssignment = ({ projectId, workspaceId, show = true }) => {
@@ -141,7 +141,7 @@ export const WorkerAssignment = ({ projectId, workspaceId, show = true }) => {
       <section className={root.elem("box").mod({ active: isActive }).toClassName()} onClick={() => selectRole(role)}>
         <header className={root.elem("box-head").toClassName()}>
           <strong>
-            {role === "annotator" ? t("assign.annotators", "Annotators") : t("assign.reviewers", "Reviewers")}
+            {role === "annotator" ? t("assign.annotators", "Labelers") : t("assign.reviewers", "Reviewers")}
             <span className={root.elem("count").toClassName()}>({rows.length})</span>
           </strong>
           {isActive && <span className={root.elem("active-tag").toClassName()}>{t("assign.active", "Active")}</span>}
@@ -206,7 +206,7 @@ export const WorkerAssignment = ({ projectId, workspaceId, show = true }) => {
                   {currentRole && (
                     <span className={root.elem("badge").mod({ role: currentRole }).toClassName()}>
                       {currentRole === "annotator"
-                        ? t("assign.annotator", "Annotator")
+                        ? t("assign.annotator", "Labeler")
                         : t("assign.reviewer", "Reviewer")}
                     </span>
                   )}
@@ -240,7 +240,7 @@ export const WorkerAssignment = ({ projectId, workspaceId, show = true }) => {
           </Button>
         </div>
 
-        {/* RIGHT: annotators / reviewers */}
+        {/* RIGHT: labelers / reviewers */}
         <div className={root.elem("roles").toClassName()}>
           {ROLES.map((role) => renderRoleBox(role, role === "annotator" ? annotators : reviewers))}
         </div>

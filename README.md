@@ -2,7 +2,7 @@
 
 **LabelSea** is an open-source data-labeling platform for building and
 managing high-quality training data — with first-class support for
-**organizations, workspaces, annotator/reviewer workflows, and worker
+**organizations, workspaces, labeler/reviewer workflows, and worker
 compensation**.
 
 LabelSea is a **derivative work based on
@@ -30,12 +30,12 @@ review platform on top.
   **Accept / Reject / Fix-and-Accept**, keep full review history, and track
   annotation/review progress, with a dedicated reviewer task view and review
   page (comments rendered as code diffs for fixes).
-- **Worker assignment** — assign annotators and reviewers to a project during
+- **Worker assignment** — assign labelers and reviewers to a project during
   creation and from project settings.
 - **Compensation** — per-project pricing (currency, annotation/review unit
   prices), earnings derived from the review history, and payment tracking.
 - **Richer Data Manager & project cards** — reviewer/`reviewed`/`reviews`
-  columns, work-pool/annotator/reviewer counts, and progress summaries.
+  columns, work-pool/labeler/reviewer counts, and progress summaries.
 
 ## Core labeling features (from Label Studio)
 

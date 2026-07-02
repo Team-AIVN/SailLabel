@@ -93,7 +93,7 @@
       "actionFailed": "작업에 실패했습니다",
       "importTitle": "데이터 가져오기",
       "poolItems": "작업집합 데이터",
-      "annotators": "어노테이터",
+      "annotators": "라벨러",
       "reviewers": "검수자",
       "annotationProgress": "어노테이션 진행도",
       "reviewProgressLine": "검수 진행도",
@@ -304,7 +304,7 @@
         "deactivated": "비활성",
         "administrator": "관리자",
         "manager": "매니저",
-        "annotator": "어노테이터",
+        "annotator": "라벨러",
         "reviewer": "검수자",
         "pending": "대기중"
       }
@@ -327,7 +327,7 @@
     "col": {
       "taskId": "태스크 ID",
       "version": "버전",
-      "annotator": "어노테이터",
+      "annotator": "라벨러",
       "reviewStatus": "리뷰 상태",
       "reviewer": "리뷰어"
     }
@@ -385,14 +385,17 @@
       "PAID": "지급 완료",
       "PARTIALLY_PAID": "부분 지급",
       "UNPAID": "미지급"
-    }
+    },
+    "allProjects": "전체 프로젝트",
+    "annotations": "어노테이션",
+    "reviews": "검수"
   },
   "assign": {
     "workspaceMembers": "워크스페이스 멤버",
     "search": "검색",
-    "annotators": "어노테이터",
+    "annotators": "라벨러",
     "reviewers": "검수자",
-    "annotator": "어노테이터",
+    "annotator": "라벨러",
     "reviewer": "검수자",
     "active": "활성",
     "none": "없음",

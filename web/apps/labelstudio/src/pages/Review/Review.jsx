@@ -161,7 +161,7 @@ export const ReviewPage = () => {
           <tr>
             <th>{t("review.col.taskId", "Task ID")}</th>
             <th>{t("review.col.version", "Version")}</th>
-            <th>{t("review.col.annotator", "Annotator")}</th>
+            <th>{t("review.col.annotator", "Labeler")}</th>
             <th>{t("review.col.reviewStatus", "Review status")}</th>
             <th>{t("review.col.reviewer", "Reviewer")}</th>
             <th>{t("review.col.comments", "Comments")}</th>

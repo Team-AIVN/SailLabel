@@ -73,7 +73,7 @@ LabelSea builds on Label Studio and adds, among other things:
   reviewer task view and a review page.
 - A **Compensation** module (per-project pricing, derived earnings, payment
   tracking).
-- **Worker assignment** (annotators / reviewers) in project creation and
+- **Worker assignment** (labelers / reviewers) in project creation and
   project settings.
 - Various Data Manager, project-card, and import/pairing enhancements.
 - Re-branding of the user-facing application name to "LabelSea".

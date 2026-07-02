@@ -195,7 +195,7 @@ export const WorkersSettings = () => {
       <section className={root.elem("box").mod({ active: isActive }).toClassName()} onClick={() => selectRole(role)}>
         <header className={root.elem("box-head").toClassName()}>
           <strong>
-            {role === "annotator" ? "Annotators" : "Reviewers"}
+            {role === "annotator" ? "Labelers" : "Reviewers"}
             <span className={root.elem("count").toClassName()}>({rows.length})</span>
           </strong>
           {isActive && <span className={root.elem("active-tag").toClassName()}>Active</span>}
@@ -262,7 +262,7 @@ export const WorkersSettings = () => {
                           <span className={root.elem("item-text").toClassName()}>{userLabel(m.user_detail)}</span>
                           {currentRole && (
                             <span className={root.elem("badge").mod({ role: currentRole }).toClassName()}>
-                              {currentRole === "annotator" ? "Annotator" : "Reviewer"}
+                              {currentRole === "annotator" ? "Labeler" : "Reviewer"}
                             </span>
                           )}
                         </li>

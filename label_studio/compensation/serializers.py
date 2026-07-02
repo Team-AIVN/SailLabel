@@ -36,6 +36,7 @@ class PaymentRecordSerializer(serializers.ModelSerializer):
         fields = (
             'id',
             'workspace',
+            'project',
             'user',
             'currency',
             'amount',

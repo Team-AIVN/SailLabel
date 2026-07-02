@@ -93,7 +93,7 @@
       "actionFailed": "Action failed",
       "importTitle": "Import data",
       "poolItems": "Pool items",
-      "annotators": "Annotators",
+      "annotators": "Labelers",
       "reviewers": "Reviewers",
       "annotationProgress": "Annotation Progress",
       "reviewProgressLine": "Review Progress",
@@ -304,7 +304,7 @@
         "deactivated": "Deactivated",
         "administrator": "Administrator",
         "manager": "Manager",
-        "annotator": "Annotator",
+        "annotator": "Labeler",
         "reviewer": "Reviewer",
         "pending": "Pending"
       }
@@ -327,7 +327,7 @@
     "col": {
       "taskId": "Task ID",
       "version": "Version",
-      "annotator": "Annotator",
+      "annotator": "Labeler",
       "reviewStatus": "Review status",
       "reviewer": "Reviewer"
     }
@@ -385,14 +385,17 @@
       "PAID": "Paid",
       "PARTIALLY_PAID": "Partially Paid",
       "UNPAID": "Unpaid"
-    }
+    },
+    "allProjects": "All projects",
+    "annotations": "Annotations",
+    "reviews": "Reviews"
   },
   "assign": {
     "workspaceMembers": "Workspace members",
     "search": "Search",
-    "annotators": "Annotators",
+    "annotators": "Labelers",
     "reviewers": "Reviewers",
-    "annotator": "Annotator",
+    "annotator": "Labeler",
     "reviewer": "Reviewer",
     "active": "Active",
     "none": "None",

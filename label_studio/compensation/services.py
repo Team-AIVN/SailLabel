@@ -199,10 +199,100 @@ def compute_workspace_compensation(workspace):
     return rows
 
 
-def compute_member_compensation(workspace, user):
-    """Per-project earnings breakdown and payment history for one worker."""
+def compensation_projects(workspace, allowed_project_ids):
+    """Projects (with a compensation policy) the caller may see — for the filter dropdown."""
+    return [
+        {'id': p.project_id, 'title': p.project.title, 'currency': p.currency}
+        for p in _policies_by_project(workspace).order_by('project__title')
+        if p.project_id in allowed_project_ids
+    ]
+
+
+def compute_project_compensation(workspace, allowed_project_ids, project_id=None):
+    """Per-(project, member) settlement rows, scoped to the projects the caller may see.
+
+    Each project settles in its own currency (the policy currency). Returns one row per
+    (project, member) with qualified counts, earnings, amount paid, remaining and status.
+    """
+    from django.contrib.auth import get_user_model
+
+    policies = [
+        p
+        for p in _policies_by_project(workspace)
+        if p.project_id in allowed_project_ids and (project_id is None or p.project_id == project_id)
+    ]
+    project_meta = {p.project_id: (p.currency, p.project.title) for p in policies}
+
+    # Payments per (project, user), restricted to the visible projects.
+    paid_map = defaultdict(lambda: Decimal('0'))
+    for rec in PaymentRecord.objects.filter(workspace=workspace, project_id__in=list(project_meta)):
+        paid_map[(rec.project_id, rec.user_id)] += rec.amount
+
+    # Earnings per (project, user).
+    per = {}
+    user_ids = set()
+    for policy in policies:
+        counts = qualified_counts_for_project(policy.project)
+        for uid, c in counts.items():
+            if c['annotation'] == 0 and c['review'] == 0:
+                continue
+            per[(policy.project_id, uid)] = {
+                'annotation_count': c['annotation'],
+                'review_count': c['review'],
+                'annotation_earnings': policy.annotation_unit_price * c['annotation'],
+                'review_earnings': policy.review_unit_price * c['review'],
+            }
+            user_ids.add(uid)
+    # Include payment-only (project, user) rows so recorded payments always show.
+    for (pid, uid) in paid_map:
+        user_ids.add(uid)
+        per.setdefault(
+            (pid, uid),
+            {
+                'annotation_count': 0,
+                'review_count': 0,
+                'annotation_earnings': Decimal('0'),
+                'review_earnings': Decimal('0'),
+            },
+        )
+
+    roles = _member_roles(workspace)
+    users = {u.pk: u for u in get_user_model().objects.filter(pk__in=user_ids)}
+
+    rows = []
+    for (pid, uid), d in per.items():
+        currency, project_name = project_meta.get(pid, (None, None))
+        earned = d['annotation_earnings'] + d['review_earnings']
+        paid = paid_map.get((pid, uid), Decimal('0'))
+        rows.append(
+            {
+                'project_id': pid,
+                'project_name': project_name,
+                'member_id': uid,
+                'member_name': _user_label(users.get(uid)),
+                'role': roles.get(uid),
+                'currency': currency,
+                'annotation_count': d['annotation_count'],
+                'review_count': d['review_count'],
+                'annotation_earnings': float(d['annotation_earnings']),
+                'review_earnings': float(d['review_earnings']),
+                'total_earned': float(earned),
+                'total_paid': float(paid),
+                'remaining_balance': float(earned - paid),
+                'status': _status_for(earned, paid),
+            }
+        )
+    rows.sort(key=lambda r: (str(r['project_name'] or ''), str(r['member_name'] or '')))
+    return rows
+
+
+def compute_member_compensation(workspace, user, allowed_project_ids=None):
+    """Per-project earnings breakdown and payment history for one worker (optionally
+    scoped to the projects the caller may see)."""
     projects = []
     for policy in _policies_by_project(workspace).order_by('project__title'):
+        if allowed_project_ids is not None and policy.project_id not in allowed_project_ids:
+            continue
         counts = qualified_counts_for_project(policy.project).get(user.pk)
         if not counts or (counts['annotation'] == 0 and counts['review'] == 0):
             continue

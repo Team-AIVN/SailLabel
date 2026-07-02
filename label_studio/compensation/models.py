@@ -69,11 +69,12 @@ class ProjectCompensationPolicy(models.Model):
 
 
 class PaymentRecord(models.Model):
-    """A manually-recorded payment to a worker. No money is moved; this is bookkeeping.
+    """A manually-recorded payment to a worker for a specific project. No money is moved;
+    this is bookkeeping.
 
-    Payments are scoped to a (workspace, user, currency) because a worker may earn in
-    several currencies across projects. Remaining balance and payment status are derived
-    by comparing the sum of these records against derived earnings for the same currency.
+    Settlement is per-project: a payment settles a worker's earnings on one project (in
+    that project's currency). Remaining balance and status are derived by comparing the
+    sum of these records against the derived earnings for the same (project, user).
     """
 
     workspace = models.ForeignKey(
@@ -81,6 +82,14 @@ class PaymentRecord(models.Model):
         on_delete=models.CASCADE,
         related_name='payment_records',
         help_text='Workspace the payment is recorded under.',
+    )
+    project = models.ForeignKey(
+        'projects.Project',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payment_records',
+        help_text='Project this payment settles (settlement unit). Null = legacy workspace-level payment.',
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
