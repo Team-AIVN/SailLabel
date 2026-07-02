@@ -201,6 +201,12 @@ export class LSFWrapper {
       interfaces.push("comments:reject");
     }
 
+    // Reviewers get the review bottom bar (Accept / Reject / Fix+Accept) instead of
+    // Submit/Update, and must leave a comment to reject.
+    if (this.project.current_user_role === "reviewer") {
+      interfaces.push("review", "comments:reject");
+    }
+
     if (this.interfacesModifier) {
       interfaces = this.interfacesModifier(interfaces, this.labelStream);
     }
@@ -240,6 +246,8 @@ export class LSFWrapper {
       onStorageInitialized: this.onStorageInitialized,
       onSubmitAnnotation: this.onSubmitAnnotation,
       onUpdateAnnotation: this.onUpdateAnnotation,
+      onAcceptAnnotation: this.onAcceptAnnotation,
+      onRejectAnnotation: this.onRejectAnnotation,
       onDeleteAnnotation: this.onDeleteAnnotation,
       onSkipTask: this.onSkipTask,
       onUnskipTask: this.onUnskipTask,
@@ -918,6 +926,64 @@ export class LSFWrapper {
     } else {
       await this.loadTask(this.task.id, annotation.pk, true);
     }
+  };
+
+  /** @private Build a "fix + accept" comment recording the original vs corrected result. */
+  buildFixComment(annotation, correctedResult) {
+    const original = this.task?.annotations?.find((a) => Number(a.id ?? a.pk) === Number(annotation.pk))?.result;
+    const fmt = (value) => {
+      try {
+        return JSON.stringify(value ?? []);
+      } catch {
+        return String(value);
+      }
+    };
+    return `[Fix + Accept]\nOriginal: ${fmt(original)}\nUpdated: ${fmt(correctedResult)}`;
+  }
+
+  /** @private POST a reviewer decision to the backend and refresh the task. */
+  submitReviewDecision = async (annotation, body, successMessage) => {
+    const taskId = this.task?.id;
+    const result = await this.withinLoadingState(async () => {
+      return this.datamanager.apiCall(
+        "submitReview",
+        { pk: annotation.pk },
+        { body },
+        { errorHandler: errorHandlerAllowSpecialErrors },
+      );
+    });
+    const status = result?.$meta?.status;
+    this.showOperationToast(status, successMessage, "Review was not saved", result);
+    if (status >= 400) return;
+    invalidateDistributionCache(taskId);
+    // Reload the task so the new review status / fixed revision is reflected.
+    await this.loadTask(taskId, annotation.pk, true);
+  };
+
+  /** @private Reviewer pressed Accept (or Fix + Accept when the result was edited). */
+  onAcceptAnnotation = async (_ls, { isDirty, entity } = {}) => {
+    const annotation = entity ?? this.currentAnnotation;
+    if (!annotation?.pk) return;
+    if (isDirty) {
+      const corrected = annotation.serializeAnnotation();
+      await this.submitReviewDecision(
+        annotation,
+        { decision: "FIX_AND_ACCEPT", content: corrected, comment: this.buildFixComment(annotation, corrected) },
+        "Annotation fixed and accepted",
+      );
+    } else {
+      await this.submitReviewDecision(annotation, { decision: "ACCEPT" }, "Annotation accepted");
+    }
+  };
+
+  /** @private Reviewer pressed Reject (a comment is enforced by the `comments:reject` interface). */
+  onRejectAnnotation = async (_ls, { entity, comment } = {}) => {
+    const annotation = entity ?? this.currentAnnotation;
+    if (!annotation?.pk) return;
+    // The reject reason is entered in the Comments box; capture it for the review record.
+    const latestComment = this.lsf?.commentStore?.comments?.[0];
+    const reason = (typeof comment === "string" ? comment : comment?.text) ?? latestComment?.text ?? "";
+    await this.submitReviewDecision(annotation, { decision: "REJECT", comment: reason }, "Annotation rejected");
   };
 
   deleteDraft = async (id) => {

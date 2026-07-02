@@ -127,7 +127,7 @@ def user_login(request):
         else:
             next_page = reverse('projects:project-index')
 
-    # In Keycloak mode, render a SailLabel-branded landing page with a button
+    # In Keycloak mode, render a LabelSea-branded landing page with a button
     # that hands off to the OIDC authorization code + PKCE flow when clicked,
     # instead of forcing an immediate upstream redirect on every visit.
     if settings.KEYCLOAK_ENABLED:

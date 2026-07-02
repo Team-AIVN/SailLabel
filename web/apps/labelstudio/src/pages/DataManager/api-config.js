@@ -37,6 +37,9 @@ export const APIConfig = {
     /** Single annotation */
     annotation: "/../annotations/:id",
 
+    /** Submit a reviewer decision (ACCEPT / REJECT / FIX_AND_ACCEPT) on an annotation */
+    submitReview: "POST:/../annotations/:pk/review/",
+
     /** Mark sample as skipped */
     skipTask: {
       method: "post",

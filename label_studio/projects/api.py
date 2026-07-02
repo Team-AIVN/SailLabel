@@ -4,6 +4,9 @@ import logging
 import os
 import pathlib
 
+from audit.models import AuditAction
+from audit.services import record_project_event
+
 from core.feature_flags import flag_set
 from core.filters import ListFilter
 from core.label_config import config_essential_data_has_changed
@@ -205,6 +208,11 @@ class ProjectListAPI(generics.ListCreateAPIView):
                     'Project with the same name already exists: {}'.format(ser.validated_data.get('title', ''))
                 )
             raise LabelStudioDatabaseException('Database error during project creation. Try again.')
+        record_project_event(
+            action=AuditAction.PROJECT_CREATED,
+            actor=self.request.user,
+            project=ser.instance,
+        )
 
     def get(self, request, *args, **kwargs):
         return super(ProjectListAPI, self).get(request, *args, **kwargs)
@@ -408,9 +416,22 @@ class ProjectAPI(generics.RetrieveUpdateDestroyAPIView):
             except KeyError:
                 pass
 
-        return super(ProjectAPI, self).patch(request, *args, **kwargs)
+        response = super(ProjectAPI, self).patch(request, *args, **kwargs)
+        if status.HTTP_200_OK <= response.status_code < status.HTTP_300_MULTIPLE_CHOICES:
+            record_project_event(
+                action=AuditAction.PROJECT_UPDATED,
+                actor=request.user,
+                project=self.get_object(),
+                metadata={'fields': sorted((request.data or {}).keys())},
+            )
+        return response
 
     def perform_destroy(self, instance):
+        record_project_event(
+            action=AuditAction.PROJECT_DELETED,
+            actor=self.request.user,
+            project=instance,
+        )
         # we don't need to relaculate counters if we delete whole project
         with temporary_disconnect_all_signals():
             instance.delete()

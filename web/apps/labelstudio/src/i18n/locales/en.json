@@ -1,12 +1,114 @@
 {
+  "workspaces": {
+    "pageTitle": "Workspaces",
+    "createButton": "Create Workspace",
+    "createWorkspaceAriaLabel": "Create new workspace",
+    "fields": {
+      "title": "Title",
+      "description": "Description"
+    },
+    "create": {
+      "title": "Create Workspace",
+      "submit": "Create",
+      "titleTooShort": "Title must be at least 3 characters",
+      "failed": "Failed to create workspace"
+    },
+    "card": {
+      "projectCount_one": "{{count}} project",
+      "projectCount_other": "{{count}} projects",
+      "open": "Open"
+    },
+    "empty": {
+      "title": "No workspaces yet",
+      "description": "Create a workspace to organize projects and team members."
+    },
+    "toast": {
+      "created": "Workspace \"{{title}}\" created",
+      "importBound": "Workspace \"{{title}}\" created with {{count}} file(s)."
+    },
+    "detail": {
+      "projects": "Projects",
+      "noProjects": "No projects in this workspace yet.",
+      "members": "Members",
+      "dataset": "Dataset",
+      "workload": "Workload",
+      "notFound": "Workspace not found",
+      "taskpools": "Task Pools",
+      "compensation": "Compensation"
+    },
+    "roles": {
+      "member": "Member",
+      "workspace_manager": "Workspace Manager"
+    },
+    "members": {
+      "user": "User",
+      "role": "Role",
+      "add": "Add member",
+      "selectUser": "Select a user",
+      "added": "Member added",
+      "addFailed": "Could not add member",
+      "roleUpdated": "Role updated",
+      "removed": "Member removed"
+    },
+    "dataset": {
+      "uploaded": "{{count}} file(s) uploaded",
+      "uploadFailed": "Upload failed",
+      "selectProject": "Select a project",
+      "byCount": "By count",
+      "byRatio": "By ratio",
+      "assign": "Assign",
+      "assigned": "Assigned {{count}} task(s)",
+      "assignFailed": "Assignment failed"
+    },
+    "workload": {
+      "refresh": "Refresh report",
+      "annotations": "Annotations",
+      "cancelled": "Skipped",
+      "projects": "Projects"
+    },
+    "steps": {
+      "name": "Workspace Name",
+      "import": "Data Import"
+    },
+    "dashboard": {
+      "newProject": "New Project",
+      "newDataset": "New Dataset",
+      "inviteUser": "Invite User",
+      "searchProjects": "Search projects",
+      "searchDatasets": "Search datasets",
+      "searchUsers": "Search users",
+      "allTypes": "All types",
+      "filterTag": "Filter by tag",
+      "sortNewest": "Newest",
+      "sortDueDate": "Due date",
+      "sortProgress": "Progress",
+      "sortTitle": "Title",
+      "tagsPlaceholder": "tags, comma separated",
+      "reviewProgress": "{{p}}% reviewed",
+      "datasetName": "Name",
+      "dataType": "Type",
+      "itemCount": "Items",
+      "lastUpdated": "Last updated",
+      "projectCreated": "Project created",
+      "actionFailed": "Action failed",
+      "importTitle": "Import data",
+      "poolItems": "Pool items",
+      "annotators": "Labelers",
+      "reviewers": "Reviewers",
+      "annotationProgress": "Annotation Progress",
+      "reviewProgressLine": "Review Progress",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    }
+  },
   "locale": {
     "label": "Language",
     "english": "English",
     "korean": "한국어"
   },
   "app": {
-    "brand": "SailLabel",
-    "logoAlt": "SailLabel Logo"
+    "brand": "LabelSea",
+    "logoAlt": "LabelSea Logo"
   },
   "common": {
     "save": "Save",
@@ -17,7 +119,9 @@
     "loading": "Loading",
     "or": "or",
     "learnMore": "Learn more",
-    "optional": "Optional"
+    "optional": "Optional",
+    "remove": "Remove",
+    "actions": "Actions"
   },
   "menubar": {
     "keyboardShortcuts": "Keyboard Shortcuts",
@@ -26,6 +130,7 @@
     "newsletterNotice": "Please check new notification settings in the Account & Settings page",
     "home": "Home",
     "projects": "Projects",
+    "workspaces": "Workspaces",
     "organization": "Organization",
     "api": "API",
     "docs": "Docs",
@@ -61,7 +166,7 @@
       "blog": "LabelStud.io Blog",
       "slackCommunity": "Slack Community"
     },
-    "versionLabel": "SailLabel Version: {{edition}}"
+    "versionLabel": "LabelSea Version: {{edition}}"
   },
   "projects": {
     "pageTitle": "Projects",
@@ -85,7 +190,8 @@
     "steps": {
       "name": "Project Name",
       "import": "Data Import",
-      "config": "Labeling Setup"
+      "config": "Labeling Setup",
+      "assign": "Worker Assignment"
     },
     "name": {
       "projectName": "Project Name",
@@ -93,7 +199,15 @@
       "descriptionPlaceholder": "Optional description of your project",
       "workspace": "Workspace",
       "workspacePlaceholder": "Select an option",
-      "workspaceHint": "Simplify project management by organizing projects into workspaces."
+      "workspaceHint": "Simplify project management by organizing projects into workspaces.",
+      "taskPool": "Task Pool",
+      "taskPoolPlaceholder": "Select a task pool",
+      "taskPoolHint": "Project tasks are created from the selected task pool. Datasets are managed by workspace admins.",
+      "currency": "Currency",
+      "currencyPlaceholder": "Select a currency",
+      "compensationHint": "Workers are paid per qualified annotation and review in this currency.",
+      "annotationUnitPrice": "Annotation Unit Price",
+      "reviewUnitPrice": "Review Unit Price"
     },
     "import": {
       "datasetUrl": "Dataset URL",
@@ -139,7 +253,15 @@
       "labelingConfigurationLink": "labeling configuration",
       "setupLabelingTrailing": " first to preview the expected JSON data format"
     },
-    "cancelAriaLabel": "Cancel project creation"
+    "cancelAriaLabel": "Cancel project creation",
+    "validation": {
+      "title": "Please complete the following before saving:",
+      "name": "Enter a project name",
+      "taskPool": "Select a task pool",
+      "currency": "Select a currency",
+      "annotationUnitPrice": "Enter an annotation unit price (0 or more)",
+      "reviewUnitPrice": "Enter a review unit price (0 or more)"
+    }
   },
   "accountSettings": {
     "pageTitle": "My Account",
@@ -182,10 +304,104 @@
         "deactivated": "Deactivated",
         "administrator": "Administrator",
         "manager": "Manager",
-        "annotator": "Annotator",
+        "annotator": "Labeler",
         "reviewer": "Reviewer",
         "pending": "Pending"
       }
     }
+  },
+  "review": {
+    "title": "Review",
+    "annotationProgress": "Annotation progress",
+    "reviewProgress": "Review progress",
+    "reviewed": "Reviewed",
+    "allStatuses": "All review statuses",
+    "empty": "No tasks.",
+    "status": {
+      "NOT_SELECTED": "Not selected",
+      "PENDING": "Pending",
+      "ACCEPTED": "Accepted",
+      "REJECTED": "Rejected",
+      "FIXED_AND_ACCEPTED": "Fixed & accepted"
+    },
+    "col": {
+      "taskId": "Task ID",
+      "version": "Version",
+      "annotator": "Labeler",
+      "reviewStatus": "Review status",
+      "reviewer": "Reviewer"
+    }
+  },
+  "taskpools": {
+    "added": "Items added",
+    "removed": "Items removed",
+    "created": "Task pool created",
+    "actionFailed": "Action failed",
+    "datasetItems": "Dataset items",
+    "allTypes": "All types",
+    "search": "Search",
+    "included": "Included",
+    "noItems": "No items",
+    "selectPool": "Select a task pool",
+    "rename": "Rename",
+    "newPoolTitle": "New task pool name",
+    "create": "Create",
+    "itemCount": "{{count}} items",
+    "empty": "No items in this pool",
+    "renamePrompt": "New task pool name",
+    "deleteConfirm": "Delete this task pool?",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all"
+  },
+  "compensation": {
+    "memberName": "Member",
+    "role": "Role",
+    "currency": "Currency",
+    "totalEarned": "Total Earned",
+    "totalPaid": "Total Paid",
+    "remaining": "Remaining Balance",
+    "statusLabel": "Status",
+    "noData": "No compensation data yet.",
+    "projectEarnings": "Project Compensation",
+    "project": "Project",
+    "qAnnotations": "Qualified Annotations",
+    "annotationEarnings": "Annotation Earnings",
+    "qReviews": "Qualified Reviews",
+    "reviewEarnings": "Review Earnings",
+    "totalEarnings": "Total Earnings",
+    "noEarnings": "No earnings yet.",
+    "paymentHistory": "Payment History",
+    "paymentDate": "Date",
+    "amount": "Amount",
+    "notes": "Notes",
+    "noPayments": "No payments recorded.",
+    "recordPaymentIn": "Record payment in {{currency}}",
+    "record": "Record",
+    "paymentRecorded": "Payment recorded",
+    "amountInvalid": "Enter an amount greater than 0",
+    "actionFailed": "Action failed",
+    "deletePaymentConfirm": "Delete this payment record?",
+    "status": {
+      "PAID": "Paid",
+      "PARTIALLY_PAID": "Partially Paid",
+      "UNPAID": "Unpaid"
+    },
+    "allProjects": "All projects",
+    "annotations": "Annotations",
+    "reviews": "Reviews"
+  },
+  "assign": {
+    "workspaceMembers": "Workspace members",
+    "search": "Search",
+    "annotators": "Labelers",
+    "reviewers": "Reviewers",
+    "annotator": "Labeler",
+    "reviewer": "Reviewer",
+    "active": "Active",
+    "none": "None",
+    "noMembers": "No members",
+    "added": "Workers assigned",
+    "removed": "Workers removed",
+    "actionFailed": "Could not update assignment"
   }
 }

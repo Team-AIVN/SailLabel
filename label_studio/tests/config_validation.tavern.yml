@@ -28,7 +28,7 @@ stages:
       keyC: wer
       keyD: ert
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: stage
@@ -96,7 +96,7 @@ stages:
     json:
     - text: Example task sentence
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 
@@ -199,7 +199,7 @@ stages:
     json:
     - text: Example task sentence
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 
@@ -325,7 +325,7 @@ stages:
     json:
     - text: Example task sentence
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: get next task
@@ -447,7 +447,7 @@ stages:
     json:
     - text: Example task sentence
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: stage
@@ -542,7 +542,7 @@ stages:
     json:
     - text: Example task sentence
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: stage
@@ -641,7 +641,7 @@ stages:
     - text: Example 1
     - text: Example 2
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: stage
@@ -773,7 +773,7 @@ stages:
     - text: Example 1
     - text: Example 2
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 
@@ -928,7 +928,7 @@ stages:
     - text: Example 1
     - text: Example 2
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 
@@ -1114,7 +1114,7 @@ stages:
     - text: Example 1
     - text: Example 2
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 
@@ -1270,7 +1270,7 @@ stages:
     json:
     - text: any text
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 
@@ -1348,7 +1348,7 @@ stages:
 - name: Import task where taxonomy_other value is null
   request:
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
     headers:
       content-type: application/json
     json:
@@ -1400,7 +1400,7 @@ stages:
         - "test1"
         - "test2"
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 

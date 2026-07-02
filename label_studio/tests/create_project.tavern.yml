@@ -36,7 +36,7 @@ stages:
     - wrong_field: http://pytest.heartex.com/image1.jpg
     - wrong_field: http://pytest.heartex.com/image2.jpg
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 400
 - name: stage
@@ -46,7 +46,7 @@ stages:
     headers:
       content-type: multipart/form-data
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import?commit_to_project=false'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/?commit_to_project=false'
   response:
     json:
       could_be_tasks_list: true

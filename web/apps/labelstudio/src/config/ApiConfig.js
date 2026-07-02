@@ -24,6 +24,67 @@ export const API_CONFIG = {
     deleteProject: "DELETE:/projects/:pk",
     projectResetCache: "POST:/projects/:pk/summary/reset",
 
+    // Review workflow
+    reviewTasks: "/projects/:pk/review/tasks",
+    reviewCandidates: "/projects/:pk/review/candidates",
+    reviewProgress: "/projects/:pk/review/progress",
+    submitReview: "POST:/annotations/:pk/review",
+
+    // Project members (role management)
+    projectMembers: "/projects/:pk/members",
+    createProjectMember: "POST:/projects/:pk/members",
+    updateProjectMember: "PATCH:/projects/:pk/members/:memberPk",
+    deleteProjectMember: "DELETE:/projects/:pk/members/:memberPk",
+
+    // Workspaces
+    workspaces: "/workspaces",
+    workspace: "/workspaces/:pk",
+    createWorkspace: "POST:/workspaces",
+    updateWorkspace: "PATCH:/workspaces/:pk",
+    deleteWorkspace: "DELETE:/workspaces/:pk",
+    workspaceMembers: "/workspaces/:pk/members",
+    workspaceMember: "/workspaces/:pk/members/:memberPk",
+    createWorkspaceMember: "POST:/workspaces/:pk/members",
+    updateWorkspaceMember: "PATCH:/workspaces/:pk/members/:memberPk",
+    deleteWorkspaceMember: "DELETE:/workspaces/:pk/members/:memberPk",
+    workspaceSummary: "/workspaces/:pk/summary",
+    workspaceProjects: "/workspaces/:pk/projects",
+    createWorkspaceProject: "POST:/workspaces/:pk/projects",
+    workspaceDatasets: "/workspaces/:pk/datasets",
+    workspaceFileUploads: "/workspaces/:pk/file-uploads",
+    uploadWorkspaceFiles: "POST:/workspaces/:pk/file-uploads",
+    deleteWorkspaceFileUpload: "DELETE:/workspaces/:pk/file-uploads/:uploadPk",
+    workspaceImportFiles: "POST:/workspaces/:pk/import",
+    workspaceImportPredictions: "POST:/workspaces/:pk/import/predictions",
+    workspaceWorkload: "/workspaces/:pk/workload",
+
+    // Datasets / Task Pools
+    workspaceTaskSourceItems: "/workspaces/:pk/task-source-items",
+    taskPools: "/workspaces/:pk/task-pools",
+    createTaskPool: "POST:/workspaces/:pk/task-pools",
+    taskPool: "/workspaces/:pk/task-pools/:poolPk",
+    updateTaskPool: "PATCH:/workspaces/:pk/task-pools/:poolPk",
+    deleteTaskPool: "DELETE:/workspaces/:pk/task-pools/:poolPk",
+    addTaskPoolItems: "POST:/workspaces/:pk/task-pools/:poolPk/items",
+    removeTaskPoolItems: "DELETE:/workspaces/:pk/task-pools/:poolPk/items",
+
+    // Compensation
+    projectCompensationPolicy: "/projects/:pk/compensation-policy",
+    setProjectCompensationPolicy: "PUT:/projects/:pk/compensation-policy",
+    workspaceCompensation: "/workspaces/:pk/compensation",
+    memberCompensation: "/workspaces/:pk/compensation/members/:userPk",
+    workspacePayments: "/workspaces/:pk/payments",
+    createWorkspacePayment: "POST:/workspaces/:pk/payments",
+    deleteWorkspacePayment: "DELETE:/workspaces/:pk/payments/:paymentPk",
+
+    // Workspace-scope cloud storage templates (provider in path: s3 | gcs | azure | localfiles)
+    workspaceStorages: "/storages/:provider/workspace/?workspace=:workspacePk",
+    createWorkspaceStorage: "POST:/storages/:provider/workspace/",
+    workspaceStorage: "/storages/:provider/workspace/:pk",
+    updateWorkspaceStorage: "PATCH:/storages/:provider/workspace/:pk",
+    deleteWorkspaceStorage: "DELETE:/storages/:provider/workspace/:pk",
+    assignWorkspaceStorageToProject: "POST:/storages/:provider/workspace/:pk/assign",
+
     // Presigning
     presignUrlForTask: "/../tasks/:taskID/presign",
     presignUrlForProject: "/../projects/:projectId/presign",

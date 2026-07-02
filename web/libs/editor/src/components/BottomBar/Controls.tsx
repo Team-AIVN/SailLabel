@@ -80,7 +80,11 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
     const buttons: React.ReactNode[] = [];
 
     const [isInProgress, setIsInProgress] = useState(false);
-    const disabled = !annotationEditable || store.isSubmitting || historySelected || isInProgress;
+    // In review mode there must be a saved annotation to act on; otherwise disable the
+    // Accept/Reject buttons (e.g. a task with no annotation yet).
+    const noReviewableAnnotation = isReview && !annotation.pk;
+    const disabled =
+      !annotationEditable || store.isSubmitting || historySelected || isInProgress || noReviewableAnnotation;
     const submitDisabled = store.hasInterface("annotations:deny-empty") && results.length === 0;
     const hasIncompleteRegions = annotation.hasIncompletePolygons;
 

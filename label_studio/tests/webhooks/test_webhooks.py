@@ -188,36 +188,6 @@ def test_webhooks_for_tasks(configured_project, business_client, organization_we
     assert 'project' in r.json()
 
 
-# TASK CREATE on IMPORT
-@pytest.mark.django_db
-def test_webhooks_for_tasks_import(configured_project, business_client, organization_webhook):
-    from django.core.files.uploadedfile import SimpleUploadedFile
-
-    webhook = organization_webhook
-
-    IMPORT_CSV = 'tests/test_suites/samples/test_5.csv'
-
-    with open(IMPORT_CSV, 'rb') as file_:
-        data = SimpleUploadedFile('test_5.csv', file_.read(), content_type='multipart/form-data')
-    with requests_mock.Mocker(real_http=True) as m:
-        m.register_uri('POST', webhook.url)
-        response = business_client.post(
-            f'/api/projects/{configured_project.id}/import',
-            data={'csv_1': data},
-            format='multipart',
-        )
-    assert response.status_code == 201
-    assert response.json()['task_count'] == 3
-
-    assert len(list(filter(lambda x: x.url == webhook.url, m.request_history))) == 1
-
-    r = list(filter(lambda x: x.url == webhook.url, m.request_history))[0]
-    assert r.json()['action'] == WebhookAction.TASKS_CREATED
-    assert 'tasks' in r.json()
-    assert 'project' in r.json()
-    assert len(r.json()['tasks']) == response.json()['task_count'] == 3
-
-
 # ANNOTATION CREATE/UPDATE/DELETE
 @pytest.mark.django_db
 def test_webhooks_for_annotation(configured_project, business_client, organization_webhook):

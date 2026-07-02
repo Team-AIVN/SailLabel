@@ -58,7 +58,15 @@ export const FF_INTERACTIVE_JSON_VIEWER = "fflag_feat_front_interactive_json_vie
 export const FF_FIT_1304_STRICT_OVERLAP = "fflag_feat_all_fit_1304_strict_overlap";
 
 // Customize flags
-const flags = {};
+const flags = {
+  // Keep global user fetching enabled for this deployment. The "disable global user
+  // fetching" large-org optimization makes the Data Manager skip loading the org users
+  // pool and expect annotator/reviewer payloads to carry full user objects — but our
+  // backend returns only user IDs for task annotators, so the MST `User` references
+  // (e.g. "Failed to resolve reference '2' to type 'User'") cannot resolve. Forcing it
+  // off restores fetchUsers() so those references resolve.
+  [FF_DISABLE_GLOBAL_USER_FETCHING]: false,
+};
 
 function getFeatureFlags() {
   return Object.assign(window.APP_SETTINGS?.feature_flags || {}, flags);

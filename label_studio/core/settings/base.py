@@ -253,7 +253,11 @@ INSTALLED_APPS = [
     'data_import',
     'data_export',
     'projects',
+    'workspaces',
+    'audit',
     'tasks',
+    'reviews',
+    'compensation',
     'data_manager',
     'io_storages',
     'ml',
@@ -648,7 +652,7 @@ if KEYCLOAK_ENABLED:
     if KEYCLOAK_PUBLIC_CLIENT:
         OIDC_USE_PKCE = True
         OIDC_PKCE_CODE_CHALLENGE_METHOD = 'S256'
-    # Post-logout redirect: send user back to SailLabel after Keycloak ends the SSO session.
+    # Post-logout redirect: send user back to LabelSea after Keycloak ends the SSO session.
     LOGOUT_REDIRECT_URL = get_env('OIDC_LOGOUT_REDIRECT_URL', '/')
     OIDC_OP_LOGOUT_URL_METHOD = 'users.auth_backends.keycloak_logout_url'
     # Our /logout/ view redirects via GET; allow the OIDC logout endpoint to respond to GET.
@@ -709,6 +713,7 @@ DATA_MANAGER_CHECK_ACTION_PERMISSION = 'data_manager.actions.check_action_permis
 BULK_UPDATE_IS_LABELED = 'tasks.functions.bulk_update_is_labeled_by_overlap'
 USER_LOGIN_FORM = 'users.forms.LoginForm'
 PROJECT_MIXIN = 'projects.mixins.ProjectMixin'
+WORKSPACE_MIXIN = 'workspaces.mixins.WorkspaceMixin'
 TASK_MIXIN = 'tasks.mixins.TaskMixin'
 LSE_PROJECT = None
 GET_TASKS_AGREEMENT_QUERYSET = None

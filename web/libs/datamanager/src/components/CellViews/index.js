@@ -4,9 +4,11 @@ export { Agreement } from "./Agreement/Agreement";
 export {
   Annotators,
   Annotators as Reviewers,
+  Annotators as ReviewedBy,
   Annotators as UpdatedBy,
   Annotators as CommentAuthors,
 } from "./Annotators/Annotators";
+export { ReviewsCell as Reviews } from "./ReviewsCell";
 export { AudioCell as Audio, AudioPlusCell as AudioPlus } from "./AudioCell";
 export { BooleanCell as Boolean } from "./BooleanCell";
 export { DateTimeCell as Date, DateTimeCell as Datetime } from "./DateTimeCell";

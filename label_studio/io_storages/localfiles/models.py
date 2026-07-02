@@ -20,6 +20,7 @@ from io_storages.base_models import (
     ImportStorage,
     ImportStorageLink,
     ProjectStorageMixin,
+    WorkspaceStorageMixin,
 )
 from io_storages.localfiles.functions import normalize_storage_path
 from io_storages.utils import StorageObject, load_tasks_json
@@ -175,6 +176,36 @@ class LocalFilesImportStorageBase(LocalFilesMixin, ImportStorage):
 
 
 class LocalFilesImportStorage(ProjectStorageMixin, LocalFilesImportStorageBase):
+    # Optional workspace-scope template this storage was cloned from. Nullable so
+    # legacy and manually created project-scope storages keep working unchanged.
+    parent_storage = models.ForeignKey(
+        'io_storages.LocalFilesWorkspaceImportStorage',
+        related_name='child_storages',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text='Workspace-scope storage this project storage was derived from.',
+    )
+
+    class Meta:
+        abstract = False
+
+
+class LocalFilesWorkspaceImportStorage(WorkspaceStorageMixin, LocalFilesImportStorageBase):
+    """Workspace-scope template for local-files imports.
+
+    Acts as a reusable configuration that individual project-scope
+    `LocalFilesImportStorage` rows can point at via `parent_storage`. The
+    workspace storage itself does not create task links — `scan_and_create_links`
+    is disabled because there is no Project FK to attach tasks to.
+    """
+
+    def scan_and_create_links(self):  # pragma: no cover - defensive guard
+        raise NotImplementedError(
+            'Workspace-scope storages are templates only. '
+            'Create a project-scope storage with parent_storage set to sync tasks.'
+        )
+
     class Meta:
         abstract = False
 

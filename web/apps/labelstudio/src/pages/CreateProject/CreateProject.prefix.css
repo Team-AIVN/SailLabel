@@ -33,6 +33,27 @@
     }
   }
 
+  &__validation {
+    position: sticky;
+    bottom: 0;
+    margin-top: auto;
+    padding: 12px 24px;
+    border-top: 1px solid var(--color-negative-border, #f3b1b1);
+    background: var(--color-negative-background, #fdecec);
+    color: var(--color-negative-content, #d1242f);
+    font-size: 13px;
+
+    & strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    & ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+  }
+
   &__tab_disabled {
     display: flex;
     align-items: center;

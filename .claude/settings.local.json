@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Bash(grep -E \"\\\\.\\(ts|js|tsx|jsx\\)$\")",
+      "Bash(xargs ls *)",
+      "Bash(python3 *)",
+      "Bash(poetry run python -c ' *)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:mozilla-django-oidc.readthedocs.io)",
+      "Bash(git ls-files *)",
+      "Bash(git ls-tree *)",
+      "Bash(grep -rn \"value=\\\\\"\\\\$\\\\|from_name\\\\|to_name\" /Users/jinki/Documents/GitHub/SailLabel/label_studio/core/label_config.py)"
+    ]
+  }
+}

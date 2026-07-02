@@ -449,6 +449,9 @@ class DataManagerTaskSerializer(TaskSerializer):
     total_annotations = serializers.IntegerField(required=False)
     total_predictions = serializers.IntegerField(required=False)
     completed_at = serializers.DateTimeField(required=False)
+    reviewed_at = serializers.DateTimeField(required=False)
+    reviewed_by = serializers.SerializerMethodField(required=False)
+    reviews = serializers.SerializerMethodField(required=False)
     annotations_results = serializers.SerializerMethodField(required=False)
     predictions_results = serializers.SerializerMethodField(required=False)
     predictions_score = serializers.FloatField(required=False)
@@ -574,6 +577,36 @@ class DataManagerTaskSerializer(TaskSerializer):
         annotators = list(set(annotators))
         annotators = [a for a in annotators if a is not None]
         return annotators if hasattr(obj, 'annotators') and annotators else []
+
+    @staticmethod
+    def get_reviewed_by(obj):
+        # Latest reviewer (annotated scalar) -> single-element list for the user-list cell.
+        reviewer_id = getattr(obj, 'reviewed_by', None)
+        return [reviewer_id] if reviewer_id else []
+
+    @staticmethod
+    def get_reviews(obj):
+        # All review records for the task (across annotation revisions), oldest stage first,
+        # so the Data Manager cell can link to each review version.
+        from reviews.models import Review
+
+        reviews = (
+            Review.objects.filter(annotation__task=obj)
+            .select_related('annotation')
+            .order_by('stage', 'created_at', 'id')
+        )
+        return [
+            {
+                'id': r.id,
+                'stage': r.stage,
+                'decision': r.decision,
+                'created_at': r.created_at,
+                'reviewer_id': r.reviewer_id,
+                'annotation_id': r.annotation_id,
+                'annotation_version': getattr(r.annotation, 'version', None),
+            }
+            for r in reviews
+        ]
 
     def get_annotations_ids(self, task):
         return self._pretty_results(task, 'annotations_ids', unique=True)

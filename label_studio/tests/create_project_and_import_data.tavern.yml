@@ -37,7 +37,7 @@ stages:
           - value: "a"
           - value: "b"
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: stage
@@ -89,7 +89,7 @@ stages:
           - value: "a"
           - value: "b"
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: stage
@@ -141,7 +141,7 @@ stages:
           - value: "a"
           - value: "b"
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: stage
@@ -193,7 +193,7 @@ stages:
           - value: "a"
           - value: "b"
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: stage
@@ -245,7 +245,7 @@ stages:
           - value: "a"
           - value: "b"
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: stage
@@ -297,7 +297,7 @@ stages:
           - value: "a"
           - value: "b"
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: stage
@@ -349,7 +349,7 @@ stages:
           - value: "a"
           - value: "b"
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: stage
@@ -401,7 +401,7 @@ stages:
           - value: "a"
           - value: "b"
     method: POST
-    url: '{django_live_url}/api/projects/{pk}/import'
+    url: '{django_live_url}/api/projects/{pk}/tasks/bulk/'
   response:
     status_code: 201
 - name: stage

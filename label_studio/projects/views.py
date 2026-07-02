@@ -16,3 +16,9 @@ def project_list(request):
 @login_required
 def project_settings(request, pk, sub_path):
     return render(request, 'projects/settings.html')
+
+
+@login_required
+def project_review(request, pk):
+    # Serve the SPA; the React ReviewPage renders the review task list client-side.
+    return render(request, 'base.html')

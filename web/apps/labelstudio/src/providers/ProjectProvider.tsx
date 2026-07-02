@@ -6,7 +6,7 @@ import { useAuth } from "@humansignal/core/providers/AuthProvider";
 import { FF_UNSAVED_CHANGES, isFF } from "../utils/feature-flags";
 import { useAPI, type WrappedResponse } from "./ApiProvider";
 import { useAppStore } from "./AppStoreProvider";
-import { useParams } from "./RoutesProvider";
+import { useFixedLocation, useParams } from "./RoutesProvider";
 import { atom, useSetAtom } from "jotai";
 
 type Empty = Record<string, never>;
@@ -32,6 +32,7 @@ type UpdateProjectOptions = {
 export const ProjectProvider: React.FunctionComponent = ({ children }) => {
   const api = useAPI();
   const params = useParams();
+  const location = useFixedLocation();
   const { user } = useAuth();
   const { update: updateStore } = useAppStore();
   // @todo use null for missed project data
@@ -104,11 +105,15 @@ export const ProjectProvider: React.FunctionComponent = ({ children }) => {
   );
 
   useEffect(() => {
+    // Only resolve a project on project-scoped routes. The router exposes an `:id`
+    // param for other sections too (e.g. /workspaces/:id); fetching /api/projects/<id>
+    // there 404s and surfaces a spurious "No project matches the given query" toast.
+    if (!/^\/projects\/\d+/.test(location?.pathname ?? "")) return;
     if (+params.id !== projectData?.id) {
       setProjectData({});
     }
     fetchProject();
-  }, [params]);
+  }, [params, location]);
 
   useEffect(() => {
     return () => projectCache.clear();

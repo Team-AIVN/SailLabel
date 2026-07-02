@@ -9,12 +9,12 @@ app_name = 'data_import'
 _api_urlpatterns = [path('file-upload/<int:pk>', api.FileUploadAPI.as_view(), name='file-upload-detail')]
 
 _api_projects_urlpatterns = [
-    # import api
+    # Project-scoped data import has moved to the workspace layer
+    # (see workspaces.api: WorkspaceImportAPI / WorkspaceFileUploadsAPI). The legacy
+    # /import, /import/predictions and /file-uploads routes were removed; data is now
+    # uploaded into a workspace and assigned to projects.
     path('<int:pk>/tasks/bulk/', api.TasksBulkCreateAPI.as_view(), name='project-tasks-bulk-upload'),
-    path('<int:pk>/import', api.ImportAPI.as_view(), name='project-import'),
-    path('<int:pk>/import/predictions', api.ImportPredictionsAPI.as_view(), name='project-import-predictions'),
     path('<int:pk>/reimport', api.ReImportAPI.as_view(), name='project-reimport'),
-    path('<int:pk>/file-uploads', api.FileUploadListAPI.as_view(), name='project-file-upload-list'),
 ]
 
 urlpatterns = [

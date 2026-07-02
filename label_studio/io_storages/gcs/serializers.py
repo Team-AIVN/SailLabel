@@ -3,7 +3,7 @@
 import os
 
 from core.utils.exceptions import extract_message
-from io_storages.gcs.models import GCSExportStorage, GCSImportStorage
+from io_storages.gcs.models import GCSExportStorage, GCSImportStorage, GCSWorkspaceImportStorage
 from io_storages.serializers import ExportStorageSerializer, ImportStorageSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -34,6 +34,43 @@ class GCSImportStorageSerializer(ImportStorageSerializer):
             if 'id' in self.initial_data:
                 storage_object = self.Meta.model.objects.get(id=self.initial_data['id'])
                 for attr in GCSImportStorageSerializer.secure_fields:
+                    data[attr] = data.get(attr) or getattr(storage_object, attr)
+            storage = self.Meta.model(**data)
+        try:
+            storage.validate_connection()
+        except Exception as exc:
+            raise ValidationError(extract_message(exc))
+        return data
+
+
+class GCSWorkspaceImportStorageSerializer(ImportStorageSerializer):
+    """Workspace-scope GCS template. Reuses the same GCS credential/connection
+    validation from the project-scope serializer, scoped to a workspace."""
+
+    type = serializers.ReadOnlyField(default=os.path.basename(os.path.dirname(__file__)))
+    presign = serializers.BooleanField(required=False, default=True)
+    secure_fields = ['google_application_credentials']
+
+    class Meta:
+        model = GCSWorkspaceImportStorage
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        result = super().to_representation(instance)
+        for attr in GCSWorkspaceImportStorageSerializer.secure_fields:
+            result.pop(attr)
+        return result
+
+    def validate(self, data):
+        data = super().validate(data)
+        storage = self.instance
+        if storage:
+            for key, value in data.items():
+                setattr(storage, key, value)
+        else:
+            if 'id' in self.initial_data:
+                storage_object = self.Meta.model.objects.get(id=self.initial_data['id'])
+                for attr in GCSWorkspaceImportStorageSerializer.secure_fields:
                     data[attr] = data.get(attr) or getattr(storage_object, attr)
             storage = self.Meta.model(**data)
         try:

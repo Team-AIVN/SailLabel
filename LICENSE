@@ -1,3 +1,37 @@
+======================================================================
+LabelSea License
+======================================================================
+
+Copyright (c) 2025-2026 LabelSea contributors.
+Copyright (c) 2019-2021 Heartex, Inc. (HumanSignal, Inc.) — Label Studio.
+
+LabelSea is licensed under the Apache License, Version 2.0 (the "License"),
+the FULL, UNMODIFIED text of which follows below.
+
+LabelSea is a derivative work based on Label Studio
+(https://github.com/HumanSignal/label-studio), which is itself licensed
+under the Apache License, Version 2.0. In accordance with that license:
+
+  * The original copyright, patent, trademark, and attribution notices of
+    Label Studio are retained (see the NOTICE file and the per-file license
+    headers throughout this repository).
+  * Files modified by the LabelSea project carry, or are accompanied by,
+    notices that the files were changed.
+  * Modifications and new files added by the LabelSea project are likewise
+    released under the Apache License, Version 2.0.
+
+"Label Studio" is a trademark of HumanSignal, Inc. LabelSea is an
+independent project and is not affiliated with, sponsored by, or endorsed
+by HumanSignal, Inc.; the name "Label Studio" is used solely to identify
+the upstream project from which LabelSea is derived. See ATTRIBUTION.md
+and NOTICE for the complete attribution and compliance statement.
+
+The remainder of this file is the verbatim Apache License, Version 2.0,
+under which both Label Studio and LabelSea are licensed.
+
+======================================================================
+
+
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/

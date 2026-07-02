@@ -97,6 +97,30 @@ class Task(TaskMixin, FsmHistoryStateModel):
         help_text='True if the number of annotations for this task is greater than or equal '
         'to the number of maximum_completions for the project',
     )
+
+    class ReviewStatus(models.TextChoices):
+        NOT_SELECTED = 'NOT_SELECTED', _('Not selected for review')
+        PENDING = 'PENDING', _('Pending review')
+        ACCEPTED = 'ACCEPTED', _('Accepted')
+        REJECTED = 'REJECTED', _('Rejected')
+        FIXED_AND_ACCEPTED = 'FIXED_AND_ACCEPTED', _('Fixed and accepted')
+
+    review_status = models.CharField(
+        _('review status'),
+        max_length=32,
+        choices=ReviewStatus.choices,
+        default=ReviewStatus.NOT_SELECTED,
+        db_index=True,
+        help_text='Review state of the task current annotation (set by the review workflow).',
+    )
+    current_annotation = models.ForeignKey(
+        'tasks.Annotation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        help_text='Latest active annotation revision for this task.',
+    )
     allow_skip = models.BooleanField(
         _('allow_skip'),
         default=True,
@@ -710,6 +734,27 @@ class Annotation(AnnotationMixin, FsmHistoryStateModel):
         help_text='Last user who updated this annotation',
     )
     was_cancelled = models.BooleanField(_('was cancelled'), default=False, help_text='User skipped the task')
+
+    class Status(models.TextChoices):
+        IN_PROGRESS = 'IN_PROGRESS', _('In progress')
+        COMPLETED = 'COMPLETED', _('Completed')
+        REWORK_REQUIRED = 'REWORK_REQUIRED', _('Rework required')
+        APPROVED = 'APPROVED', _('Approved')
+
+    version = models.PositiveIntegerField(
+        _('version'),
+        default=1,
+        help_text='Revision number of this annotation within its task (1-based).',
+    )
+    status = models.CharField(
+        _('status'),
+        max_length=32,
+        choices=Status.choices,
+        default=Status.COMPLETED,
+        db_index=True,
+        help_text='Annotation revision status used by the review workflow. A submitted '
+        'annotation is COMPLETED; review sets APPROVED or REWORK_REQUIRED.',
+    )
     ground_truth = models.BooleanField(
         _('ground_truth'),
         default=False,

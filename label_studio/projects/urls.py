@@ -2,7 +2,7 @@
 
 from django.urls import include, path
 
-from . import api, views
+from . import api, members_api, views
 
 app_name = 'projects'
 
@@ -11,6 +11,8 @@ _urlpatterns = [
     path('', views.project_list, name='project-index'),
     path('<int:pk>/settings/', views.project_settings, name='project-settings', kwargs={'sub_path': ''}),
     path('<int:pk>/settings/<sub_path>', views.project_settings, name='project-settings-anything'),
+    path('<int:pk>/review/', views.project_review, name='project-review'),
+    path('<int:pk>/review', views.project_review, name='project-review-no-slash'),
 ]
 
 # reverse for projects:api:name
@@ -19,6 +21,13 @@ _api_urlpatterns = [
     path('', api.ProjectListAPI.as_view(), name='project-list'),
     path('<int:pk>/', api.ProjectAPI.as_view(), name='project-detail'),
     path('counts/', api.ProjectCountsListAPI.as_view(), name='project-counts-list'),
+    # Project membership (role management)
+    path('<int:pk>/members/', members_api.ProjectMembersAPI.as_view(), name='project-members'),
+    path(
+        '<int:pk>/members/<int:member_pk>/',
+        members_api.ProjectMemberDetailAPI.as_view(),
+        name='project-member-detail',
+    ),
     # Get next task
     path('<int:pk>/next/', api.ProjectNextTaskAPI.as_view(), name='project-next'),
     # Label stream history

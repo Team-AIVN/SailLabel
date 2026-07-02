@@ -11,7 +11,6 @@ import { useContextProps, useParams } from "../../providers/RoutesProvider";
 import { addCrumb, deleteCrumb } from "../../services/breadrumbs";
 import { cn } from "../../utils/bem";
 import { isDefined } from "../../utils/helpers";
-import { ImportModal } from "../CreateProject/Import/ImportModal";
 import { ExportPage } from "../ExportPage/ExportPage";
 import { APIConfig } from "./api-config";
 
@@ -37,7 +36,8 @@ const initializeDataManager = async (root, props, params) => {
     showPreviews: false,
     apiEndpoints: APIConfig.endpoints,
     interfaces: {
-      import: true,
+      // Project-scoped import was removed; data is uploaded via the workspace.
+      import: false,
       export: true,
       backButton: false,
       labelingHeader: false,
@@ -120,10 +120,6 @@ export const DataManagerPage = ({ ...props }) => {
 
     dataManager.on("settingsClicked", () => {
       history.push(buildLink("/settings/labeling", { id: params?.id ?? project?.id }));
-    });
-
-    dataManager.on("importClicked", () => {
-      history.push(buildLink("/data/import", { id: params?.id ?? project?.id }));
     });
 
     // Navigate to Storage Settings and auto-open Add Source Storage modal
@@ -236,7 +232,6 @@ export const DataManagerPage = ({ ...props }) => {
 DataManagerPage.path = "/data";
 DataManagerPage.pages = {
   ExportPage,
-  ImportModal,
 };
 DataManagerPage.context = ({ dmRef }) => {
   const { project } = useProject();

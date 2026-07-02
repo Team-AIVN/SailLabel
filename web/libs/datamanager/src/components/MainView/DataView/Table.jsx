@@ -252,11 +252,7 @@ export const DataView = injector(
           return (
             <div className={cn("no-results").toClassName()}>
               <EmptyState
-                // Import functionality props
-                canImport={!!store.interfaces.get("import")}
-                onOpenSourceStorageModal={() => getRoot(store)?.SDK?.invoke?.("openSourceStorageModal")}
-                onOpenImportModal={() => getRoot(store)?.SDK?.invoke?.("importClicked")}
-                // Role-based functionality props
+                // Role-based functionality props (project-scoped import is removed)
                 userRole={role}
                 project={project}
                 hasData={hasData}

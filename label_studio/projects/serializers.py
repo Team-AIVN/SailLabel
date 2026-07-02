@@ -31,7 +31,7 @@ from label_studio_sdk.label_interface.control_tags import (
     TimeSeriesLabelsTag,
     VideoRectangleTag,
 )
-from projects.models import Project, ProjectImport, ProjectOnboarding, ProjectReimport, ProjectSummary
+from projects.models import Project, ProjectImport, ProjectMember, ProjectOnboarding, ProjectReimport, ProjectSummary
 from rest_flex_fields import FlexFieldsModelSerializer
 from rest_framework import serializers
 from rest_framework.serializers import SerializerMethodField
@@ -277,6 +277,10 @@ class ProjectSerializer(FlexFieldsModelSerializer):
             'enable_empty_annotation',
             'show_annotation_history',
             'organization',
+            'workspace',
+            'task_pool',
+            'review_strategy',
+            'review_ratio',
             'color',
             'maximum_annotations',
             'is_published',
@@ -322,6 +326,34 @@ class ProjectSerializer(FlexFieldsModelSerializer):
         else:
             # Existing project is updated
             self.instance.validate_config(value)
+        return value
+
+    def validate_review_ratio(self, value):
+        if value is None:
+            return 0.0
+        if not 0 <= value <= 1:
+            raise serializers.ValidationError('review_ratio must be between 0 and 1.')
+        return value
+
+    def validate_task_pool(self, value):
+        # A project may only use a task pool from its own organization's workspace.
+        if value is None:
+            return value
+        request = self.context.get('request')
+        active_org_id = getattr(getattr(request, 'user', None), 'active_organization_id', None)
+        if active_org_id and value.workspace.organization_id != active_org_id:
+            raise serializers.ValidationError('Task pool does not belong to your active organization.')
+        return value
+
+    def validate_workspace(self, value):
+        # A project may only be placed in a workspace from its own organization.
+        if value is None:
+            return value
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        active_org_id = getattr(user, 'active_organization_id', None)
+        if active_org_id and value.organization_id != active_org_id:
+            raise serializers.ValidationError('Workspace does not belong to your active organization.')
         return value
 
     def validate_model_version(self, value):
@@ -496,3 +528,12 @@ class GetFieldsSerializer(serializers.Serializer):
     def validate_filter(self, value):
         if value in ['all', 'pinned_only', 'exclude_pinned']:
             return value
+
+
+class ProjectMemberSerializer(serializers.ModelSerializer):
+    user_detail = UserSimpleSerializer(source='user', read_only=True)
+
+    class Meta:
+        model = ProjectMember
+        fields = ('id', 'user', 'user_detail', 'role', 'enabled', 'created_at', 'updated_at')
+        read_only_fields = ('created_at', 'updated_at')

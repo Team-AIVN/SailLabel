@@ -560,7 +560,24 @@ def newest_annotation_subquery() -> Subquery:
 
 
 def base_annotate_completed_at(queryset: TaskQuerySet) -> TaskQuerySet:
-    return queryset.annotate(completed_at=Case(When(is_labeled=True, then=newest_annotation_subquery())))
+    # "Completed" = latest annotation submission time, regardless of is_labeled state.
+    return queryset.annotate(completed_at=newest_annotation_subquery())
+
+
+def newest_review_subquery(field: str) -> Subquery:
+    """Subquery for a field of the most recent Review across all of a task's annotations."""
+    from reviews.models import Review
+
+    newest_reviews = Review.objects.filter(annotation__task=OuterRef('pk')).order_by('-created_at', '-id')[:1]
+    return Subquery(newest_reviews.values(field))
+
+
+def annotate_reviewed_at(queryset: TaskQuerySet) -> TaskQuerySet:
+    return queryset.annotate(reviewed_at=newest_review_subquery('created_at'))
+
+
+def annotate_reviewed_by(queryset: TaskQuerySet) -> TaskQuerySet:
+    return queryset.annotate(reviewed_by=newest_review_subquery('reviewer_id'))
 
 
 def annotate_completed_at(queryset: TaskQuerySet) -> TaskQuerySet:
@@ -753,6 +770,8 @@ settings.DATA_MANAGER_ANNOTATIONS_MAP = {
     'predictions_model_versions': annotate_predictions_model_versions,
     'predictions_score': annotate_predictions_score,
     'annotators': annotate_annotators,
+    'reviewed_at': annotate_reviewed_at,
+    'reviewed_by': annotate_reviewed_by,
     'annotations_ids': annotate_annotations_ids,
     'file_upload': file_upload,
     'draft_exists': annotate_draft_exists,

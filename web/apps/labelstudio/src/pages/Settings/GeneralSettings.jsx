@@ -1,20 +1,34 @@
-import { Badge, Button, Select, Typography, Tooltip, EnterpriseBadge } from "@humansignal/ui";
-import { useCallback, useContext } from "react";
+import { Badge, Button, Typography, Tooltip } from "@humansignal/ui";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { IconSpark } from "@humansignal/icons";
-import { Form, Input, TextArea } from "../../components/Form";
+import { Form, Input, Select, TextArea } from "../../components/Form";
 import { RadioGroup } from "../../components/Form/Elements/RadioGroup/RadioGroup";
 import { ProjectContext } from "../../providers/ProjectProvider";
+import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
 import { HeidiTips } from "../../components/HeidiTips/HeidiTips";
-import { FF_LSDV_E_297, isFF } from "../../utils/feature-flags";
+import { FF_LSDV_E_297, FF_WORKSPACE, isFF } from "../../utils/feature-flags";
 import { createURL } from "../../components/HeidiTips/utils";
 
 export const GeneralSettings = () => {
   const { project, fetchProject } = useContext(ProjectContext);
+  const api = useAPI();
+  const [workspaces, setWorkspaces] = useState([]);
 
   const updateProject = useCallback(() => {
     if (project.id) fetchProject(project.id, true);
   }, [project]);
+
+  // Load the org's workspaces so the project's current workspace can be shown/changed.
+  useEffect(() => {
+    if (!isFF(FF_WORKSPACE)) return;
+    (async () => {
+      const data = await api.callApi("workspaces");
+      setWorkspaces(Array.isArray(data) ? data : (data?.results ?? []));
+    })();
+  }, [api]);
+
+  const workspaceOptions = useMemo(() => workspaces.map((w) => ({ label: w.title, value: w.id })), [workspaces]);
 
   const colors = ["#FDFDFC", "#FF4C25", "#FF750F", "#ECB800", "#9AC422", "#34988D", "#617ADA", "#CC6FBE"];
 
@@ -33,29 +47,17 @@ export const GeneralSettings = () => {
               <Input name="title" label="Project Name" />
 
               <TextArea name="description" label="Description" style={{ minHeight: 128 }} />
-              {isFF(FF_LSDV_E_297) && (
+              {isFF(FF_WORKSPACE) && (
                 <div className={cn("workspace-placeholder").toClassName()}>
-                  <div className={cn("workspace-placeholder").elem("badge-wrapper").toClassName()}>
-                    <div className={cn("workspace-placeholder").elem("title").toClassName()}>Workspace</div>
-                    <EnterpriseBadge size="small" className="ml-2" />
-                  </div>
-                  <Select placeholder="Select an option" disabled options={[]} />
+                  <Select
+                    name="workspace"
+                    label="Workspace"
+                    placeholder="Select a workspace"
+                    options={workspaceOptions}
+                    disabled
+                  />
                   <Typography size="small" className="my-tight">
-                    Simplify project management by organizing projects into workspaces.{" "}
-                    <a
-                      target="_blank"
-                      href={createURL(
-                        "https://docs.humansignal.com/guide/manage_projects#Create-workspaces-to-organize-projects",
-                        {
-                          experiment: "project_settings_tip",
-                          treatment: "simplify_project_management",
-                        },
-                      )}
-                      rel="noreferrer"
-                      className="underline hover:no-underline"
-                    >
-                      Learn more
-                    </a>
+                    The workspace this project belongs to.
                   </Typography>
                 </div>
               )}
