@@ -33,6 +33,7 @@ import "./MenuSidebar.prefix.css";
 import { FF_HOMEPAGE, FF_WORKSPACE } from "../../utils/feature-flags";
 import { pages } from "@humansignal/app-common";
 import { isFF } from "../../utils/feature-flags";
+import { usePermissions } from "../../utils/permissions";
 import { ff } from "@humansignal/core";
 import { openHotkeyHelp } from "@humansignal/app-common/pages/AccountSettings/sections/Hotkeys/Help";
 
@@ -61,6 +62,7 @@ export const Menubar = ({ enabled, defaultOpened, defaultPinned, children, onSid
   const menuDropdownRef = useRef();
   const useMenuRef = useRef();
   const { user, isLoading } = useAuth();
+  const permissions = usePermissions();
   const location = useFixedLocation();
 
   const config = useConfig();
@@ -236,7 +238,7 @@ export const Menubar = ({ enabled, defaultOpened, defaultPinned, children, onSid
                 {isFF(FF_HOMEPAGE) && (
                   <Menu.Item label={t("menubar.home")} to="/" icon={<IconHome />} data-external exact />
                 )}
-                {isFF(FF_WORKSPACE) && (
+                {isFF(FF_WORKSPACE) && permissions.canSeeWorkspacesMenu && (
                   <Menu.Item
                     label={t("menubar.workspaces")}
                     to="/workspaces"
@@ -245,14 +247,18 @@ export const Menubar = ({ enabled, defaultOpened, defaultPinned, children, onSid
                     exact
                   />
                 )}
-                <Menu.Item label={t("menubar.projects")} to="/projects" icon={<IconFolder />} data-external exact />
-                <Menu.Item
-                  label={t("menubar.organization")}
-                  to="/organization"
-                  icon={<IconPeople />}
-                  data-external
-                  exact
-                />
+                {permissions.canSeeProjectsMenu && (
+                  <Menu.Item label={t("menubar.projects")} to="/projects" icon={<IconFolder />} data-external exact />
+                )}
+                {permissions.canSeeOrganization && (
+                  <Menu.Item
+                    label={t("menubar.organization")}
+                    to="/organization"
+                    icon={<IconPeople />}
+                    data-external
+                    exact
+                  />
+                )}
 
                 <Menu.Spacer />
 
