@@ -79,3 +79,63 @@ def resolve_workspace_role(user, workspace):
     if workspace.members.filter(user=user, deleted_at__isnull=True).exists():
         return ROLE_MEMBER
     return None
+
+
+def has_workspace_access(user):
+    """True if the user can access at least one workspace (drives the Workspaces menu).
+
+    SA, workspace managers/members, and project managers (view-only) qualify;
+    plain labelers/reviewers with no workspace membership do not.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if is_super_admin.test(user):
+        return True
+    org_id = getattr(user, 'active_organization_id', None)
+    if not org_id:
+        return False
+
+    from projects.models import ProjectMember
+    from users.constants import ProjectRole
+    from workspaces.models import WorkspaceMember
+
+    if WorkspaceMember.objects.filter(
+        user=user, workspace__organization_id=org_id, deleted_at__isnull=True
+    ).exists():
+        return True
+    # Project managers get view-only access to their workspace.
+    return ProjectMember.objects.filter(
+        user=user,
+        project__organization_id=org_id,
+        role=ProjectRole.PROJECT_MANAGER,
+        deleted_at__isnull=True,
+    ).exists()
+
+
+def has_project_access(user):
+    """True if the user can access at least one project (drives the Projects menu).
+
+    Everyone with a project membership qualifies, plus workspace managers (who
+    manage every project in their workspace). Plain workspace members do not.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if is_super_admin.test(user):
+        return True
+    org_id = getattr(user, 'active_organization_id', None)
+    if not org_id:
+        return False
+
+    from projects.models import ProjectMember
+    from workspaces.models import WorkspaceMember
+
+    if WorkspaceMember.objects.filter(
+        user=user,
+        workspace__organization_id=org_id,
+        role='workspace_manager',
+        deleted_at__isnull=True,
+    ).exists():
+        return True
+    return ProjectMember.objects.filter(
+        user=user, project__organization_id=org_id, deleted_at__isnull=True
+    ).exists()
