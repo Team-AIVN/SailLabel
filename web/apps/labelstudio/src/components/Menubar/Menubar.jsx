@@ -236,7 +236,6 @@ export const Menubar = ({ enabled, defaultOpened, defaultPinned, children, onSid
                 {isFF(FF_HOMEPAGE) && (
                   <Menu.Item label={t("menubar.home")} to="/" icon={<IconHome />} data-external exact />
                 )}
-                <Menu.Item label={t("menubar.projects")} to="/projects" icon={<IconFolder />} data-external exact />
                 {isFF(FF_WORKSPACE) && (
                   <Menu.Item
                     label={t("menubar.workspaces")}
@@ -246,6 +245,7 @@ export const Menubar = ({ enabled, defaultOpened, defaultPinned, children, onSid
                     exact
                   />
                 )}
+                <Menu.Item label={t("menubar.projects")} to="/projects" icon={<IconFolder />} data-external exact />
                 <Menu.Item
                   label={t("menubar.organization")}
                   to="/organization"

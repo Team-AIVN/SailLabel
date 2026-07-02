@@ -11,6 +11,13 @@ class Migration(migrations.Migration):
         ("workspaces", "0004_datasetitem_workpool_workpoolitem_and_more"),
     ]
 
+    # This migration references the pre-rename model workspaces.WorkPool, so it
+    # must run before workspaces.0005 renames WorkPool -> TaskPool. Without this,
+    # Django may apply the rename first and fail to resolve 'workspaces.workpool'.
+    run_before = [
+        ("workspaces", "0005_rename_task_pool_terms"),
+    ]
+
     operations = [
         migrations.AddField(
             model_name="project",
