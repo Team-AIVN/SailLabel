@@ -86,6 +86,7 @@ class WorkspaceSummarySerializer(serializers.ModelSerializer):
     total_datasets = serializers.SerializerMethodField()
     total_projects = serializers.SerializerMethodField()
     total_task_pools = serializers.SerializerMethodField()
+    current_user_role = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Workspace
@@ -98,10 +99,18 @@ class WorkspaceSummarySerializer(serializers.ModelSerializer):
             'total_datasets',
             'total_projects',
             'total_task_pools',
+            'current_user_role',
         )
 
     def get_total_users(self, obj) -> int:
         return obj.members.filter(deleted_at__isnull=True).count()
+
+    def get_current_user_role(self, obj):
+        from users.roles import resolve_workspace_role
+
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        return resolve_workspace_role(user, obj)
 
     def get_total_datasets(self, obj) -> int:
         return obj.file_uploads.count()

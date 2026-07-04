@@ -7,6 +7,7 @@ import { Space } from "../../components/Space/Space";
 import { Spinner } from "../../components/Spinner/Spinner";
 import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
+import { workspacePermissions } from "../../utils/permissions";
 import { CreateProject } from "../CreateProject/CreateProject";
 import { Compensation } from "./Compensation";
 import { TaskPools } from "./TaskPools";
@@ -231,6 +232,10 @@ export const WorkspaceDetail = () => {
     .map((m) => m.user_detail ?? m.user)
     .filter((u) => u && typeof u === "object" && !memberUserIds.has(u.id));
 
+  // Workspace-role gating: managers get the management actions; project managers
+  // may view the tabs (read-only); plain members (WMb) see only the header.
+  const perms = workspacePermissions(summary?.current_user_role);
+
   return (
     <div className={root.toClassName()}>
       {/* Header */}
@@ -259,20 +264,24 @@ export const WorkspaceDetail = () => {
         </div>
       </header>
 
-      {/* Quick actions */}
-      <div className={root.elem("quick-actions").toClassName()}>
-        <Button size="small" onClick={() => openQuickAction("project")}>
-          {t("workspaces.dashboard.newProject", "New Project")}
-        </Button>
-        <Button size="small" look="outlined" onClick={() => openQuickAction("dataset")}>
-          {t("workspaces.dashboard.newDataset", "New Dataset")}
-        </Button>
-        <Button size="small" look="outlined" onClick={() => openQuickAction("user")}>
-          {t("workspaces.dashboard.inviteUser", "Invite User")}
-        </Button>
-      </div>
+      {/* Quick actions — workspace managers only */}
+      {perms.canManage && (
+        <div className={root.elem("quick-actions").toClassName()}>
+          <Button size="small" onClick={() => openQuickAction("project")}>
+            {t("workspaces.dashboard.newProject", "New Project")}
+          </Button>
+          <Button size="small" look="outlined" onClick={() => openQuickAction("dataset")}>
+            {t("workspaces.dashboard.newDataset", "New Dataset")}
+          </Button>
+          <Button size="small" look="outlined" onClick={() => openQuickAction("user")}>
+            {t("workspaces.dashboard.inviteUser", "Invite User")}
+          </Button>
+        </div>
+      )}
 
-      {/* Tabs */}
+      {/* Tabs — hidden from plain workspace members (WMb), who see only the header */}
+      {perms.canViewTabs && (
+        <>
       <nav className={root.elem("tabs").toClassName()}>
         {TABS.map((tab) => (
           <button
@@ -511,6 +520,8 @@ export const WorkspaceDetail = () => {
             </tbody>
           </table>
         </section>
+      )}
+        </>
       )}
 
       {showImport && (
