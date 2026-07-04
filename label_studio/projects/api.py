@@ -46,8 +46,9 @@ from projects.serializers import (
     ProjectSummarySerializer,
 )
 from rest_framework import filters, generics, status
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.exceptions import ValidationError as RestValidationError
+from users.rules import can_create_project
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
@@ -200,6 +201,11 @@ class ProjectListAPI(generics.ListCreateAPIView):
         return context
 
     def perform_create(self, ser):
+        # Project creation is a management action (workspace managers / super admins).
+        # Enforced explicitly here because the core view otherwise only checks org
+        # membership (Community edition), not the RBAC role.
+        if not can_create_project.test(self.request.user):
+            raise PermissionDenied('Only workspace managers or super admins can create projects.')
         try:
             ser.save(organization=self.request.user.active_organization)
         except IntegrityError as e:
