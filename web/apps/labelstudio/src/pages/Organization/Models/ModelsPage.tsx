@@ -3,15 +3,18 @@ import { useUpdatePageTitle } from "@humansignal/core";
 import { cn } from "apps/labelstudio/src/utils/bem";
 import { Link } from "react-router-dom";
 import type { Page } from "../../types/Page";
+import { SuperAdminGuard } from "../../../components/RoleGuard/RoleGuard";
 import { EmptyList } from "./@components/EmptyList";
 
 export const ModelsPage: Page = () => {
   useUpdatePageTitle("Models");
 
   return (
-    <div className={cn("prompter").toClassName()}>
-      <EmptyList />
-    </div>
+    <SuperAdminGuard>
+      <div className={cn("prompter").toClassName()}>
+        <EmptyList />
+      </div>
+    </SuperAdminGuard>
   );
 };
 

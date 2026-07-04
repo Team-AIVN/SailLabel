@@ -4,6 +4,7 @@ import { Spinner } from "../../components/Spinner/Spinner";
 import { useAPI } from "../../providers/ApiProvider";
 import { useParams } from "../../providers/RoutesProvider";
 import { cn } from "../../utils/bem";
+import { ProjectRoleGuard } from "../../components/RoleGuard/RoleGuard";
 import "./Review.prefix.css";
 
 const REVIEW_STATUSES = ["NOT_SELECTED", "PENDING", "ACCEPTED", "REJECTED", "FIXED_AND_ACCEPTED"];
@@ -46,7 +47,7 @@ const signLines = (block, sign) =>
     .map((line) => `${sign} ${line}`)
     .join("\n");
 
-export const ReviewPage = () => {
+const ReviewPageInner = () => {
   const { t } = useTranslation();
   const api = useAPI();
   const routeParams = useParams();
@@ -203,6 +204,14 @@ export const ReviewPage = () => {
     </div>
   );
 };
+
+// Reviewers (and project managers / workspace managers / super admins) only.
+// Labelers and unassigned members are redirected to the project data view.
+export const ReviewPage = () => (
+  <ProjectRoleGuard check={(perms) => perms.canReview}>
+    <ReviewPageInner />
+  </ProjectRoleGuard>
+);
 
 ReviewPage.title = "Review";
 ReviewPage.path = "/review";

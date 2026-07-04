@@ -1,4 +1,5 @@
 import { SidebarMenu } from "../../components/SidebarMenu/SidebarMenu";
+import { SuperAdminGuard } from "../../components/RoleGuard/RoleGuard";
 import { PeoplePage } from "./PeoplePage/PeoplePage";
 import { WebhookPage } from "../WebhookPage/WebhookPage";
 
@@ -10,7 +11,13 @@ const MenuLayout = ({ children, ...routeProps }) => {
   if (ALLOW_ORGANIZATION_WEBHOOKS) {
     menuItems.push(WebhookPage);
   }
-  return <SidebarMenu menuItems={menuItems} path={routeProps.match.url} children={children} />;
+  return (
+    <SidebarMenu
+      menuItems={menuItems}
+      path={routeProps.match.url}
+      children={<SuperAdminGuard>{children}</SuperAdminGuard>}
+    />
+  );
 };
 
 const organizationPages = {};

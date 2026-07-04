@@ -1,4 +1,5 @@
 import { SidebarMenu } from "../../components/SidebarMenu/SidebarMenu";
+import { ProjectRoleGuard } from "../../components/RoleGuard/RoleGuard";
 import { FF_WORKSPACE, isFF } from "../../utils/feature-flags";
 import { WebhookPage } from "../WebhookPage/WebhookPage";
 import { DangerZone } from "./DangerZone";
@@ -26,7 +27,7 @@ export const MenuLayout = ({ children, ...routeProps }) => {
         DangerZone,
       ].filter(Boolean)}
       path={routeProps.match.url}
-      children={children}
+      children={<ProjectRoleGuard check={(perms) => perms.canManage}>{children}</ProjectRoleGuard>}
     />
   );
 };
