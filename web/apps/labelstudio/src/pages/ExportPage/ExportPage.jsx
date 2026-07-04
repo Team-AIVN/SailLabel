@@ -10,6 +10,7 @@ import {
   IconCopyOutline,
 } from "@humansignal/icons";
 import { Form, Input } from "../../components/Form";
+import { ProjectRoleGuard } from "../../components/RoleGuard/RoleGuard";
 import { Modal } from "../../components/Modal/Modal";
 import { Space } from "../../components/Space/Space";
 import { useAPI } from "../../providers/ApiProvider";
@@ -43,7 +44,7 @@ const wait = () => new Promise((resolve) => setTimeout(resolve, 5000));
 
 const isTimeoutLikeStatus = (status) => status === 408 || status === 502 || status === 504;
 
-export const ExportPage = () => {
+const ExportPageInner = () => {
   const history = useHistory();
   const location = useFixedLocation();
   const pageParams = useParams();
@@ -276,6 +277,14 @@ const FormatInfo = ({ availableFormats, selected, onClick }) => {
     </div>
   );
 };
+
+// Export is limited to managers (super admin / workspace manager / project manager).
+// Labelers and reviewers are redirected back to the project data view.
+export const ExportPage = () => (
+  <ProjectRoleGuard check={(perms) => perms.canExport}>
+    <ExportPageInner />
+  </ProjectRoleGuard>
+);
 
 ExportPage.path = "/export";
 ExportPage.modal = true;

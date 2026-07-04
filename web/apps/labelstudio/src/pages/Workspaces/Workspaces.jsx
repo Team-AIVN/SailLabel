@@ -8,6 +8,7 @@ import { ApiContext } from "../../providers/ApiProvider";
 import { useContextProps } from "../../providers/RoutesProvider";
 import { cn } from "../../utils/bem";
 import { useUpdatePageTitle } from "@humansignal/core";
+import { WorkspaceAccessGuard } from "../../components/RoleGuard/RoleGuard";
 import { CreateWorkspace } from "./CreateWorkspace";
 import { WorkspaceDetail } from "./WorkspaceDetail";
 import { EmptyWorkspacesList, WorkspacesList } from "./WorkspacesList";
@@ -20,7 +21,7 @@ const getCurrentPage = () => {
   return pageNumberFromURL ? Number.parseInt(pageNumberFromURL) : 1;
 };
 
-export const WorkspacesPage = () => {
+const WorkspacesPageInner = () => {
   const { t } = useTranslation();
   const api = React.useContext(ApiContext);
   const [workspacesList, setWorkspacesList] = React.useState([]);
@@ -92,6 +93,14 @@ export const WorkspacesPage = () => {
     </div>
   );
 };
+
+// Workspaces are for SA / workspace managers / project managers / workspace members.
+// Labelers and reviewers (no workspace access) are redirected to their projects.
+export const WorkspacesPage = () => (
+  <WorkspaceAccessGuard>
+    <WorkspacesPageInner />
+  </WorkspaceAccessGuard>
+);
 
 WorkspacesPage.title = "Workspaces";
 WorkspacesPage.path = "/workspaces";

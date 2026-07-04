@@ -59,3 +59,26 @@ export const SuperAdminGuard = ({
   if (!isSuperAdmin) return <Redirect to={redirectTo} />;
   return <>{children}</>;
 };
+
+/** Guards a page that requires access to at least one workspace (e.g. /workspaces). */
+export const WorkspaceAccessGuard = ({ children }: { children: ReactNode }) => {
+  const { isLoading } = useAuth();
+  const { canSeeWorkspacesMenu } = usePermissions();
+
+  if (isLoading) return null;
+  if (!canSeeWorkspacesMenu) return <Redirect to="/projects" />;
+  return <>{children}</>;
+};
+
+/** Guards a page that requires access to at least one project (e.g. /projects). */
+export const ProjectAccessGuard = ({ children }: { children: ReactNode }) => {
+  const { isLoading } = useAuth();
+  const { canSeeProjectsMenu, canSeeWorkspacesMenu } = usePermissions();
+
+  if (isLoading) return null;
+  if (!canSeeProjectsMenu) {
+    // Workspace-only members (WMb) land on the workspaces list instead.
+    return <Redirect to={canSeeWorkspacesMenu ? "/workspaces" : "/"} />;
+  }
+  return <>{children}</>;
+};
