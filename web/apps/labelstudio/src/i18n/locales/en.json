@@ -464,5 +464,25 @@
   },
   "editor": {
     "compareAll": "Compare All"
+  },
+  "danger": {
+    "title": "Danger Zone",
+    "description": "Perform these actions at your own risk. Actions you take on this page can't be reverted. Make sure your data is backed up.",
+    "resetCache": "Reset Cache",
+    "resetCacheHelp": "Reset Cache may help in cases like if you are unable to modify the labeling configuration due to validation errors concerning existing labels, but you are confident that the labels don't exist. You can use this action to reset the cache and try again.",
+    "dropTabs": "Drop All Tabs",
+    "dropTabsHelp": "If the Data Manager is not loading, dropping all Data Manager tabs can help.",
+    "deleteProject": "Delete Project",
+    "deleteProjectHelp": "Deleting a project removes all tasks, annotations, and project data from the database."
+  },
+  "annotationPage": {
+    "title": "Annotation Settings",
+    "labelingInstructions": "Labeling Instructions",
+    "instructionsHelp": "Write instructions to help users complete labeling tasks.",
+    "instructionsHtml": "The instruction field supports HTML markup and it allows use of images, iframes (pdf).",
+    "showBeforeLabeling": "Show before labeling",
+    "prelabeling": "Prelabeling",
+    "usePredictions": "Use predictions to prelabel tasks",
+    "usePredictionsHelp": "Enable and select which set of predictions to use for prelabeling."
   }
 }

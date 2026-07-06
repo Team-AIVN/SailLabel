@@ -229,7 +229,10 @@ export const WorkersSettings = () => {
         <h1>Workers</h1>
         <p className={root.elem("hint").toClassName()}>
           워크스페이스 멤버를 <b>Worker</b>, <b>Labelers</b>, <b>Reviewers</b> 중 하나로 끌어다 놓아 배치하세요.
-          <b>Worker</b>는 아직 역할이 없는 상태이고, 상자 사이로 끌면 역할이 바뀝니다. 왼쪽으로 끌면 배치가 해제됩니다.
+          <br />
+          <b>Worker</b>는 아직 역할이 없는 상태이고, 상자 사이로 끌면 역할이 바뀝니다.
+          <br />
+          왼쪽으로 끌면 배치가 해제됩니다.
         </p>
         <div className={cn("settings-wrapper").toClassName()}>
           {loading ? (
