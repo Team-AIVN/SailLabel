@@ -81,7 +81,6 @@ export const WorkspaceDetail = () => {
 
   // create affordances
   const [showNewProject, setShowNewProject] = useState(false);
-  const [showInvite, setShowInvite] = useState(false);
   const [inviteUser, setInviteUser] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [showImport, setShowImport] = useState(false);
@@ -176,7 +175,6 @@ export const WorkspaceDetail = () => {
       toast.show({ message: t("workspaces.members.added") });
       setInviteUser("");
       setInviteRole("member");
-      setShowInvite(false);
       loadUsers();
       loadSummary();
     } else {
@@ -213,12 +211,16 @@ export const WorkspaceDetail = () => {
         openImport();
       } else if (action === "user") {
         setTab("users");
-        setShowInvite(true);
-        loadOrgMembers();
       }
     },
     [setTab, loadOrgMembers, openImport],
   );
+
+  // Load the org member pool whenever the Members tab is shown, so the add-member
+  // dropdown is populated without needing a separate toggle.
+  useEffect(() => {
+    if (activeTab === "users") loadOrgMembers();
+  }, [activeTab, loadOrgMembers]);
 
   if (loading && !summary) {
     return (
@@ -460,8 +462,32 @@ export const WorkspaceDetail = () => {
             </div>
           )}
           {perms.canManage && (
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>기존 멤버 추가 (이미 가입된 사람)</div>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>기존 멤버 추가 (이미 가입된 사람)</div>
+              <div className={root.elem("inline-form").toClassName()}>
+                <select value={inviteUser} onChange={(e) => setInviteUser(e.target.value)}>
+                  <option value="">{t("workspaces.members.selectUser")}</option>
+                  {addableUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {userLabel(u)}
+                    </option>
+                  ))}
+                </select>
+                <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+                  {WORKSPACE_ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {t(`workspaces.roles.${r}`, r)}
+                    </option>
+                  ))}
+                </select>
+                <Button size="small" onClick={inviteMember} disabled={!inviteUser}>
+                  {t("workspaces.members.add")}
+                </Button>
+              </div>
+            </div>
           )}
+
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>{t("workspaces.detail.members", "Members")}</div>
           <div className={root.elem("toolbar").toClassName()}>
             <input
               className={root.elem("search").toClassName()}
@@ -469,39 +495,7 @@ export const WorkspaceDetail = () => {
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
             />
-            <Button
-              size="small"
-              onClick={() => {
-                setShowInvite((v) => !v);
-                loadOrgMembers();
-              }}
-            >
-              {t("workspaces.dashboard.inviteUser", "Invite User")}
-            </Button>
           </div>
-
-          {showInvite && (
-            <div className={root.elem("inline-form").toClassName()}>
-              <select value={inviteUser} onChange={(e) => setInviteUser(e.target.value)}>
-                <option value="">{t("workspaces.members.selectUser")}</option>
-                {addableUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {userLabel(u)}
-                  </option>
-                ))}
-              </select>
-              <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
-                {WORKSPACE_ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {t(`workspaces.roles.${r}`, r)}
-                  </option>
-                ))}
-              </select>
-              <Button size="small" onClick={inviteMember} disabled={!inviteUser}>
-                {t("workspaces.members.add")}
-              </Button>
-            </div>
-          )}
 
           <table className={root.elem("table").toClassName()}>
             <thead>

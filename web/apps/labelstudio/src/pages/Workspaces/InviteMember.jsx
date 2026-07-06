@@ -24,7 +24,6 @@ const fieldStyle = { height: 32, padding: "0 8px", border: "1px solid var(--colo
 export const InviteMember = ({ workspaceId, projects = [] }) => {
   const api = useAPI();
   const toast = useToast();
-  const [email, setEmail] = useState("");
   const [projectId, setProjectId] = useState("");
   const [role, setRole] = useState("member");
   const [link, setLink] = useState("");
@@ -39,12 +38,8 @@ export const InviteMember = ({ workspaceId, projects = [] }) => {
   };
 
   const generate = async () => {
-    if (!email.trim()) {
-      toast.show({ message: "이메일을 입력하세요", type: "error" });
-      return;
-    }
     setBusy(true);
-    const body = { email: email.trim(), role };
+    const body = { role };
     if (projectId) body.project = Number(projectId);
     else body.workspace = Number(workspaceId);
     const res = await api.callApi("createInvitation", { body });
@@ -63,15 +58,8 @@ export const InviteMember = ({ workspaceId, projects = [] }) => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 640 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 720 }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        <input
-          type="email"
-          placeholder="초대할 이메일"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{ ...fieldStyle, flex: 1, minWidth: 200 }}
-        />
         <select value={projectId} onChange={(e) => onProjectChange(e.target.value)} style={fieldStyle}>
           <option value="">프로젝트 없음 (워크스페이스만)</option>
           {projects.map((p) => (
@@ -95,7 +83,7 @@ export const InviteMember = ({ workspaceId, projects = [] }) => {
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input readOnly value={link} style={{ ...fieldStyle, flex: 1 }} onFocus={(e) => e.target.select()} />
           <Button size="small" look="outlined" onClick={copy}>
-            복사
+            링크 복사
           </Button>
         </div>
       )}

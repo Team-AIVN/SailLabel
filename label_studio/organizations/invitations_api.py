@@ -37,9 +37,9 @@ class InvitationCreateAPI(generics.CreateAPIView):
         if org is None:
             raise ValidationError('No active organization.')
 
+        # Email is optional — the link places whoever signs up through it; the email
+        # is only a record of the intended recipient.
         email = (request.data.get('email') or '').strip().lower()
-        if not email:
-            raise ValidationError({'email': 'Email is required.'})
 
         project_id = request.data.get('project')
         workspace_id = request.data.get('workspace')
