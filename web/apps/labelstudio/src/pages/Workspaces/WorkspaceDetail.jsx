@@ -450,10 +450,17 @@ export const WorkspaceDetail = () => {
       {activeTab === "users" && (
         <section className={root.elem("panel").toClassName()}>
           {perms.canManage && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>이메일로 초대</div>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontWeight: 600, marginBottom: 2 }}>새 멤버 초대 (계정이 없는 사람)</div>
+              <div style={{ fontSize: 13, color: "var(--color-neutral-content-subtler)", marginBottom: 8 }}>
+                초대 링크를 만들어 전달하세요. 상대가 그 링크로 가입하면 아래 역할로 자동 배치됩니다. (자동 이메일 발송이
+                아닙니다)
+              </div>
               <InviteMember workspaceId={Number(id)} projects={projects} />
             </div>
+          )}
+          {perms.canManage && (
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>기존 멤버 추가 (이미 가입된 사람)</div>
           )}
           <div className={root.elem("toolbar").toClassName()}>
             <input

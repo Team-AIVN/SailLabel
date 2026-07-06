@@ -73,7 +73,7 @@
     "dashboard": {
       "newProject": "New Project",
       "newDataset": "New Dataset",
-      "inviteUser": "Invite User",
+      "inviteUser": "Add existing member",
       "searchProjects": "Search projects",
       "searchDatasets": "Search datasets",
       "searchUsers": "Search users",

@@ -73,7 +73,7 @@
     "dashboard": {
       "newProject": "프로젝트 생성",
       "newDataset": "데이터셋 추가",
-      "inviteUser": "사용자 초대",
+      "inviteUser": "기존 멤버 추가",
       "searchProjects": "프로젝트 검색",
       "searchDatasets": "데이터셋 검색",
       "searchUsers": "사용자 검색",
