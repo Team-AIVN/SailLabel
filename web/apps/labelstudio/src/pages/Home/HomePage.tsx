@@ -2,7 +2,7 @@ import { IconExternal, IconFolderAdd, IconHumanSignal, IconUserAdd, IconFolderOp
 import { Button, SimpleCard, Spinner, Tooltip, Typography } from "@humansignal/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useHistory, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useUpdatePageTitle } from "@humansignal/core";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
@@ -30,6 +30,7 @@ const resourceLinks = [
 ] as const;
 
 const actions = [
+  { type: "createWorkspace", labelKey: "home.actions.createWorkspace", icon: IconFolderOpen },
   { type: "createProject", labelKey: "home.actions.createProject", icon: IconFolderAdd },
   { type: "inviteMembers", labelKey: "home.actions.inviteMembers", icon: IconUserAdd },
 ] as const;
@@ -40,6 +41,7 @@ export const HomePage: Page = () => {
   const { t } = useTranslation();
   const api = useAPI();
   const location = useLocation();
+  const history = useHistory();
   const [modalIsOpen, setModalIsOpen] = useAtom(creationDialogOpen);
   const [invitationIsOpen, setInvitationIsOpen] = useAtom(invitationOpen);
   const setLocationKey = useSetAtom(locationKeyAtom);
@@ -99,6 +101,11 @@ export const HomePage: Page = () => {
   const handleActions = (action: Action) => {
     return () => {
       switch (action) {
+        case "createWorkspace":
+          // Workspace is the top-level container (datasets live here); send the
+          // user to the Workspaces page to create one before projects.
+          history.push("/workspaces");
+          break;
         case "createProject":
           setModalIsOpen(true);
           break;
@@ -174,8 +181,8 @@ export const HomePage: Page = () => {
                 </Typography>
                 <Button
                   className="mt-4"
-                  onClick={() => setModalIsOpen(true)}
-                  aria-label={t("home.empty.createProjectAriaLabel")}
+                  onClick={() => history.push("/workspaces")}
+                  aria-label={t("home.empty.createWorkspaceAriaLabel")}
                 >
                   {t("home.empty.cta")}
                 </Button>
