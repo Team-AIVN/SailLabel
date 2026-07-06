@@ -156,7 +156,9 @@
       "description": "A workspace is where you upload datasets and organize projects. Start by creating one.",
       "cta": "Create Workspace",
       "createWorkspaceAriaLabel": "Create new workspace",
-      "createProjectAriaLabel": "Create new project"
+      "createProjectAriaLabel": "Create new project",
+      "memberTitle": "No assignments yet",
+      "memberDescription": "Once an administrator adds you to a workspace or project, it will show up here."
     },
     "tasksProgress": "{{finished}} of {{total}} Tasks ({{percent}}%)",
     "resources": {

@@ -156,7 +156,9 @@
       "description": "워크스페이스에 데이터셋을 올리고 프로젝트를 정리합니다. 먼저 워크스페이스를 만들어 보세요.",
       "cta": "워크스페이스 생성",
       "createWorkspaceAriaLabel": "새 워크스페이스 생성",
-      "createProjectAriaLabel": "새 프로젝트 생성"
+      "createProjectAriaLabel": "새 프로젝트 생성",
+      "memberTitle": "아직 배정된 작업이 없습니다",
+      "memberDescription": "관리자가 워크스페이스나 프로젝트에 배정하면 여기에 표시됩니다."
     },
     "tasksProgress": "{{total}}개 중 {{finished}}개 작업 완료 ({{percent}}%)",
     "resources": {

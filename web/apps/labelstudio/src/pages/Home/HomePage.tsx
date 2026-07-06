@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useUpdatePageTitle } from "@humansignal/core";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { HeidiTips } from "../../components/HeidiTips/HeidiTips";
+import { usePermissions } from "../../utils/permissions";
 import { useAPI } from "../../providers/ApiProvider";
 import { CreateProject } from "../CreateProject/CreateProject";
 import { InviteLink } from "../Organization/PeoplePage/InviteLink";
@@ -48,6 +49,13 @@ export const HomePage: Page = () => {
   const setProjectsData = useSetAtom(projectsDataAtom);
   const sortedProjects = useAtomValue(sortedProjectsAtom);
   const visitedIds = useAtomValue(visitedIdsAtom);
+  const { canCreateWorkspace, isSuperAdmin } = usePermissions();
+
+  // Only managers create workspaces/projects; only super admins invite org members.
+  // Plain members see neither, and get a "wait to be assigned" empty state.
+  const visibleActions = actions.filter((a) =>
+    a.type === "inviteMembers" ? isSuperAdmin : canCreateWorkspace,
+  );
 
   useUpdatePageTitle(t("home.pageTitle"));
 
@@ -129,7 +137,7 @@ export const HomePage: Page = () => {
             </Typography>
           </div>
           <div className="flex flex-wrap justify-start gap-4">
-            {actions.map((action) => {
+            {visibleActions.map((action) => {
               const label = t(action.labelKey);
               return (
                 <Button
@@ -174,18 +182,20 @@ export const HomePage: Page = () => {
                   <IconFolderOpen />
                 </div>
                 <Typography variant="headline" size="small">
-                  {t("home.empty.title")}
+                  {t(canCreateWorkspace ? "home.empty.title" : "home.empty.memberTitle")}
                 </Typography>
                 <Typography size="small" className="text-neutral-content-subtler">
-                  {t("home.empty.description")}
+                  {t(canCreateWorkspace ? "home.empty.description" : "home.empty.memberDescription")}
                 </Typography>
-                <Button
-                  className="mt-4"
-                  onClick={() => history.push("/workspaces")}
-                  aria-label={t("home.empty.createWorkspaceAriaLabel")}
-                >
-                  {t("home.empty.cta")}
-                </Button>
+                {canCreateWorkspace && (
+                  <Button
+                    className="mt-4"
+                    onClick={() => history.push("/workspaces")}
+                    aria-label={t("home.empty.createWorkspaceAriaLabel")}
+                  >
+                    {t("home.empty.cta")}
+                  </Button>
+                )}
               </div>
             ) : isSuccess && data && sortedProjects.length > 0 ? (
               <div className="flex flex-col gap-1">

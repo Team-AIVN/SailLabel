@@ -106,6 +106,7 @@ class BaseWhoAmIUserSerializer(BaseUserSerializer):
     is_super_admin = serializers.SerializerMethodField()
     has_workspace_access = serializers.SerializerMethodField()
     has_project_access = serializers.SerializerMethodField()
+    can_create_workspace = serializers.SerializerMethodField()
 
     class Meta(BaseUserSerializer.Meta):
         fields = BaseUserSerializer.Meta.fields + (
@@ -113,6 +114,7 @@ class BaseWhoAmIUserSerializer(BaseUserSerializer):
             'is_super_admin',
             'has_workspace_access',
             'has_project_access',
+            'can_create_workspace',
         )
 
     def get_permissions(self, user) -> list[str]:
@@ -132,6 +134,12 @@ class BaseWhoAmIUserSerializer(BaseUserSerializer):
         from users.roles import has_project_access
 
         return has_project_access(user)
+
+    def get_can_create_workspace(self, user) -> bool:
+        # SA or workspace manager of any workspace (mirrors projects.create policy).
+        from users.rules import can_create_workspace
+
+        return bool(can_create_workspace.test(user))
 
 
 class UserSimpleSerializer(BaseUserSerializer):
