@@ -105,6 +105,13 @@ class ProjectMembersAPI(_ProjectScopedMixin, generics.ListCreateAPIView):
             member = serializer.save(project=project)
             action = AuditAction.ROLE_GRANTED
 
+        # Assigning someone to a project also makes them a member of the project's
+        # workspace (low-privilege 'member'), so a manager can add people straight
+        # from the project's Workers tab without a separate workspace-invite step.
+        # This is a system side effect of an authorised project-member creation, so
+        # it does not require the caller to hold workspace-invite permission.
+        self._ensure_workspace_membership(user, project)
+
         record_role_change(
             action=action,
             actor=self.request.user,
@@ -114,6 +121,21 @@ class ProjectMembersAPI(_ProjectScopedMixin, generics.ListCreateAPIView):
             role=member.role,
             organization=project.organization,
         )
+
+    @staticmethod
+    def _ensure_workspace_membership(user, project):
+        if not project.workspace_id:
+            return
+        from workspaces.models import WorkspaceMember
+
+        existing = WorkspaceMember.objects.filter(user=user, workspace_id=project.workspace_id).order_by('-id').first()
+        if existing is None:
+            WorkspaceMember.objects.create(user=user, workspace_id=project.workspace_id, role='member')
+        elif existing.deleted_at is not None:
+            existing.deleted_at = None
+            existing.deleted_by = None
+            existing.role = existing.role or 'member'
+            existing.save(update_fields=['deleted_at', 'deleted_by', 'role', 'updated_at'])
 
 
 @method_decorator(

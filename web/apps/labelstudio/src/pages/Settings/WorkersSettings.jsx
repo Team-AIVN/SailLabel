@@ -42,9 +42,9 @@ export const WorkersSettings = () => {
   const root = useMemo(() => cn("worker-assign"), []);
 
   const projectId = project?.id;
-  const workspaceId = project?.workspace;
+  const orgId = project?.organization;
 
-  const [members, setMembers] = useState([]); // workspace members (all)
+  const [members, setMembers] = useState([]); // org members (assignable pool)
   const [userInfo, setUserInfo] = useState({}); // user_id -> user_detail
   const [serverByUser, setServerByUser] = useState({}); // user_id -> { memberId, role } (saved state)
   const [assignments, setAssignments] = useState({}); // user_id -> role (desired/staged)
@@ -55,15 +55,19 @@ export const WorkersSettings = () => {
   const load = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
-    const [ws, pm] = await Promise.all([
-      workspaceId ? api.callApi("workspaceMembers", { params: { pk: workspaceId } }) : Promise.resolve([]),
+    // Pool is every organization member: assigning one to a project role also grants
+    // workspace membership on the backend, so managers add people from here directly.
+    const [org, pm] = await Promise.all([
+      orgId ? api.callApi("memberships", { params: { pk: orgId } }) : Promise.resolve([]),
       api.callApi("projectMembers", { params: { pk: projectId } }),
     ]);
-    const wsMembers = listOf(ws);
+    // Org memberships expose { user: <user object> }; normalize to the { user: id,
+    // user_detail: object } shape the rest of this component expects.
+    const orgMembers = listOf(org).map((m) => ({ user: m.user?.id ?? m.user, user_detail: m.user_detail ?? m.user }));
     const projMembers = listOf(pm);
 
     const info = {};
-    for (const m of wsMembers) info[m.user] = m.user_detail;
+    for (const m of orgMembers) info[m.user] = m.user_detail;
     for (const m of projMembers) info[m.user] = m.user_detail ?? info[m.user];
 
     const server = {};
@@ -75,12 +79,12 @@ export const WorkersSettings = () => {
       }
     }
 
-    setMembers(wsMembers);
+    setMembers(orgMembers);
     setUserInfo(info);
     setServerByUser(server);
     setAssignments(desired);
     setLoading(false);
-  }, [api, projectId, workspaceId]);
+  }, [api, projectId, orgId]);
 
   useEffect(() => {
     load();
@@ -216,7 +220,7 @@ export const WorkersSettings = () => {
   const poolHead = (
     <header className={root.elem("panel-head").toClassName()}>
       <strong>
-        Workspace members
+        멤버
         <span className={root.elem("count").toClassName()}>({poolMembers.length})</span>
       </strong>
       <input placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -228,7 +232,7 @@ export const WorkersSettings = () => {
       <div className={cn("general-settings").elem("wrapper").toClassName()}>
         <h1>Workers</h1>
         <p className={root.elem("hint").toClassName()}>
-          워크스페이스 멤버를 <b>Worker</b>, <b>Labelers</b>, <b>Reviewers</b> 중 하나로 끌어다 놓아 배치하세요.
+          조직 멤버를 <b>Worker</b>, <b>Labelers</b>, <b>Reviewers</b> 중 하나로 끌어다 놓아 배치하세요.
           <br />
           <b>Worker</b>는 아직 역할이 없는 상태이고, 상자 사이로 끌면 역할이 바뀝니다.
           <br />
@@ -242,7 +246,7 @@ export const WorkersSettings = () => {
               <DragDropContext onDragEnd={onDragEnd}>
                 <div className={root.mod({ dnd: true, triple: true }).toClassName()}>
                   {/* LEFT: unassigned workspace members */}
-                  {renderZone(POOL, "Workspace members", poolMembers.map((m) => m.user), { head: poolHead })}
+                  {renderZone(POOL, "멤버", poolMembers.map((m) => m.user), { head: poolHead })}
 
                   {/* RIGHT: three role zones */}
                   <div className={root.elem("roles").toClassName()}>

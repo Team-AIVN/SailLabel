@@ -49,8 +49,12 @@ export const WorkerAssignment = ({ projectId, workspaceId, show = true }) => {
   const [ready, setReady] = useState(false);
 
   const loadMembers = useCallback(async () => {
-    const ws = await api.callApi("workspaceMembers", { params: { pk: workspaceId } });
-    setMembers(listOf(ws));
+    // Pool is every org member (assigning also grants workspace membership on the
+    // backend). Resolve the org via the workspace, then normalize the shape.
+    const workspace = await api.callApi("workspace", { params: { pk: workspaceId } });
+    const orgId = workspace?.organization;
+    const org = orgId ? await api.callApi("memberships", { params: { pk: orgId } }) : [];
+    setMembers(listOf(org).map((m) => ({ user: m.user?.id ?? m.user, user_detail: m.user_detail ?? m.user })));
   }, [api, workspaceId]);
 
   const loadProjectMembers = useCallback(async () => {
