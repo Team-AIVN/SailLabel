@@ -4,6 +4,7 @@
  * `on*OnComment()` are used for actions with comment attached to them.
  */
 
+import i18next from "i18next";
 import { inject, observer } from "mobx-react";
 import type React from "react";
 import { memo, type ReactElement } from "react";
@@ -73,7 +74,7 @@ export const AcceptButton = memo(
           }}
           data-testid="bottombar-accept-button"
         >
-          {hasChanges ? "Fix + Accept" : "Accept"}
+          {hasChanges ? i18next.t("editor.fixAndAccept") : i18next.t("editor.accept")}
         </Button>
       </Tooltip>
     );
@@ -152,7 +153,7 @@ export const SkipButton = memo(
           }}
           data-testid="bottombar-skip-button"
         >
-          Skip
+          {i18next.t("editor.skip")}
         </Button>
       </>
     );

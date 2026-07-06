@@ -4,6 +4,7 @@
  * Only this component should get interface updates, other versions should be removed.
  */
 
+import i18next from "i18next";
 import { observer } from "mobx-react";
 import type React from "react";
 import { useCallback, useState } from "react";
@@ -238,7 +239,7 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
               }}
               data-testid={`bottombar-${isUpdate ? "update" : "submit"}-and-exit-button`}
             >
-              {`${isUpdate ? "Update" : "Submit"} and exit`}
+              {isUpdate ? i18next.t("editor.updateAndExit") : i18next.t("editor.submitAndExit")}
             </Button>
           </div>
         );
@@ -327,7 +328,7 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
                   }}
                   data-testid="bottombar-update-button"
                 >
-                  {isUpdate ? "Update" : "Submit"}
+                  {isUpdate ? i18next.t("editor.update") : i18next.t("editor.submit")}
                 </Button>
                 {useExitOption ? (
                   <Dropdown.Trigger

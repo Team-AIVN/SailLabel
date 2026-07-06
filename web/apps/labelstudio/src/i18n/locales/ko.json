@@ -463,7 +463,15 @@
     "customTemplate": "커스텀 템플릿"
   },
   "editor": {
-    "compareAll": "전체 비교"
+    "compareAll": "전체 비교",
+    "submit": "제출",
+    "update": "수정",
+    "skip": "건너뛰기",
+    "submitAndExit": "제출 후 나가기",
+    "updateAndExit": "수정 후 나가기",
+    "accept": "승인",
+    "reject": "반려",
+    "fixAndAccept": "수정 후 승인"
   },
   "danger": {
     "title": "Danger Zone",

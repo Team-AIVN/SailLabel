@@ -463,7 +463,15 @@
     "customTemplate": "Custom template"
   },
   "editor": {
-    "compareAll": "Compare All"
+    "compareAll": "Compare All",
+    "submit": "Submit",
+    "update": "Update",
+    "skip": "Skip",
+    "submitAndExit": "Submit and exit",
+    "updateAndExit": "Update and exit",
+    "accept": "Accept",
+    "reject": "Reject",
+    "fixAndAccept": "Fix + Accept"
   },
   "danger": {
     "title": "Danger Zone",

@@ -2,6 +2,7 @@
  * @deprecated It was used only without FF_3873 in old interface.
  */
 
+import i18next from "i18next";
 import { inject, observer } from "mobx-react";
 import { IconBan, IconInfoOutline } from "@humansignal/icons";
 import { Button, Tooltip } from "@humansignal/ui";
@@ -95,7 +96,7 @@ export const Controls = controlsInjector(
               }
             }}
           >
-            Reject
+            {i18next.t("editor.reject")}
           </Button>
         </ButtonTooltip>
       );
@@ -115,7 +116,7 @@ export const Controls = controlsInjector(
               store.acceptAnnotation();
             }}
           >
-            {history.canUndo || annotation.versions.draft ? "Fix + Accept" : "Accept"}
+            {history.canUndo || annotation.versions.draft ? i18next.t("editor.fixAndAccept") : i18next.t("editor.accept")}
           </Button>
         </ButtonTooltip>,
       );
@@ -183,7 +184,7 @@ export const Controls = controlsInjector(
                 }
               }}
             >
-              Skip
+              {i18next.t("editor.skip")}
             </Button>
           </ButtonTooltip>,
         );
@@ -225,7 +226,7 @@ export const Controls = controlsInjector(
                 store.updateAnnotation();
               }}
             >
-              {isUpdate ? "Update" : "Submit"}
+              {isUpdate ? i18next.t("editor.update") : i18next.t("editor.submit")}
             </Button>
           </ButtonTooltip>
         );
