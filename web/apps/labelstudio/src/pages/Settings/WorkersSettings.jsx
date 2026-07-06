@@ -1,11 +1,15 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import { Button, useToast } from "@humansignal/ui";
 import { ProjectContext } from "../../providers/ProjectProvider";
 import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
 import "../CreateProject/WorkerAssignment.prefix.css";
 
-const ROLES = ["annotator", "reviewer"];
+// Droppable zones. `members` is the unassigned workspace-member pool; the other
+// two are the project's roles. A card's zone IS its assignment.
+const POOL = "members";
+const ROLE_ZONES = ["annotator", "reviewer"];
 
 const listOf = (response) => {
   if (!response) return [];
@@ -21,9 +25,10 @@ const userLabel = (detail) => {
 };
 
 /**
- * Project Settings → Workers: the same two-panel annotator/reviewer assignment used in
- * project creation, reflecting this project's current members. Changes are staged locally
- * and only applied on Save (Cancel reverts to the saved state).
+ * Project Settings → Workers: drag-and-drop worker assignment. Workspace members
+ * live in the left pool; drag a member card into Labelers or Reviewers to assign,
+ * drag between the two role boxes to switch role, or drag back to the pool to
+ * unassign. Changes are staged locally and only applied on Save (Cancel reverts).
  */
 export const WorkersSettings = () => {
   const { project } = useContext(ProjectContext);
@@ -34,13 +39,10 @@ export const WorkersSettings = () => {
   const projectId = project?.id;
   const workspaceId = project?.workspace;
 
-  const [members, setMembers] = useState([]); // workspace members (left pool)
+  const [members, setMembers] = useState([]); // workspace members (all)
   const [userInfo, setUserInfo] = useState({}); // user_id -> user_detail
   const [serverByUser, setServerByUser] = useState({}); // user_id -> { memberId, role } (saved state)
   const [assignments, setAssignments] = useState({}); // user_id -> role (desired/staged)
-  const [activeRole, setActiveRole] = useState("annotator");
-  const [leftSelected, setLeftSelected] = useState(() => new Set());
-  const [rightSelected, setRightSelected] = useState(() => new Set());
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -72,8 +74,6 @@ export const WorkersSettings = () => {
     setUserInfo(info);
     setServerByUser(server);
     setAssignments(desired);
-    setLeftSelected(new Set());
-    setRightSelected(new Set());
     setLoading(false);
   }, [api, projectId, workspaceId]);
 
@@ -81,24 +81,24 @@ export const WorkersSettings = () => {
     load();
   }, [load]);
 
+  // Derive the three zone lists from the staged assignments.
   const annotators = useMemo(
-    () =>
-      Object.keys(assignments)
-        .filter((u) => assignments[u] === "annotator")
-        .map(Number),
+    () => Object.keys(assignments).filter((u) => assignments[u] === "annotator").map(Number),
     [assignments],
   );
   const reviewers = useMemo(
-    () =>
-      Object.keys(assignments)
-        .filter((u) => assignments[u] === "reviewer")
-        .map(Number),
+    () => Object.keys(assignments).filter((u) => assignments[u] === "reviewer").map(Number),
     [assignments],
   );
-  const assignedActive = useMemo(
-    () => new Set(activeRole === "annotator" ? annotators : reviewers),
-    [activeRole, annotators, reviewers],
-  );
+  const assignedUserIds = useMemo(() => new Set([...annotators, ...reviewers]), [annotators, reviewers]);
+
+  // Left pool = workspace members not assigned to any role (respecting search).
+  const poolMembers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return members
+      .filter((m) => !assignedUserIds.has(m.user))
+      .filter((m) => !q || userLabel(m.user_detail).toLowerCase().includes(q));
+  }, [members, assignedUserIds, search]);
 
   const dirty = useMemo(() => {
     const keys = new Set([...Object.keys(serverByUser), ...Object.keys(assignments)]);
@@ -108,44 +108,18 @@ export const WorkersSettings = () => {
     return false;
   }, [serverByUser, assignments]);
 
-  const visibleMembers = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return members;
-    return members.filter((m) => userLabel(m.user_detail).toLowerCase().includes(q));
-  }, [members, search]);
-
-  const toggle = (setFn) => (id) =>
-    setFn((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+  const onDragEnd = useCallback((result) => {
+    const { destination, draggableId } = result;
+    if (!destination) return;
+    const uid = Number(draggableId);
+    const zone = destination.droppableId;
+    setAssignments((prev) => {
+      const next = { ...prev };
+      if (zone === POOL) delete next[uid];
+      else next[uid] = zone; // "annotator" | "reviewer"
       return next;
     });
-  const toggleLeft = toggle(setLeftSelected);
-  const toggleRight = toggle(setRightSelected);
-
-  const selectRole = useCallback((role) => {
-    setActiveRole(role);
-    setLeftSelected(new Set());
-    setRightSelected(new Set());
   }, []);
-
-  const addMembers = useCallback(() => {
-    setAssignments((prev) => {
-      const next = { ...prev };
-      for (const uid of leftSelected) next[uid] = activeRole;
-      return next;
-    });
-    setLeftSelected(new Set());
-  }, [leftSelected, activeRole]);
-
-  const removeMembers = useCallback(() => {
-    setAssignments((prev) => {
-      const next = { ...prev };
-      for (const uid of rightSelected) delete next[uid];
-      return next;
-    });
-    setRightSelected(new Set());
-  }, [rightSelected]);
 
   const onSave = useCallback(async () => {
     if (!dirty) return;
@@ -185,119 +159,93 @@ export const WorkersSettings = () => {
     const desired = {};
     for (const [uid, srv] of Object.entries(serverByUser)) desired[uid] = srv.role;
     setAssignments(desired);
-    setLeftSelected(new Set());
-    setRightSelected(new Set());
   }, [serverByUser]);
 
-  const renderRoleBox = (role, rows) => {
-    const isActive = activeRole === role;
-    return (
-      <section className={root.elem("box").mod({ active: isActive }).toClassName()} onClick={() => selectRole(role)}>
+  const renderCard = (uid, index) => (
+    <Draggable key={uid} draggableId={String(uid)} index={index}>
+      {(provided, snapshot) => (
+        <li
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          className={root
+            .elem("card")
+            .mod({ dragging: snapshot.isDragging })
+            .toClassName()}
+        >
+          <span className={root.elem("grip").toClassName()} aria-hidden>
+            ⠿
+          </span>
+          <span className={root.elem("item-text").toClassName()}>{userLabel(userInfo[uid])}</span>
+        </li>
+      )}
+    </Draggable>
+  );
+
+  const renderZone = (zoneId, title, uids, { head } = {}) => (
+    <section className={root.elem(zoneId === POOL ? "panel" : "box").toClassName()}>
+      {head ?? (
         <header className={root.elem("box-head").toClassName()}>
           <strong>
-            {role === "annotator" ? "Labelers" : "Reviewers"}
-            <span className={root.elem("count").toClassName()}>({rows.length})</span>
+            {title}
+            <span className={root.elem("count").toClassName()}>({uids.length})</span>
           </strong>
-          {isActive && <span className={root.elem("active-tag").toClassName()}>Active</span>}
         </header>
-        <ul className={root.elem("items").toClassName()}>
-          {rows.map((uid) => (
-            <li
-              key={uid}
-              className={root
-                .elem("item")
-                .mod({ selected: rightSelected.has(uid) })
-                .toClassName()}
-            >
-              <input
-                type="checkbox"
-                disabled={!isActive}
-                checked={rightSelected.has(uid)}
-                onChange={() => toggleRight(uid)}
-                onClick={(e) => e.stopPropagation()}
-              />
-              <span className={root.elem("item-text").toClassName()}>{userLabel(userInfo[uid])}</span>
-            </li>
-          ))}
-          {rows.length === 0 && <li className={root.elem("muted").toClassName()}>None</li>}
-        </ul>
-      </section>
-    );
-  };
+      )}
+      <Droppable droppableId={zoneId}>
+        {(provided, snapshot) => (
+          <ul
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className={root
+              .elem("items")
+              .mod({ over: snapshot.isDraggingOver })
+              .toClassName()}
+          >
+            {uids.map((uid, i) => renderCard(uid, i))}
+            {provided.placeholder}
+            {uids.length === 0 && <li className={root.elem("muted").toClassName()}>{"여기로 드래그"}</li>}
+          </ul>
+        )}
+      </Droppable>
+    </section>
+  );
+
+  const poolHead = (
+    <header className={root.elem("panel-head").toClassName()}>
+      <strong>
+        Workspace members
+        <span className={root.elem("count").toClassName()}>({poolMembers.length})</span>
+      </strong>
+      <input placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
+    </header>
+  );
 
   return (
     <div className={cn("general-settings").toClassName()}>
       <div className={cn("general-settings").elem("wrapper").toClassName()}>
         <h1>Workers</h1>
+        <p className={root.elem("hint").toClassName()}>
+          워크스페이스 멤버를 <b>Labelers</b> 또는 <b>Reviewers</b>로 끌어다 놓아 배치하세요. 두 박스 사이로 끌면 역할이
+          바뀌고, 왼쪽으로 다시 끌면 배치가 해제됩니다.
+        </p>
         <div className={cn("settings-wrapper").toClassName()}>
           {loading ? (
             <div className={root.elem("loading").toClassName()}>…</div>
           ) : (
             <>
-              <div className={root.toClassName()}>
-                {/* LEFT: workspace members */}
-                <section className={root.elem("panel").toClassName()}>
-                  <header className={root.elem("panel-head").toClassName()}>
-                    <strong>Workspace members</strong>
-                    <input placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
-                  </header>
-                  <ul className={root.elem("items").toClassName()}>
-                    {visibleMembers.map((m) => {
-                      const included = assignedActive.has(m.user);
-                      const currentRole = assignments[m.user];
-                      return (
-                        <li
-                          key={m.id}
-                          className={root
-                            .elem("item")
-                            .mod({ included, selected: leftSelected.has(m.user) })
-                            .toClassName()}
-                        >
-                          <input
-                            type="checkbox"
-                            disabled={included}
-                            checked={leftSelected.has(m.user)}
-                            onChange={() => toggleLeft(m.user)}
-                          />
-                          <span className={root.elem("item-text").toClassName()}>{userLabel(m.user_detail)}</span>
-                          {currentRole && (
-                            <span className={root.elem("badge").mod({ role: currentRole }).toClassName()}>
-                              {currentRole === "annotator" ? "Labeler" : "Reviewer"}
-                            </span>
-                          )}
-                        </li>
-                      );
-                    })}
-                    {visibleMembers.length === 0 && <li className={root.elem("muted").toClassName()}>No members</li>}
-                  </ul>
-                </section>
+              <DragDropContext onDragEnd={onDragEnd}>
+                <div className={root.mod({ dnd: true }).toClassName()}>
+                  {/* LEFT: unassigned workspace members */}
+                  {renderZone(POOL, "Workspace members", poolMembers.map((m) => m.user), { head: poolHead })}
 
-                {/* CENTER: arrows */}
-                <div className={root.elem("controls").toClassName()}>
-                  <Button
-                    size="small"
-                    onClick={addMembers}
-                    disabled={Array.from(leftSelected).every((uid) => assignedActive.has(uid))}
-                    aria-label="add"
-                  >
-                    →
-                  </Button>
-                  <Button
-                    size="small"
-                    look="outlined"
-                    onClick={removeMembers}
-                    disabled={rightSelected.size === 0}
-                    aria-label="remove"
-                  >
-                    ←
-                  </Button>
+                  {/* RIGHT: role zones */}
+                  <div className={root.elem("roles").toClassName()}>
+                    {renderZone("annotator", "Labelers", annotators)}
+                    {renderZone("reviewer", "Reviewers", reviewers)}
+                  </div>
                 </div>
-
-                {/* RIGHT: annotators / reviewers */}
-                <div className={root.elem("roles").toClassName()}>
-                  {ROLES.map((role) => renderRoleBox(role, role === "annotator" ? annotators : reviewers))}
-                </div>
-              </div>
+              </DragDropContext>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
                 <Button
