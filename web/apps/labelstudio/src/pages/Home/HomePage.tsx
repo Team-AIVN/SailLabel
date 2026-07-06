@@ -118,7 +118,7 @@ export const HomePage: Page = () => {
 
   return (
     <main className="p-6">
-      <div className="grid grid-cols-[minmax(0,1fr)_450px] gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_450px]">
         <section className="flex flex-col gap-6">
           <div className="flex flex-col gap-1">
             <Typography variant="headline" size="small">
@@ -128,7 +128,7 @@ export const HomePage: Page = () => {
               {t("home.getStarted")}
             </Typography>
           </div>
-          <div className="flex justify-start gap-4">
+          <div className="flex flex-wrap justify-start gap-4">
             {actions.map((action) => {
               const label = t(action.labelKey);
               return (
