@@ -1,4 +1,4 @@
-import { IconExternal, IconFolderAdd, IconHumanSignal, IconUserAdd, IconFolderOpen } from "@humansignal/icons";
+import { IconExternal, IconFolderAdd, IconHumanSignal, IconFolderOpen } from "@humansignal/icons";
 import { Button, SimpleCard, Spinner, Tooltip, Typography } from "@humansignal/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
@@ -30,10 +30,11 @@ const resourceLinks = [
   { key: "slackCommunity", url: "https://slack.labelstud.io" },
 ] as const;
 
+// Member invites now live in the workspace (email invite with project/role), so
+// the home no longer shows a separate org-wide invite action.
 const actions = [
   { type: "createWorkspace", labelKey: "home.actions.createWorkspace", icon: IconFolderOpen },
   { type: "createProject", labelKey: "home.actions.createProject", icon: IconFolderAdd },
-  { type: "inviteMembers", labelKey: "home.actions.inviteMembers", icon: IconUserAdd },
 ] as const;
 
 type Action = (typeof actions)[number]["type"];
@@ -49,13 +50,11 @@ export const HomePage: Page = () => {
   const setProjectsData = useSetAtom(projectsDataAtom);
   const sortedProjects = useAtomValue(sortedProjectsAtom);
   const visitedIds = useAtomValue(visitedIdsAtom);
-  const { canCreateWorkspace, isSuperAdmin } = usePermissions();
+  const { canCreateWorkspace } = usePermissions();
 
-  // Only managers create workspaces/projects; only super admins invite org members.
-  // Plain members see neither, and get a "wait to be assigned" empty state.
-  const visibleActions = actions.filter((a) =>
-    a.type === "inviteMembers" ? isSuperAdmin : canCreateWorkspace,
-  );
+  // Only workspace managers / super admins create workspaces and projects. Plain
+  // members see no create actions and get a "wait to be assigned" empty state.
+  const visibleActions = canCreateWorkspace ? actions : [];
 
   useUpdatePageTitle(t("home.pageTitle"));
 

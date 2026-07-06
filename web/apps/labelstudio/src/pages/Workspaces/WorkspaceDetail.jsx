@@ -10,6 +10,7 @@ import { cn } from "../../utils/bem";
 import { workspacePermissions } from "../../utils/permissions";
 import { CreateProject } from "../CreateProject/CreateProject";
 import { Compensation } from "./Compensation";
+import { InviteMember } from "./InviteMember";
 import { TaskPools } from "./TaskPools";
 import { WorkspaceImportPage } from "./WorkspaceImport";
 import "./WorkspaceDetail.prefix.css";
@@ -448,6 +449,12 @@ export const WorkspaceDetail = () => {
       {/* Users tab */}
       {activeTab === "users" && (
         <section className={root.elem("panel").toClassName()}>
+          {perms.canManage && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>이메일로 초대</div>
+              <InviteMember workspaceId={Number(id)} projects={projects} />
+            </div>
+          )}
           <div className={root.elem("toolbar").toClassName()}>
             <input
               className={root.elem("search").toClassName()}
