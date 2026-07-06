@@ -1,5 +1,6 @@
 import { Button, Typography } from "@humansignal/ui";
 import { Space } from "@humansignal/ui/lib/space/space";
+import i18next from "i18next";
 import { cn } from "apps/labelstudio/src/utils/bem";
 import { Modal } from "apps/labelstudio/src/components/Modal/ModalPopup";
 import { API } from "apps/labelstudio/src/providers/ApiProvider";
@@ -39,7 +40,7 @@ export function InviteLink({
   return (
     <Modal
       ref={modalRef}
-      title="Invite members"
+      title={i18next.t("people.inviteMembers")}
       opened={opened}
       bareFooter={true}
       body={<InvitationModal />}
@@ -57,8 +58,7 @@ const InvitationModal = () => {
     <div className={cn("invite").toClassName()}>
       <Input value={link} style={{ width: "100%" }} readOnly />
       <Typography size="small" className="text-neutral-content-subtler mt-base mb-wider">
-        Invite members to join your Label Studio instance. People that you invite have full access to all of your
-        projects.{" "}
+        {i18next.t("people.inviteDescription")}{" "}
         <a
           href="https://labelstud.io/guide/signup.html"
           target="_blank"
@@ -70,7 +70,7 @@ const InvitationModal = () => {
             })
           }
         >
-          Learn more
+          {i18next.t("people.learnMore")}
         </a>
         .
       </Typography>
@@ -92,7 +92,7 @@ const InvitationFooter = () => {
           onClick={() => refetch()}
           aria-label="Refresh invite link"
         >
-          Reset Link
+          {i18next.t("people.resetLink")}
         </Button>
       </Space>
       <Space>
@@ -102,7 +102,7 @@ const InvitationFooter = () => {
           onClick={() => copyText(link!)}
           aria-label="Copy invite link"
         >
-          {copied ? "Copied!" : "Copy link"}
+          {copied ? i18next.t("people.copied") : i18next.t("people.copyLink")}
         </Button>
       </Space>
     </Space>

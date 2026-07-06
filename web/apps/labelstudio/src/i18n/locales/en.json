@@ -445,7 +445,8 @@
     "inviteDescription": "Invite members to join your instance. People that you invite have full access to all of your projects.",
     "learnMore": "Learn more",
     "resetLink": "Reset Link",
-    "copyLink": "Copy link"
+    "copyLink": "Copy link",
+    "copied": "Copied!"
   },
   "templates": {
     "computerVision": "Computer Vision",
@@ -460,5 +461,8 @@
     "generativeAI": "Generative AI",
     "community": "Community Contributions",
     "customTemplate": "Custom template"
+  },
+  "editor": {
+    "compareAll": "Compare All"
   }
 }

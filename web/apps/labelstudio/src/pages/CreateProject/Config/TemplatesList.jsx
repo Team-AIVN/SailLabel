@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import React from "react";
 import { Spinner } from "../../../components";
 import { useAPI } from "../../../providers/ApiProvider";
@@ -7,6 +8,27 @@ import { IconInfo } from "@humansignal/icons";
 import { Button, EnterpriseBadge } from "@humansignal/ui";
 
 const listClass = cn("templates-list");
+
+// The template gallery groups are fetched with English names; localize the
+// sidebar labels at render (the raw group value stays the grouping key).
+const GROUP_KEYS = {
+  "Computer Vision": "templates.computerVision",
+  "Natural Language Processing": "templates.nlp",
+  "Audio/Speech Processing": "templates.audioSpeech",
+  "Conversational AI": "templates.conversationalAI",
+  Chat: "templates.chat",
+  "Ranking & Scoring": "templates.rankingScoring",
+  "Structured Data Parsing": "templates.structuredData",
+  "Time Series Analysis": "templates.timeSeries",
+  Videos: "templates.videos",
+  "Generative AI": "templates.generativeAI",
+  "Community Contributions": "templates.community",
+};
+
+const localizeGroup = (group) => {
+  const key = GROUP_KEYS[group];
+  return key && i18next.exists(key) ? i18next.t(key) : group;
+};
 
 const Arrow = () => (
   <svg width="8" height="12" viewBox="0 0 8 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -85,7 +107,7 @@ export const TemplatesList = ({ selectedGroup, selectedRecipe, onCustomTemplate,
                 })
                 .toClassName()}
             >
-              {group}
+              {localizeGroup(group)}
               <Arrow />
             </li>
           ))}
@@ -99,7 +121,7 @@ export const TemplatesList = ({ selectedGroup, selectedRecipe, onCustomTemplate,
           className="w-full"
           aria-label="Create custom template"
         >
-          Custom template
+          {i18next.t("templates.customTemplate")}
         </Button>
       </aside>
       <main>
