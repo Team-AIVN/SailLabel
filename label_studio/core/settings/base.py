@@ -73,10 +73,6 @@ LOGGING = {
             'level': 'WARNING',
             'propagate': False,
         },
-        # Keycloak / OIDC — keep verbose even when LOG_LEVEL is raised, so loop bugs surface.
-        'users.oidc_backend': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
-        'users.auth_backends': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
-        'mozilla_django_oidc': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
     },
 }
 
@@ -117,21 +113,6 @@ if HOSTNAME:
 
 FRONTEND_HMR = get_bool_env('FRONTEND_HMR', False)
 FRONTEND_HOSTNAME = get_env('FRONTEND_HOSTNAME', 'http://localhost:8010' if FRONTEND_HMR else HOSTNAME)
-
-# Keycloak / OIDC
-# Defaults come from deploy/keycloak/sail-label.json (public client on MCP realm).
-# Override per-environment via env vars.
-KEYCLOAK_SERVER_URL = get_env('KEYCLOAK_SERVER_URL', '')
-KEYCLOAK_REALM = get_env('KEYCLOAK_REALM', '')
-KEYCLOAK_CLIENT_ID = get_env('KEYCLOAK_CLIENT_ID', '')
-KEYCLOAK_CLIENT_SECRET = get_env('KEYCLOAK_CLIENT_SECRET', '')
-KEYCLOAK_PUBLIC_CLIENT = get_bool_env('KEYCLOAK_PUBLIC_CLIENT', True)
-KEYCLOAK_REALM_URL = (
-    f'{KEYCLOAK_SERVER_URL.rstrip("/")}/realms/{KEYCLOAK_REALM}'
-    if KEYCLOAK_SERVER_URL and KEYCLOAK_REALM
-    else ''
-)
-KEYCLOAK_ENABLED = bool(KEYCLOAK_REALM_URL and KEYCLOAK_CLIENT_ID)
 
 DOMAIN_FROM_REQUEST = get_bool_env('DOMAIN_FROM_REQUEST', False)
 
@@ -267,7 +248,6 @@ INSTALLED_APPS = [
     'ml_model_providers',
     'jwt_auth',
     'session_policy',
-    'mozilla_django_oidc',
 ]
 
 MIDDLEWARE = [
@@ -289,10 +269,7 @@ MIDDLEWARE = [
     'jwt_auth.middleware.JWTAuthenticationMiddleware',
 ]
 
-_DRF_AUTH_CLASSES = []
-if KEYCLOAK_ENABLED:
-    _DRF_AUTH_CLASSES.append('users.auth_backends.KeycloakBearerAuthentication')
-_DRF_AUTH_CLASSES += [
+_DRF_AUTH_CLASSES = [
     'jwt_auth.auth.TokenAuthenticationPhaseout',
     'rest_framework.authentication.SessionAuthentication',
 ]
@@ -341,27 +318,20 @@ ALLOWED_HOSTS = get_env_list('ALLOWED_HOSTS', default=['*'])
 AUTH_USER_MODEL = 'users.User'
 AUTHENTICATION_BACKENDS = [
     'rules.permissions.ObjectPermissionBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
-if KEYCLOAK_ENABLED:
-    AUTHENTICATION_BACKENDS.append('users.oidc_backend.KeycloakOIDCBackend')
-# Keep ModelBackend during the migration window; remove once all users are on Keycloak.
-AUTHENTICATION_BACKENDS.append('django.contrib.auth.backends.ModelBackend')
 
 USE_USERNAME_FOR_LOGIN = False
 
 # Disallow self-service signup — Keycloak is the single source of truth for accounts.
-DISABLE_SIGNUP_WITHOUT_LINK = get_bool_env('DISABLE_SIGNUP_WITHOUT_LINK', KEYCLOAK_ENABLED)
+DISABLE_SIGNUP_WITHOUT_LINK = get_bool_env('DISABLE_SIGNUP_WITHOUT_LINK', False)
 
 # Password validation settings
 AUTH_PASSWORD_MIN_LENGTH = 8
 AUTH_PASSWORD_MAX_LENGTH = 128
 
-# Local password policy is retained for legacy accounts; Keycloak users use
-# `set_unusable_password()` so these validators never apply to them.
 AUTH_PASSWORD_VALIDATORS = (
-    []
-    if KEYCLOAK_ENABLED
-    else [
+    [
         {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
         {
             'NAME': 'users.validators.PasswordLengthValidator',
@@ -629,34 +599,7 @@ PREDICTION_IMPORT_BATCH_SIZE = int(get_env('PREDICTION_IMPORT_BATCH_SIZE', 500))
 PROJECT_TITLE_MIN_LEN = 3
 PROJECT_TITLE_MAX_LEN = 50
 LOGIN_REDIRECT_URL = '/'
-LOGIN_URL = '/oidc/authenticate/' if KEYCLOAK_ENABLED else '/user/login/'
-
-# ── mozilla-django-oidc (Keycloak) ────────────────────────────────────────────
-if KEYCLOAK_ENABLED:
-    OIDC_RP_CLIENT_ID = KEYCLOAK_CLIENT_ID
-    OIDC_RP_CLIENT_SECRET = KEYCLOAK_CLIENT_SECRET
-    OIDC_RP_SIGN_ALGO = 'RS256'
-    OIDC_OP_AUTHORIZATION_ENDPOINT = f'{KEYCLOAK_REALM_URL}/protocol/openid-connect/auth'
-    OIDC_OP_TOKEN_ENDPOINT = f'{KEYCLOAK_REALM_URL}/protocol/openid-connect/token'
-    OIDC_OP_USER_ENDPOINT = f'{KEYCLOAK_REALM_URL}/protocol/openid-connect/userinfo'
-    OIDC_OP_JWKS_ENDPOINT = f'{KEYCLOAK_REALM_URL}/protocol/openid-connect/certs'
-    OIDC_OP_LOGOUT_ENDPOINT = f'{KEYCLOAK_REALM_URL}/protocol/openid-connect/logout'
-    OIDC_RP_SCOPES = get_env('OIDC_RP_SCOPES', 'openid email profile')
-    OIDC_STORE_ACCESS_TOKEN = True
-    OIDC_STORE_ID_TOKEN = True
-    OIDC_CREATE_USER = True
-    OIDC_USERNAME_ALGO = 'users.auth_backends.generate_username'
-    OIDC_AUTHENTICATION_CALLBACK_URL = 'oidc_authentication_callback'
-    # Public client (no client secret) → require PKCE for the Authorization Code flow.
-    # Keycloak's "sail-label" client is configured with public-client: true.
-    if KEYCLOAK_PUBLIC_CLIENT:
-        OIDC_USE_PKCE = True
-        OIDC_PKCE_CODE_CHALLENGE_METHOD = 'S256'
-    # Post-logout redirect: send user back to LabelSea after Keycloak ends the SSO session.
-    LOGOUT_REDIRECT_URL = get_env('OIDC_LOGOUT_REDIRECT_URL', '/')
-    OIDC_OP_LOGOUT_URL_METHOD = 'users.auth_backends.keycloak_logout_url'
-    # Our /logout/ view redirects via GET; allow the OIDC logout endpoint to respond to GET.
-    ALLOW_LOGOUT_GET_METHOD = True
+LOGIN_URL = '/user/login/'
 
 MIN_GROUND_TRUTH = 10
 DATA_UNDEFINED_NAME = '$undefined$'
@@ -969,13 +912,7 @@ if CI:
         'sql-analyser': 'postgresql',
     }
 
-if not KEYCLOAK_ENABLED:
-    LOGOUT_REDIRECT_URL = get_env('LOGOUT_REDIRECT_URL', None)
-# NOTE: when KEYCLOAK_ENABLED, LOGOUT_REDIRECT_URL is the *local* path the browser
-# lands on after Keycloak ends the SSO session (see `OIDC_LOGOUT_REDIRECT_URL`
-# near the OIDC block above). Do NOT overwrite it with a full Keycloak logout URL
-# — `users.auth_backends.keycloak_logout_url` wraps it as `post_logout_redirect_uri`,
-# and double-wrapping produces an invalid redirect URI.
+LOGOUT_REDIRECT_URL = get_env('LOGOUT_REDIRECT_URL', None)
 
 # Enable legacy tokens (useful for running with a pre-existing token via `LABEL_STUDIO_USER_TOKEN`)
 LABEL_STUDIO_ENABLE_LEGACY_API_TOKEN = get_bool_env('LABEL_STUDIO_ENABLE_LEGACY_API_TOKEN', False)

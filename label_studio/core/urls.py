@@ -109,10 +109,6 @@ urlpatterns = [
     re_path(r'^', include('jwt_auth.urls')),
 ]
 
-if settings.KEYCLOAK_ENABLED:
-    # mozilla-django-oidc RP endpoints: /oidc/authenticate/, /oidc/callback/, /oidc/logout/
-    urlpatterns.append(path('oidc/', include('mozilla_django_oidc.urls')))
-
 urlpatterns += [
     re_path(r'^', include('session_policy.urls')),
     path('docs/api/schema/', SpectacularAPIView.as_view(), name='schema'),
