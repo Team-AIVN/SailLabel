@@ -195,4 +195,9 @@
   &_dnd &__items {
     min-height: 64px;
   }
+
+  /* Three role zones (Worker/Labelers/Reviewers) stacked on the right. */
+  &_triple &__box {
+    max-height: 22vh;
+  }
 }

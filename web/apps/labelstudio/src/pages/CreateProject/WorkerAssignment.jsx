@@ -6,12 +6,16 @@ import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
 import "./WorkerAssignment.prefix.css";
 
-// At project creation we don't split labeler/reviewer: whoever is added is a
-// worker (stored as annotator). Reviewers are designated later in the project's
-// Workers settings tab.
+// Left pool droppable id + the three role zones a member can be dropped into.
+// "member" is the no-work-role bucket (labeled "Worker"); reviewers/labelers are
+// the real work roles. A member's zone IS their stored ProjectMember.role.
 const POOL = "members";
-const WORKERS = "workers";
-const WORKER_ROLES = new Set(["annotator", "reviewer"]);
+const ROLE_ZONES = [
+  { id: "member", key: "assign.workers", label: "Worker" },
+  { id: "annotator", key: "assign.annotators", label: "Labelers" },
+  { id: "reviewer", key: "assign.reviewers", label: "Reviewers" },
+];
+const ROLE_IDS = new Set(ROLE_ZONES.map((z) => z.id));
 
 const listOf = (response) => {
   if (!response) return [];
@@ -27,9 +31,10 @@ const userLabel = (detail) => {
 };
 
 /**
- * Drag-and-drop worker assignment for project creation: workspace members on the
- * left, the project's workers on the right. Drag a member into Workers to assign
- * (stored as annotator), drag back to unassign. Changes persist immediately.
+ * Drag-and-drop worker assignment for project creation. Workspace members sit in
+ * the left pool; drag a member into Worker / Labelers / Reviewers to assign that
+ * role, between boxes to switch role, or back to the pool to unassign. Dropping in
+ * "Worker" stores the no-work-role `member` state. Changes persist immediately.
  */
 export const WorkerAssignment = ({ projectId, workspaceId, show = true }) => {
   const { t } = useTranslation();
@@ -72,14 +77,24 @@ export const WorkerAssignment = ({ projectId, workspaceId, show = true }) => {
     };
   }, [show, projectId, workspaceId, api, loadMembers, loadProjectMembers]);
 
-  // Workers = project members holding a worker role (annotator/reviewer).
-  const workers = useMemo(() => projectMembers.filter((m) => WORKER_ROLES.has(m.role)), [projectMembers]);
+  // Assigned = project members holding an assignment role (member/annotator/reviewer).
+  const assigned = useMemo(() => projectMembers.filter((m) => ROLE_IDS.has(m.role)), [projectMembers]);
+  const byRole = useMemo(() => {
+    const map = { member: [], annotator: [], reviewer: [] };
+    for (const m of assigned) map[m.role]?.push(m);
+    return map;
+  }, [assigned]);
+  const roleByUser = useMemo(() => {
+    const map = new Map();
+    for (const m of assigned) map.set(m.user, m.role);
+    return map;
+  }, [assigned]);
   const memberIdByUser = useMemo(() => {
     const map = new Map();
-    for (const m of workers) map.set(m.user, m.id);
+    for (const m of assigned) map.set(m.user, m.id);
     return map;
-  }, [workers]);
-  const assignedUserIds = useMemo(() => new Set(workers.map((m) => m.user)), [workers]);
+  }, [assigned]);
+  const assignedUserIds = useMemo(() => new Set(assigned.map((m) => m.user)), [assigned]);
 
   // Left pool = workspace members not yet assigned (respecting search).
   const poolMembers = useMemo(() => {
@@ -89,10 +104,6 @@ export const WorkerAssignment = ({ projectId, workspaceId, show = true }) => {
       .filter((m) => !q || userLabel(m.user_detail).toLowerCase().includes(q));
   }, [members, assignedUserIds, search]);
 
-  const refresh = useCallback(async () => {
-    await loadProjectMembers();
-  }, [loadProjectMembers]);
-
   const onDragEnd = useCallback(
     async (result) => {
       const { destination, draggableId } = result;
@@ -100,27 +111,27 @@ export const WorkerAssignment = ({ projectId, workspaceId, show = true }) => {
       const uid = Number(draggableId);
       const zone = destination.droppableId;
 
-      if (zone === WORKERS) {
-        if (assignedUserIds.has(uid)) return; // reordering within workers, no-op
+      if (ROLE_IDS.has(zone)) {
+        if (roleByUser.get(uid) === zone) return; // dropped back in same box
         const res = await api.callApi("createProjectMember", {
           params: { pk: projectId },
-          body: { user: uid, role: "annotator" },
+          body: { user: uid, role: zone }, // POST upserts the (user, project) role
         });
         if (res && res.error) {
           toast.show({ message: t("assign.actionFailed", "Could not update assignment"), type: "error" });
         } else {
           toast.show({ message: t("assign.added", "Workers assigned") });
         }
-        await refresh();
+        await loadProjectMembers();
       } else if (zone === POOL) {
         const memberPk = memberIdByUser.get(uid);
-        if (!memberPk) return; // wasn't assigned, no-op
+        if (!memberPk) return; // wasn't assigned
         await api.callApi("deleteProjectMember", { params: { pk: projectId, memberPk } });
         toast.show({ message: t("assign.removed", "Workers removed") });
-        await refresh();
+        await loadProjectMembers();
       }
     },
-    [api, projectId, assignedUserIds, memberIdByUser, toast, t, refresh],
+    [api, projectId, roleByUser, memberIdByUser, toast, t, loadProjectMembers],
   );
 
   if (!show) return null;
@@ -147,10 +158,42 @@ export const WorkerAssignment = ({ projectId, workspaceId, show = true }) => {
     </Draggable>
   );
 
+  const renderRoleZone = (zone) => {
+    const rows = byRole[zone.id] ?? [];
+    return (
+      <section key={zone.id} className={root.elem("box").toClassName()}>
+        <header className={root.elem("box-head").toClassName()}>
+          <strong>
+            {t(zone.key, zone.label)}
+            <span className={root.elem("count").toClassName()}>({rows.length})</span>
+          </strong>
+        </header>
+        <Droppable droppableId={zone.id}>
+          {(provided, snapshot) => (
+            <ul
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              className={root
+                .elem("items")
+                .mod({ over: snapshot.isDraggingOver })
+                .toClassName()}
+            >
+              {rows.map((m, i) => renderCard(m.user, m.user_detail, i))}
+              {provided.placeholder}
+              {rows.length === 0 && (
+                <li className={root.elem("muted").toClassName()}>{t("assign.dragHere", "여기로 드래그")}</li>
+              )}
+            </ul>
+          )}
+        </Droppable>
+      </section>
+    );
+  };
+
   return (
     <div className={cn("project-name").toClassName()}>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className={root.mod({ dnd: true }).toClassName()}>
+        <div className={root.mod({ dnd: true, triple: true }).toClassName()}>
           {/* LEFT: workspace members */}
           <section className={root.elem("panel").toClassName()}>
             <header className={root.elem("panel-head").toClassName()}>
@@ -184,33 +227,8 @@ export const WorkerAssignment = ({ projectId, workspaceId, show = true }) => {
             </Droppable>
           </section>
 
-          {/* RIGHT: workers (no role split) */}
-          <section className={root.elem("box").toClassName()}>
-            <header className={root.elem("box-head").toClassName()}>
-              <strong>
-                {t("assign.workers", "Workers")}
-                <span className={root.elem("count").toClassName()}>({workers.length})</span>
-              </strong>
-            </header>
-            <Droppable droppableId={WORKERS}>
-              {(provided, snapshot) => (
-                <ul
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={root
-                    .elem("items")
-                    .mod({ over: snapshot.isDraggingOver })
-                    .toClassName()}
-                >
-                  {workers.map((m, i) => renderCard(m.user, m.user_detail, i))}
-                  {provided.placeholder}
-                  {workers.length === 0 && (
-                    <li className={root.elem("muted").toClassName()}>{t("assign.dragHere", "여기로 드래그")}</li>
-                  )}
-                </ul>
-              )}
-            </Droppable>
-          </section>
+          {/* RIGHT: three role zones */}
+          <div className={root.elem("roles").toClassName()}>{ROLE_ZONES.map(renderRoleZone)}</div>
         </div>
       </DragDropContext>
     </div>

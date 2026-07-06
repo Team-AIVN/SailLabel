@@ -6,10 +6,15 @@ import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
 import "../CreateProject/WorkerAssignment.prefix.css";
 
-// Droppable zones. `members` is the unassigned workspace-member pool; the other
-// two are the project's roles. A card's zone IS its assignment.
+// Left pool droppable id + the three role zones. "member" is the no-work-role
+// bucket (labeled "Worker"). A card's zone IS its staged ProjectMember.role.
 const POOL = "members";
-const ROLE_ZONES = ["annotator", "reviewer"];
+const ROLE_ZONES = [
+  { id: "member", label: "Worker" },
+  { id: "annotator", label: "Labelers" },
+  { id: "reviewer", label: "Reviewers" },
+];
+const ROLE_IDS = new Set(ROLE_ZONES.map((z) => z.id));
 
 const listOf = (response) => {
   if (!response) return [];
@@ -26,9 +31,9 @@ const userLabel = (detail) => {
 
 /**
  * Project Settings → Workers: drag-and-drop worker assignment. Workspace members
- * live in the left pool; drag a member card into Labelers or Reviewers to assign,
- * drag between the two role boxes to switch role, or drag back to the pool to
- * unassign. Changes are staged locally and only applied on Save (Cancel reverts).
+ * live in the left pool; drag a member into Worker / Labelers / Reviewers to assign,
+ * between boxes to switch role, or back to the pool to unassign. "Worker" is the
+ * no-work-role `member` state. Changes are staged locally and applied on Save.
  */
 export const WorkersSettings = () => {
   const { project } = useContext(ProjectContext);
@@ -64,7 +69,7 @@ export const WorkersSettings = () => {
     const server = {};
     const desired = {};
     for (const m of projMembers) {
-      if (m.role === "annotator" || m.role === "reviewer") {
+      if (ROLE_IDS.has(m.role)) {
         server[m.user] = { memberId: m.id, role: m.role };
         desired[m.user] = m.role;
       }
@@ -81,16 +86,13 @@ export const WorkersSettings = () => {
     load();
   }, [load]);
 
-  // Derive the three zone lists from the staged assignments.
-  const annotators = useMemo(
-    () => Object.keys(assignments).filter((u) => assignments[u] === "annotator").map(Number),
-    [assignments],
-  );
-  const reviewers = useMemo(
-    () => Object.keys(assignments).filter((u) => assignments[u] === "reviewer").map(Number),
-    [assignments],
-  );
-  const assignedUserIds = useMemo(() => new Set([...annotators, ...reviewers]), [annotators, reviewers]);
+  // Derive per-zone user lists from the staged assignments.
+  const byRole = useMemo(() => {
+    const map = { member: [], annotator: [], reviewer: [] };
+    for (const [uid, role] of Object.entries(assignments)) map[role]?.push(Number(uid));
+    return map;
+  }, [assignments]);
+  const assignedUserIds = useMemo(() => new Set(Object.keys(assignments).map(Number)), [assignments]);
 
   // Left pool = workspace members not assigned to any role (respecting search).
   const poolMembers = useMemo(() => {
@@ -116,7 +118,7 @@ export const WorkersSettings = () => {
     setAssignments((prev) => {
       const next = { ...prev };
       if (zone === POOL) delete next[uid];
-      else next[uid] = zone; // "annotator" | "reviewer"
+      else if (ROLE_IDS.has(zone)) next[uid] = zone;
       return next;
     });
   }, []);
@@ -226,8 +228,8 @@ export const WorkersSettings = () => {
       <div className={cn("general-settings").elem("wrapper").toClassName()}>
         <h1>Workers</h1>
         <p className={root.elem("hint").toClassName()}>
-          워크스페이스 멤버를 <b>Labelers</b> 또는 <b>Reviewers</b>로 끌어다 놓아 배치하세요. 두 박스 사이로 끌면 역할이
-          바뀌고, 왼쪽으로 다시 끌면 배치가 해제됩니다.
+          워크스페이스 멤버를 <b>Worker</b>, <b>Labelers</b>, <b>Reviewers</b> 중 하나로 끌어다 놓아 배치하세요.
+          <b>Worker</b>는 아직 역할이 없는 상태이고, 상자 사이로 끌면 역할이 바뀝니다. 왼쪽으로 끌면 배치가 해제됩니다.
         </p>
         <div className={cn("settings-wrapper").toClassName()}>
           {loading ? (
@@ -235,14 +237,15 @@ export const WorkersSettings = () => {
           ) : (
             <>
               <DragDropContext onDragEnd={onDragEnd}>
-                <div className={root.mod({ dnd: true }).toClassName()}>
+                <div className={root.mod({ dnd: true, triple: true }).toClassName()}>
                   {/* LEFT: unassigned workspace members */}
                   {renderZone(POOL, "Workspace members", poolMembers.map((m) => m.user), { head: poolHead })}
 
-                  {/* RIGHT: role zones */}
+                  {/* RIGHT: three role zones */}
                   <div className={root.elem("roles").toClassName()}>
-                    {renderZone("annotator", "Labelers", annotators)}
-                    {renderZone("reviewer", "Reviewers", reviewers)}
+                    {ROLE_ZONES.map((z) => (
+                      <div key={z.id}>{renderZone(z.id, z.label, byRole[z.id] ?? [])}</div>
+                    ))}
                   </div>
                 </div>
               </DragDropContext>
