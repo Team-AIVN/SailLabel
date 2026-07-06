@@ -2,6 +2,7 @@
 
 from django.urls import include, path
 from organizations import api, views
+from organizations.invitations_api import InvitationCreateAPI
 
 app_name = 'organizations'
 
@@ -37,4 +38,6 @@ urlpatterns = [
     # invite
     path('api/invite', api.OrganizationInviteAPI.as_view(), name='organization-invite'),
     path('api/invite/reset-token', api.OrganizationResetTokenAPI.as_view(), name='organization-reset-token'),
+    # per-recipient invitation (workspace/project + role)
+    path('api/invitations', InvitationCreateAPI.as_view(), name='invitation-create'),
 ]

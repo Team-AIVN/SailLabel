@@ -13,9 +13,10 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from organizations.forms import OrganizationSignupForm
-from organizations.models import Organization
+from organizations.models import Invitation, Organization
 from rest_framework.authtoken.models import Token
 from users import forms
+from users.models import User
 from users.functions import login, proceed_registration
 
 logger = logging.getLogger()
@@ -42,6 +43,7 @@ def user_signup(request):
     user = request.user
     next_page = request.GET.get('next')
     token = request.GET.get('token')
+    invite_token = request.GET.get('invite') or request.POST.get('invite')
 
     # checks if the URL is a safe redirection.
     if not next_page or not url_has_allowed_host_and_scheme(url=next_page, allowed_hosts=request.get_host()):
@@ -56,15 +58,22 @@ def user_signup(request):
     if user.is_authenticated:
         return redirect(next_page)
 
+    # A valid per-recipient invitation authorizes signup and carries the target
+    # workspace/project/role to apply once the account exists.
+    invitation = None
+    if invite_token:
+        invitation = Invitation.objects.filter(token=invite_token, accepted_at__isnull=True).first()
+
     # make a new user
     if request.method == 'POST':
         organization = Organization.objects.first()
-        if settings.DISABLE_SIGNUP_WITHOUT_LINK is True:
-            if not (token and organization and token == organization.token):
-                raise PermissionDenied()
-        else:
-            if token and organization and token != organization.token:
-                raise PermissionDenied()
+        if invitation is None:
+            if settings.DISABLE_SIGNUP_WITHOUT_LINK is True:
+                if not (token and organization and token == organization.token):
+                    raise PermissionDenied()
+            else:
+                if token and organization and token != organization.token:
+                    raise PermissionDenied()
 
         user_form = forms.UserSignupForm(request.POST)
         organization_form = OrganizationSignupForm(request.POST)
@@ -72,6 +81,10 @@ def user_signup(request):
         if user_form.is_valid():
             redirect_response = proceed_registration(request, user_form, organization_form, next_page)
             if redirect_response:
+                if invitation is not None:
+                    new_user = User.objects.filter(email__iexact=user_form.cleaned_data.get('email')).order_by('-id').first()
+                    if new_user is not None:
+                        invitation.apply(new_user)
                 return redirect_response
 
     if flag_set('fflag_feat_front_lsdv_e_297_increase_oss_to_enterprise_adoption_short'):
@@ -83,6 +96,7 @@ def user_signup(request):
                 'organization_form': organization_form,
                 'next': quote(next_page),
                 'token': token,
+                'invite': invite_token or '',
                 'found_us_options': forms.FOUND_US_OPTIONS,
                 'elaborate': forms.FOUND_US_ELABORATE,
             },
@@ -96,6 +110,7 @@ def user_signup(request):
             'organization_form': organization_form,
             'next': quote(next_page),
             'token': token,
+            'invite': invite_token or '',
         },
     )
 
