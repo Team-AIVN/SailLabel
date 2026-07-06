@@ -5,6 +5,7 @@ import mimetypes
 
 from audit.models import AuditAction
 from audit.services import record_role_change, record_workspace_event
+from core.api_permissions import CanCreateWorkspacePermission
 from core.decorators import override_report_only_csp
 from core.mixins import GetParentObjectMixin
 from core.permissions import ViewClassPermission, all_permissions
@@ -19,6 +20,8 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
+from users.rules import can_create_workspace
 
 from .models import Workspace, WorkspaceFileUpload, WorkspaceMember
 from .rules import is_workspace_manager, is_workspace_member
@@ -62,6 +65,7 @@ def _active_org_or_400(user):
 )
 class WorkspaceListAPI(generics.ListCreateAPIView):
     serializer_class = WorkspaceSerializer
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [CanCreateWorkspacePermission]
     permission_required = ViewClassPermission(
         GET=all_permissions.workspaces_view,
         POST=all_permissions.workspaces_create,
@@ -74,6 +78,8 @@ class WorkspaceListAPI(generics.ListCreateAPIView):
     @transaction.atomic
     def perform_create(self, serializer):
         org = _active_org_or_400(self.request.user)
+        if not can_create_workspace.test(self.request.user):
+            raise PermissionDenied('Only workspace managers or super admins can create workspaces.')
         workspace = serializer.save(organization=org, created_by=self.request.user)
         WorkspaceMember.objects.get_or_create(
             user=self.request.user,

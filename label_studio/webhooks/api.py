@@ -1,4 +1,5 @@
 import django_filters
+from core.api_permissions import ProjectManagerBodyPermission, ProjectManagerSubresourcePermission
 from core.permissions import ViewClassPermission, all_permissions
 from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
@@ -6,13 +7,21 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from projects import models as project_models
 from rest_framework import generics
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from users.rules import is_project_manager_of, is_super_admin
 
 from .models import Webhook, WebhookAction
 from .serializers import WebhookSerializer, WebhookSerializerForUpdate
+
+
+def _require_project_manager(user, project):
+    """Webhooks read/write project data, so only PM/WM/SA may manage them."""
+    if is_super_admin.test(user) or is_project_manager_of.test(user, project):
+        return
+    raise PermissionDenied('Only project managers, workspace managers, or super admins can manage webhooks.')
 
 
 class WebhookFilterSet(django_filters.FilterSet):
@@ -58,7 +67,7 @@ class WebhookFilterSet(django_filters.FilterSet):
 class WebhookListAPI(generics.ListCreateAPIView):
     queryset = Webhook.objects.all()
     serializer_class = WebhookSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ProjectManagerBodyPermission]
     filter_backends = [DjangoFilterBackend]
     filterset_class = WebhookFilterSet
     permission_required = ViewClassPermission(
@@ -73,6 +82,7 @@ class WebhookListAPI(generics.ListCreateAPIView):
         project = serializer.validated_data.get('project')
         if project is None or project.organization_id != self.request.user.active_organization.id:
             raise NotFound('Project not found.')
+        _require_project_manager(self.request.user, project)
         serializer.save(organization=self.request.user.active_organization)
 
 
@@ -127,7 +137,7 @@ class WebhookListAPI(generics.ListCreateAPIView):
 class WebhookAPI(generics.RetrieveUpdateDestroyAPIView):
     queryset = Webhook.objects.all()
     serializer_class = WebhookSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ProjectManagerSubresourcePermission]
     permission_required = ViewClassPermission(
         GET=all_permissions.webhooks_view,
         PATCH=all_permissions.webhooks_change,

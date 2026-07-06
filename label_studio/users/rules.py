@@ -168,6 +168,31 @@ def can_create_project(user):
 
 
 @rules.predicate
+def can_create_workspace(user):
+    """Workspace creation is allowed for super admins and existing workspace managers.
+
+    Unary (create has no target object). Mirrors ``can_create_project``: a brand-new
+    organization is bootstrapped by its super admin, who can then delegate by making
+    others workspace managers.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if is_super_admin.test(user):
+        return True
+    org_id = getattr(user, 'active_organization_id', None)
+    if not org_id:
+        return False
+    from workspaces.models import WorkspaceMember
+
+    return WorkspaceMember.objects.filter(
+        user=user,
+        workspace__organization_id=org_id,
+        role='workspace_manager',
+        deleted_at__isnull=True,
+    ).exists()
+
+
+@rules.predicate
 def not_self_review(user, annotation):
     """Self-review prohibition — isolated from the full authorisation rule.
 

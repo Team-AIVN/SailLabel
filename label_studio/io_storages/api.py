@@ -5,6 +5,7 @@ import logging
 import os
 import time
 
+from core.api_permissions import ProjectManagerBodyPermission, ProjectManagerSubresourcePermission
 from core.permissions import ViewClassPermission, all_permissions
 from core.utils.io import read_yaml
 from django.conf import settings
@@ -15,10 +16,19 @@ from rest_framework import generics, status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
+from users.rules import is_project_manager_of, is_super_admin
 from workspaces.models import Workspace
 from workspaces.rules import is_workspace_manager, is_workspace_member
 
 logger = logging.getLogger(__name__)
+
+
+def _require_project_manager(user, project):
+    """Cloud storage connects external data sources, so only PM/WM/SA may manage it."""
+    if project is not None and (is_super_admin.test(user) or is_project_manager_of.test(user, project)):
+        return
+    raise PermissionDenied('Only project managers, workspace managers, or super admins can manage storage.')
 
 
 class ImportStorageListAPI(generics.ListCreateAPIView):
@@ -26,6 +36,7 @@ class ImportStorageListAPI(generics.ListCreateAPIView):
         GET=all_permissions.storages_view,
         POST=all_permissions.storages_change,
     )
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [ProjectManagerBodyPermission]
     parser_classes = (JSONParser, FormParser, MultiPartParser)
 
     serializer_class = ImportStorageSerializer
@@ -44,6 +55,10 @@ class ImportStorageListAPI(generics.ListCreateAPIView):
         StorageClass.ensure_storage_statuses(storages)
         return storages
 
+    def perform_create(self, serializer):
+        _require_project_manager(self.request.user, serializer.validated_data.get('project'))
+        serializer.save()
+
 
 class ImportStorageDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     """RUD storage by pk specified in URL"""
@@ -54,6 +69,7 @@ class ImportStorageDetailAPI(generics.RetrieveUpdateDestroyAPIView):
         PUT=all_permissions.storages_change,
         DELETE=all_permissions.storages_change,
     )
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [ProjectManagerSubresourcePermission]
     parser_classes = (JSONParser, FormParser, MultiPartParser)
     serializer_class = ImportStorageSerializer
 
@@ -67,6 +83,7 @@ class ExportStorageListAPI(generics.ListCreateAPIView):
         GET=all_permissions.storages_view,
         POST=all_permissions.storages_change,
     )
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [ProjectManagerBodyPermission]
     parser_classes = (JSONParser, FormParser, MultiPartParser)
     serializer_class = ExportStorageSerializer
 
@@ -85,6 +102,7 @@ class ExportStorageListAPI(generics.ListCreateAPIView):
         return storages
 
     def perform_create(self, serializer):
+        _require_project_manager(self.request.user, serializer.validated_data.get('project'))
         # double check: not export storages don't validate connection in serializer,
         # just make another explicit check here, note: in this create API we have credentials in request.data
         instance = serializer.Meta.model(**serializer.validated_data)
@@ -107,6 +125,7 @@ class ExportStorageDetailAPI(generics.RetrieveUpdateDestroyAPIView):
         PUT=all_permissions.storages_change,
         DELETE=all_permissions.storages_change,
     )
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [ProjectManagerSubresourcePermission]
     parser_classes = (JSONParser, FormParser, MultiPartParser)
     serializer_class = ExportStorageSerializer
 
@@ -119,6 +138,7 @@ class ImportStorageSyncAPI(generics.GenericAPIView):
     permission_required = ViewClassPermission(
         POST=all_permissions.storages_sync,
     )
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [ProjectManagerSubresourcePermission]
     parser_classes = (JSONParser, FormParser, MultiPartParser)
     serializer_class = ImportStorageSerializer
 
@@ -142,6 +162,7 @@ class ExportStorageSyncAPI(generics.GenericAPIView):
     permission_required = ViewClassPermission(
         POST=all_permissions.storages_sync,
     )
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [ProjectManagerSubresourcePermission]
     parser_classes = (JSONParser, FormParser, MultiPartParser)
     serializer_class = ExportStorageSerializer
 

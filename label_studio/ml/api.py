@@ -2,6 +2,7 @@
 
 import logging
 
+from core.api_permissions import ProjectManagerBodyPermission, ProjectManagerSubresourcePermission
 from core.feature_flags import flag_set
 from core.permissions import ViewClassPermission, all_permissions
 from django.conf import settings
@@ -13,9 +14,19 @@ from ml.models import MLBackend
 from ml.serializers import MLBackendSerializer, MLInteractiveAnnotatingRequest
 from projects.models import Project, Task
 from rest_framework import generics, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
 from rest_framework.views import APIView
+from users.rules import is_project_manager_of, is_super_admin
+
+
+def _require_project_manager(user, project):
+    """ML backends receive task data and inject predictions, so only PM/WM/SA manage them."""
+    if project is not None and (is_super_admin.test(user) or is_project_manager_of.test(user, project)):
+        return
+    raise PermissionDenied('Only project managers, workspace managers, or super admins can manage ML backends.')
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +128,7 @@ class MLBackendListAPI(generics.ListCreateAPIView):
         GET=all_permissions.projects_view,
         POST=all_permissions.projects_change,
     )
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [ProjectManagerBodyPermission]
     serializer_class = MLBackendSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['is_interactive']
@@ -132,6 +144,7 @@ class MLBackendListAPI(generics.ListCreateAPIView):
         return ml_backends
 
     def perform_create(self, serializer):
+        _require_project_manager(self.request.user, serializer.validated_data.get('project'))
         ml_backend = serializer.save()
         ml_backend.update_state()
 
@@ -209,6 +222,7 @@ class MLBackendDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     parser_classes = (JSONParser, FormParser, MultiPartParser)
     serializer_class = MLBackendSerializer
     permission_required = all_permissions.projects_change
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [ProjectManagerSubresourcePermission]
     queryset = MLBackend.objects.all()
 
     def get_object(self):
