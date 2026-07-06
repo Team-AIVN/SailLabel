@@ -42,49 +42,56 @@ export const WorkersSettings = () => {
   const root = useMemo(() => cn("worker-assign"), []);
 
   const projectId = project?.id;
-  const orgId = project?.organization;
 
-  const [members, setMembers] = useState([]); // org members (assignable pool)
+  const [members, setMembers] = useState([]); // this project's workers (assignable pool)
   const [userInfo, setUserInfo] = useState({}); // user_id -> user_detail
   const [serverByUser, setServerByUser] = useState({}); // user_id -> { memberId, role } (saved state)
   const [assignments, setAssignments] = useState({}); // user_id -> role (desired/staged)
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [inviteRole, setInviteRole] = useState("annotator");
+  const [inviteLink, setInviteLink] = useState("");
+  const [inviting, setInviting] = useState(false);
+
+  const generateInvite = useCallback(async () => {
+    setInviting(true);
+    const res = await api.callApi("createInvitation", { body: { project: projectId, role: inviteRole } });
+    setInviting(false);
+    if (res?.link) {
+      setInviteLink(res.link);
+      toast.show({ message: "초대 링크가 생성됐습니다" });
+    } else {
+      toast.show({ message: res?.detail ?? "초대 생성에 실패했습니다", type: "error" });
+    }
+  }, [api, projectId, inviteRole, toast]);
 
   const load = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
-    // Pool is every organization member: assigning one to a project role also grants
-    // workspace membership on the backend, so managers add people from here directly.
-    const [org, pm] = await Promise.all([
-      orgId ? api.callApi("memberships", { params: { pk: orgId } }) : Promise.resolve([]),
-      api.callApi("projectMembers", { params: { pk: projectId } }),
-    ]);
-    // Org memberships expose { user: <user object> }; normalize to the { user: id,
-    // user_detail: object } shape the rest of this component expects.
-    const orgMembers = listOf(org).map((m) => ({ user: m.user?.id ?? m.user, user_detail: m.user_detail ?? m.user }));
+    const pm = await api.callApi("projectMembers", { params: { pk: projectId } });
     const projMembers = listOf(pm);
+    // Pool + boxes show only this project's workers (member/annotator/reviewer).
+    // Project managers and non-project users are excluded. New workers are brought
+    // in via the invite link above.
+    const workers = projMembers.filter((m) => ROLE_IDS.has(m.role));
 
     const info = {};
-    for (const m of orgMembers) info[m.user] = m.user_detail;
-    for (const m of projMembers) info[m.user] = m.user_detail ?? info[m.user];
+    for (const m of projMembers) info[m.user] = m.user_detail;
 
     const server = {};
     const desired = {};
-    for (const m of projMembers) {
-      if (ROLE_IDS.has(m.role)) {
-        server[m.user] = { memberId: m.id, role: m.role };
-        desired[m.user] = m.role;
-      }
+    for (const m of workers) {
+      server[m.user] = { memberId: m.id, role: m.role };
+      desired[m.user] = m.role;
     }
 
-    setMembers(orgMembers);
+    setMembers(workers.map((m) => ({ user: m.user, user_detail: m.user_detail })));
     setUserInfo(info);
     setServerByUser(server);
     setAssignments(desired);
     setLoading(false);
-  }, [api, projectId, orgId]);
+  }, [api, projectId]);
 
   useEffect(() => {
     load();
@@ -231,12 +238,59 @@ export const WorkersSettings = () => {
     <div className={cn("general-settings").toClassName()}>
       <div className={cn("general-settings").elem("wrapper").toClassName()}>
         <h1>Workers</h1>
+
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 600, marginBottom: 2 }}>작업자 초대 (계정이 없는 사람)</div>
+          <div style={{ fontSize: 13, color: "var(--color-neutral-content-subtler)", marginBottom: 8 }}>
+            초대 링크를 만들어 전달하세요. 상대가 그 링크로 가입하면 이 프로젝트의 작업자로 자동 배치됩니다. (자동 이메일
+            발송이 아닙니다)
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <select
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value)}
+              style={{ height: 32, padding: "0 8px", border: "1px solid var(--color-neutral-border)", borderRadius: 6 }}
+            >
+              <option value="member">Worker (미배정)</option>
+              <option value="annotator">라벨러</option>
+              <option value="reviewer">검수자</option>
+            </select>
+            <Button size="small" onClick={generateInvite} waiting={inviting}>
+              초대 링크 생성
+            </Button>
+          </div>
+          {inviteLink && (
+            <div style={{ display: "flex", gap: 8, marginTop: 8, maxWidth: 720 }}>
+              <input
+                readOnly
+                value={inviteLink}
+                onFocus={(e) => e.target.select()}
+                style={{
+                  flex: 1,
+                  height: 32,
+                  padding: "0 8px",
+                  border: "1px solid var(--color-neutral-border)",
+                  borderRadius: 6,
+                }}
+              />
+              <Button
+                size="small"
+                look="outlined"
+                onClick={() => {
+                  navigator.clipboard?.writeText(inviteLink);
+                  toast.show({ message: "복사됐습니다" });
+                }}
+              >
+                링크 복사
+              </Button>
+            </div>
+          )}
+        </div>
+
         <p className={root.elem("hint").toClassName()}>
-          조직 멤버를 <b>Worker</b>, <b>Labelers</b>, <b>Reviewers</b> 중 하나로 끌어다 놓아 배치하세요.
+          이 프로젝트의 작업자를 <b>Worker</b>, <b>Labelers</b>, <b>Reviewers</b> 중 하나로 끌어다 배치하세요.
           <br />
-          <b>Worker</b>는 아직 역할이 없는 상태이고, 상자 사이로 끌면 역할이 바뀝니다.
-          <br />
-          왼쪽으로 끌면 배치가 해제됩니다.
+          상자 사이로 끌면 역할이 바뀌고, 왼쪽으로 끌면 프로젝트에서 제외됩니다.
         </p>
         <div className={cn("settings-wrapper").toClassName()}>
           {loading ? (
