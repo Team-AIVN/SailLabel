@@ -7,6 +7,7 @@ import pathlib
 from audit.models import AuditAction
 from audit.services import record_project_event
 
+from core.api_permissions import ProjectManagerObjectPermission
 from core.feature_flags import flag_set
 from core.filters import ListFilter
 from core.label_config import config_essential_data_has_changed
@@ -382,6 +383,10 @@ class ProjectAPI(generics.RetrieveUpdateDestroyAPIView):
         PUT=all_permissions.projects_change,
         POST=all_permissions.projects_create,
     )
+    # ``permission_required`` above is declarative only; enforce project-manager
+    # authority for mutations (change/delete) at the object level so labelers and
+    # other non-managers cannot alter a project through the API.
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [ProjectManagerObjectPermission]
     serializer_class = ProjectSerializer
 
     redirect_route = 'projects:project-detail'
