@@ -403,5 +403,48 @@
     "added": "작업자를 배정했습니다",
     "removed": "작업자를 제거했습니다",
     "actionFailed": "배정을 변경하지 못했습니다"
+  },
+  "dm": {
+    "columns": "컬럼",
+    "filters": "필터",
+    "orderBy": "정렬 기준",
+    "actions": "작업",
+    "labelAll": "전체 라벨링",
+    "labelCount": "{{count}}개 라벨링",
+    "labelAsDisplayed": "표시된 대로 라벨링",
+    "export": "내보내기",
+    "import": "가져오기"
+  },
+  "settings": {
+    "general": "일반",
+    "workers": "작업자",
+    "labelingInterface": "라벨링 인터페이스",
+    "annotation": "어노테이션",
+    "model": "모델",
+    "predictions": "예측",
+    "cloudStorage": "클라우드 스토리지",
+    "webhooks": "웹훅",
+    "dangerZone": "위험 구역"
+  },
+  "people": {
+    "inviteMembers": "멤버 초대",
+    "inviteDescription": "이 인스턴스에 참여할 멤버를 초대하세요. 초대한 사람은 모든 프로젝트에 접근할 수 있습니다.",
+    "learnMore": "자세히 보기",
+    "resetLink": "링크 재설정",
+    "copyLink": "링크 복사"
+  },
+  "templates": {
+    "computerVision": "컴퓨터 비전",
+    "nlp": "자연어 처리",
+    "audioSpeech": "오디오/음성 처리",
+    "conversationalAI": "대화형 AI",
+    "chat": "챗",
+    "rankingScoring": "랭킹 & 스코어링",
+    "structuredData": "정형 데이터 파싱",
+    "timeSeries": "시계열 분석",
+    "videos": "비디오",
+    "generativeAI": "생성형 AI",
+    "community": "커뮤니티 기여",
+    "customTemplate": "커스텀 템플릿"
   }
 }
