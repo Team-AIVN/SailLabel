@@ -415,6 +415,20 @@
     "export": "내보내기",
     "import": "가져오기"
   },
+  "dmcol": {
+    "completed_at": "완료",
+    "total_annotations": "어노테이션",
+    "cancelled_annotations": "취소됨",
+    "total_predictions": "예측",
+    "annotators": "작업자",
+    "reviewed_at": "검수됨",
+    "reviewed_by": "검수자",
+    "reviews": "검수",
+    "avg_lead_time": "소요 시간",
+    "created_at": "생성일",
+    "updated_at": "수정일",
+    "draft_exists": "임시저장"
+  },
   "settings": {
     "general": "일반",
     "workers": "작업자",

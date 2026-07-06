@@ -415,6 +415,20 @@
     "export": "Export",
     "import": "Import"
   },
+  "dmcol": {
+    "completed_at": "Completed",
+    "total_annotations": "Annotations",
+    "cancelled_annotations": "Cancelled",
+    "total_predictions": "Predictions",
+    "annotators": "Annotated by",
+    "reviewed_at": "Reviewed",
+    "reviewed_by": "Reviewed by",
+    "reviews": "Reviews",
+    "avg_lead_time": "Lead Time",
+    "created_at": "Created at",
+    "updated_at": "Updated at",
+    "draft_exists": "Drafts"
+  },
   "settings": {
     "general": "General",
     "workers": "Workers",
