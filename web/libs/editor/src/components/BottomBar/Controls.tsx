@@ -72,6 +72,16 @@ const ControlButton = observer(({ button, disabled, onClick, variant, look }: Co
 
 export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
   observer(({ store, history, annotation }) => {
+    // Worker who has not been assigned a labeling/review role yet — no actions.
+    if (store.hasInterface("assignment:pending")) {
+      return (
+        <div className={cn("controls").toClassName()}>
+          <div style={{ padding: "8px 12px", color: "var(--color-neutral-content-subtler)", fontSize: 14 }}>
+            아직 역할이 배정되지 않았습니다. 관리자가 라벨러 또는 검수자로 배정하면 작업할 수 있어요.
+          </div>
+        </div>
+      );
+    }
     const isReview = store.hasInterface("review") || annotation.canBeReviewed;
     const isNotQuickView = store.hasInterface("topbar:prevnext");
     const historySelected = isDefined(store.annotationStore.selectedHistory);
