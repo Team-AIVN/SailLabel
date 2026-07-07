@@ -10,6 +10,12 @@
     padding-right: 8px;
     align-items: center;
 
+    &__assignment-pending {
+      padding: 8px 12px;
+      color: var(--color-neutral-content-subtler);
+      font-size: 14px;
+    }
+
     & .button {
       width: 160px;
       height: 40px;

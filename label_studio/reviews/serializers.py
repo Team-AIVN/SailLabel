@@ -33,8 +33,6 @@ class ReviewCandidateSerializer(serializers.Serializer):
     annotation_version = serializers.SerializerMethodField()
     annotator = serializers.SerializerMethodField()
     review_status = serializers.CharField()
-    reviewer = serializers.SerializerMethodField()
-    comments = serializers.SerializerMethodField()
     reviews = serializers.SerializerMethodField()
 
     def get_annotation_version(self, task):
@@ -47,37 +45,6 @@ class ReviewCandidateSerializer(serializers.Serializer):
         root = task.annotations.order_by('id').first()
         user = getattr(root, 'completed_by', None) if root else None
         return UserSimpleSerializer(user).data if user else None
-
-    def get_reviewer(self, task):
-        # Latest review across ALL of the task's annotation revisions. For FIX_AND_ACCEPT
-        # the Review is attached to the original annotation while current_annotation points
-        # at the new revision, so looking only at current_annotation.reviews misses it.
-        review = (
-            Review.objects.filter(annotation__task=task)
-            .select_related('reviewer')
-            .order_by('-created_at', '-id')
-            .first()
-        )
-        return UserSimpleSerializer(review.reviewer).data if review and review.reviewer else None
-
-    def get_comments(self, task):
-        # All non-empty review comments left on the task (across revisions), oldest first.
-        reviews = (
-            Review.objects.filter(annotation__task=task)
-            .exclude(comment='')
-            .select_related('reviewer')
-            .order_by('created_at', 'id')
-        )
-        return [
-            {
-                'id': r.id,
-                'comment': r.comment,
-                'decision': r.decision,
-                'reviewer': UserSimpleSerializer(r.reviewer).data if r.reviewer else None,
-                'created_at': r.created_at,
-            }
-            for r in reviews
-        ]
 
     def get_reviews(self, task):
         # Every review decision on the task (across revisions), newest first, so the

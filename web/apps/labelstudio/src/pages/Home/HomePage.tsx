@@ -10,11 +10,9 @@ import { HeidiTips } from "../../components/HeidiTips/HeidiTips";
 import { usePermissions } from "../../utils/permissions";
 import { useAPI } from "../../providers/ApiProvider";
 import { CreateProject } from "../CreateProject/CreateProject";
-import { InviteLink } from "../Organization/PeoplePage/InviteLink";
 import type { Page } from "../types/Page";
 import {
   creationDialogOpen,
-  invitationOpen,
   locationKeyAtom,
   PROJECTS_TO_SHOW,
   projectsDataAtom,
@@ -45,7 +43,6 @@ export const HomePage: Page = () => {
   const location = useLocation();
   const history = useHistory();
   const [modalIsOpen, setModalIsOpen] = useAtom(creationDialogOpen);
-  const [invitationIsOpen, setInvitationIsOpen] = useAtom(invitationOpen);
   const setLocationKey = useSetAtom(locationKeyAtom);
   const setProjectsData = useSetAtom(projectsDataAtom);
   const sortedProjects = useAtomValue(sortedProjectsAtom);
@@ -115,9 +112,6 @@ export const HomePage: Page = () => {
           break;
         case "createProject":
           setModalIsOpen(true);
-          break;
-        case "inviteMembers":
-          setInvitationIsOpen(true);
           break;
       }
     };
@@ -239,7 +233,6 @@ export const HomePage: Page = () => {
         </section>
       </div>
       {modalIsOpen && <CreateProject onClose={() => setModalIsOpen(false)} />}
-      <InviteLink opened={invitationIsOpen} onClosed={() => setInvitationIsOpen(false)} />
     </main>
   );
 };

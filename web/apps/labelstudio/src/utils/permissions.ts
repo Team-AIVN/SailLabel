@@ -83,7 +83,6 @@ export function usePermissions() {
     canSeeProjectsMenu: !!user?.has_project_access,
     canSeeWorkspacesMenu: !!user?.has_workspace_access,
     canSeeOrganization: !!user?.is_super_admin,
-    canSeeModels: !!user?.is_super_admin,
     // Super admins and workspace managers may create workspaces/projects.
     canCreateWorkspace: !!user?.can_create_workspace,
   };

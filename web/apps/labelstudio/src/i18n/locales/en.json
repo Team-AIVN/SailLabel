@@ -477,7 +477,9 @@
     "updateAndExit": "Update and exit",
     "accept": "Accept",
     "reject": "Reject",
-    "fixAndAccept": "Fix + Accept"
+    "fixAndAccept": "Fix + Accept",
+    "assignmentPending": "No role assigned yet. You can start once an admin assigns you as a labeler or reviewer.",
+    "rejectReasonPrompt": "Enter a reason for rejecting"
   },
   "danger": {
     "title": "Danger Zone",

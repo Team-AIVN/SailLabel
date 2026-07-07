@@ -477,7 +477,9 @@
     "updateAndExit": "수정 후 나가기",
     "accept": "승인",
     "reject": "반려",
-    "fixAndAccept": "수정 후 승인"
+    "fixAndAccept": "수정 후 승인",
+    "assignmentPending": "아직 역할이 배정되지 않았습니다. 관리자가 라벨러 또는 검수자로 배정하면 작업할 수 있어요.",
+    "rejectReasonPrompt": "거절 사유를 입력하세요"
   },
   "danger": {
     "title": "Danger Zone",
