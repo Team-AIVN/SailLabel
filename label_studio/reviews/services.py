@@ -115,25 +115,25 @@ def on_annotation_updated(annotation):
 
 
 def _record_review(annotation, reviewer, decision, comment='', stage=1):
-    """Record a review decision, keeping the decision history as an audit trail.
+    """Record a review decision as a new timeline entry (newest first).
 
-    Distinct decisions accumulate (e.g. ACCEPT then REJECT = two rows), but repeating
-    the *same* decision does not pile up duplicate rows — it just refreshes the comment
-    on the latest one. This fixes double-clicking Accept creating identical records
-    while preserving genuine decision history.
+    Every distinct action stacks as its own row — two Fix+Accepts with different
+    corrections are two rows, a reject-with-reason then a later accept are two rows.
+    Only an immediate exact duplicate is skipped (see below).
     """
+    comment = comment or ''
     latest = Review.objects.filter(annotation=annotation, reviewer=reviewer, stage=stage).order_by('-id').first()
-    if latest and latest.decision == decision:
-        if (comment or '') != (latest.comment or ''):
-            latest.comment = comment or ''
-            latest.save(update_fields=['comment'])
+    # Only an immediate EXACT duplicate (same decision AND identical comment) is skipped,
+    # so an accidental double-click of Accept doesn't pile up. Anything with different
+    # content (a new fix summary, a different reject reason) stacks as a new row.
+    if latest and latest.decision == decision and (latest.comment or '') == comment:
         return latest
     return Review.objects.create(
         annotation=annotation,
         project=annotation.project,
         reviewer=reviewer,
         decision=decision,
-        comment=comment or '',
+        comment=comment,
         stage=stage,
     )
 
