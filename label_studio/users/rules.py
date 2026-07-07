@@ -143,13 +143,11 @@ def is_project_member_of(user, obj):
     return project.members.filter(user=user, deleted_at__isnull=True).exists()
 
 
-@rules.predicate
-def can_create_project(user):
-    """Project creation is a management action (per the permission spec: WM/SA).
-
-    Unary (create has no target object): allow super admins and anyone who
-    manages at least one workspace in their active organization.
-    """
+def _manages_a_workspace(user):
+    """Shared rule for creating projects/workspaces: super admins, and anyone who
+    manages at least one workspace in their active organization. Unary (create has no
+    target object), so a brand-new org is bootstrapped by its super admin, who can then
+    delegate by making others workspace managers."""
     if not user or not user.is_authenticated:
         return False
     if is_super_admin.test(user):
@@ -165,31 +163,18 @@ def can_create_project(user):
         role='workspace_manager',
         deleted_at__isnull=True,
     ).exists()
+
+
+@rules.predicate
+def can_create_project(user):
+    """Project creation is a management action (WM/SA) — see ``_manages_a_workspace``."""
+    return _manages_a_workspace(user)
 
 
 @rules.predicate
 def can_create_workspace(user):
-    """Workspace creation is allowed for super admins and existing workspace managers.
-
-    Unary (create has no target object). Mirrors ``can_create_project``: a brand-new
-    organization is bootstrapped by its super admin, who can then delegate by making
-    others workspace managers.
-    """
-    if not user or not user.is_authenticated:
-        return False
-    if is_super_admin.test(user):
-        return True
-    org_id = getattr(user, 'active_organization_id', None)
-    if not org_id:
-        return False
-    from workspaces.models import WorkspaceMember
-
-    return WorkspaceMember.objects.filter(
-        user=user,
-        workspace__organization_id=org_id,
-        role='workspace_manager',
-        deleted_at__isnull=True,
-    ).exists()
+    """Workspace creation is a management action (WM/SA) — see ``_manages_a_workspace``."""
+    return _manages_a_workspace(user)
 
 
 @rules.predicate

@@ -24,7 +24,7 @@ from workspaces.rules import is_workspace_manager, is_workspace_member
 logger = logging.getLogger(__name__)
 
 
-def _require_project_manager(user, project):
+def _require_workspace_manager(user, project):
     """Cloud storage connects external data sources, so only WM/SA may manage it
     (project managers are excluded per team decision)."""
     workspace = getattr(project, 'workspace', None)
@@ -58,7 +58,7 @@ class ImportStorageListAPI(generics.ListCreateAPIView):
         return storages
 
     def perform_create(self, serializer):
-        _require_project_manager(self.request.user, serializer.validated_data.get('project'))
+        _require_workspace_manager(self.request.user, serializer.validated_data.get('project'))
         serializer.save()
 
 
@@ -104,7 +104,7 @@ class ExportStorageListAPI(generics.ListCreateAPIView):
         return storages
 
     def perform_create(self, serializer):
-        _require_project_manager(self.request.user, serializer.validated_data.get('project'))
+        _require_workspace_manager(self.request.user, serializer.validated_data.get('project'))
         # double check: not export storages don't validate connection in serializer,
         # just make another explicit check here, note: in this create API we have credentials in request.data
         instance = serializer.Meta.model(**serializer.validated_data)
