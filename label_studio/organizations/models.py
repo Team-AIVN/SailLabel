@@ -252,12 +252,14 @@ class Invitation(models.Model):
         return self.accepted_at is not None
 
     def apply(self, user):
-        """Place the accepting ``user`` into the invited workspace/project/role."""
+        """Place the accepting ``user`` into the invited workspace/project/role.
+
+        Invite links are reusable: everyone who signs up through the link is placed,
+        so this is idempotent per user rather than single-use.
+        """
         from projects.models import ProjectMember
         from workspaces.models import WorkspaceMember
 
-        if self.accepted_at is not None:
-            return
         if self.project is not None:
             ProjectMember.objects.get_or_create(
                 user=user, project=self.project, defaults={'role': self.role or 'annotator'}
@@ -266,6 +268,8 @@ class Invitation(models.Model):
                 WorkspaceMember.objects.get_or_create(user=user, workspace=self.workspace, defaults={'role': 'member'})
         elif self.workspace is not None:
             WorkspaceMember.objects.get_or_create(user=user, workspace=self.workspace, defaults={'role': self.role or 'member'})
-        self.accepted_at = timezone.now()
-        self.accepted_by = user
-        self.save(update_fields=['accepted_at', 'accepted_by'])
+        # Record first use for reference, but keep the link usable for others.
+        if self.accepted_at is None:
+            self.accepted_at = timezone.now()
+            self.accepted_by = user
+            self.save(update_fields=['accepted_at', 'accepted_by'])

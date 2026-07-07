@@ -62,7 +62,9 @@ def user_signup(request):
     # workspace/project/role to apply once the account exists.
     invitation = None
     if invite_token:
-        invitation = Invitation.objects.filter(token=invite_token, accepted_at__isnull=True).first()
+        # Reusable link: look up by token only (not "unaccepted"), so multiple people
+        # can sign up through the same invite.
+        invitation = Invitation.objects.filter(token=invite_token).first()
 
     # make a new user
     if request.method == 'POST':
