@@ -159,33 +159,55 @@ def reject(annotation, reviewer, comment='', stage=1):
     return review
 
 
-def _result_field_map(result):
+def _choice_display(parsed_config, from_name, saved_value):
+    """Map a saved choice value (its alias, e.g. PORT) to the displayed label
+    (e.g. 좌현 변침) using the project's parsed config."""
+    field = (parsed_config or {}).get(from_name) or {}
+    attrs = field.get('labels_attrs') or {}
+    return (attrs.get(saved_value) or {}).get('value') or saved_value
+
+
+def _field_label(parsed_config, from_name):
+    """Human field label (from the associated Text tag) or the raw from_name."""
+    field = (parsed_config or {}).get(from_name) or {}
+    inputs = field.get('inputs') or []
+    return (inputs[0].get('value') if inputs else None) or from_name
+
+
+def _result_field_map(result, parsed_config=None):
     """Flatten an annotation result into {from_name: human-readable value}."""
     out = {}
     for r in result or []:
-        value = r.get('value', {}) if isinstance(r, dict) else {}
+        if not isinstance(r, dict):
+            continue
+        from_name = r.get('from_name', '?')
+        value = r.get('value', {})
         if 'choices' in value:
-            shown = ', '.join(value.get('choices') or [])
+            shown = ', '.join(_choice_display(parsed_config, from_name, c) for c in (value.get('choices') or []))
         elif 'text' in value:
             text = value.get('text')
             shown = ' '.join(text) if isinstance(text, list) else str(text)
         else:
             shown = str(value)
-        out[r.get('from_name', '?')] = shown
+        out[from_name] = shown
     return out
 
 
-def build_fix_summary(original, corrected):
-    """Readable field-level summary of what the reviewer changed (old -> new)."""
-    before = _result_field_map(original)
-    after = _result_field_map(corrected)
+def build_fix_summary(original, corrected, parsed_config=None):
+    """Readable field-level summary of what the reviewer changed (old -> new).
+
+    When the project's parsed config is supplied, field names and choice values are
+    shown with their human labels (e.g. "권고 조종 방향: 좌현 변침 → 우현 변침").
+    """
+    before = _result_field_map(original, parsed_config)
+    after = _result_field_map(corrected, parsed_config)
     keys = list(dict.fromkeys(list(before.keys()) + list(after.keys())))
     lines = []
     for k in keys:
         b = before.get(k, '(없음)')
         a = after.get(k, '(없음)')
         if b != a:
-            lines.append(f'{k}: {b or "(없음)"} → {a or "(없음)"}')
+            lines.append(f'{_field_label(parsed_config, k)}: {b or "(없음)"} → {a or "(없음)"}')
     if not lines:
         return '[수정 후 승인] 변경 없음'
     return '[수정 후 승인]\n' + '\n'.join(lines)
@@ -201,8 +223,12 @@ def fix_and_accept(annotation, reviewer, content=None, comment='', stage=1):
     is used so this does not re-fire the annotation post_save signal.
     """
     corrected = content if content is not None else annotation.result
-    # Field-level change summary, captured before the result is overwritten.
-    summary = build_fix_summary(annotation.result, corrected)
+    # Field-level change summary (with human labels), captured before overwrite.
+    try:
+        parsed = annotation.project.get_parsed_config()
+    except Exception:
+        parsed = None
+    summary = build_fix_summary(annotation.result, corrected, parsed)
     Annotation.objects.filter(pk=annotation.pk).update(result=corrected, status=Annotation.Status.APPROVED)
     annotation.result = corrected
     annotation.status = Annotation.Status.APPROVED
