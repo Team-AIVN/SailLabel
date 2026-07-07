@@ -419,7 +419,15 @@
     "labelCount": "Label {{count}} Task",
     "labelAsDisplayed": "Label Tasks As Displayed",
     "export": "Export",
-    "import": "Import"
+    "import": "Import",
+    "reviewStatus": {
+      "NOT_SELECTED": "Not selected",
+      "PENDING": "Pending",
+      "ACCEPTED": "Accepted",
+      "REJECTED": "Rejected",
+      "FIXED_AND_ACCEPTED": "Fixed & accepted"
+    },
+    "viewMore": "View more"
   },
   "dmcol": {
     "completed_at": "Completed",

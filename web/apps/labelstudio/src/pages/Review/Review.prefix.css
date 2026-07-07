@@ -143,24 +143,24 @@
     font-weight: 600;
     padding: 2px 10px;
     border-radius: 999px;
-    background: #e4e7ec;
-    color: #384250;
+    background: var(--color-neutral-emphasis-subtle);
+    color: var(--color-neutral-content);
     white-space: nowrap;
 
-    /* Explicit high-contrast colors — the theme's surface-content vars render too
-       faint here, making the status pill hard to read. */
+    /* Use the strong `-content` text vars (not the faint `-surface-content`) over a
+       subtle tinted background — both adapt to light/dark theme. */
     &_status_ACCEPTED,
     &_status_FIXED_AND_ACCEPTED {
-      background: #cdefda;
-      color: #12703a;
+      background: var(--color-positive-emphasis-subtle);
+      color: var(--color-positive-content);
     }
     &_status_REJECTED {
-      background: #fbd5d5;
-      color: #b42318;
+      background: var(--color-negative-emphasis-subtle);
+      color: var(--color-negative-content);
     }
     &_status_PENDING {
-      background: #fce7c3;
-      color: #93500a;
+      background: var(--color-warning-emphasis-subtle);
+      color: var(--color-warning-content);
     }
   }
 

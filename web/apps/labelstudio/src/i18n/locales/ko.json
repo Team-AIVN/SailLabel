@@ -419,7 +419,15 @@
     "labelCount": "{{count}}개 라벨링",
     "labelAsDisplayed": "표시된 대로 라벨링",
     "export": "내보내기",
-    "import": "가져오기"
+    "import": "가져오기",
+    "reviewStatus": {
+      "NOT_SELECTED": "미선정",
+      "PENDING": "대기",
+      "ACCEPTED": "승인",
+      "REJECTED": "거절",
+      "FIXED_AND_ACCEPTED": "수정+승인"
+    },
+    "viewMore": "더보기"
   },
   "dmcol": {
     "completed_at": "완료",
