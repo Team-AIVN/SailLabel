@@ -50,8 +50,12 @@ def _is_review_manager(user, project):
 def _review_task_queryset(user, project):
     """Reviewers/managers see all tasks; a labeler sees only tasks they annotated
     (so they can review the decisions/reasons on their own work)."""
-    base = Task.objects.filter(project=project).select_related(
-        'current_annotation', 'current_annotation__completed_by'
+    base = (
+        Task.objects.filter(project=project)
+        .select_related('current_annotation', 'current_annotation__completed_by')
+        # Prefetched so the serializer resolves annotator + reviews without a per-task
+        # query (avoids N+1 across the task list).
+        .prefetch_related('annotations__completed_by', 'annotations__reviews__reviewer')
     )
     if _is_review_manager(user, project):
         return base
