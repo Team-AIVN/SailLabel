@@ -193,6 +193,10 @@ export class LSFWrapper {
         "predictions:tabs",
         "annotations:copy-link",
       );
+      // Allow skipping in quick view (opening a single task) too, not only in the stream.
+      if (this.project.show_skip_button) {
+        interfaces.push("skip");
+      }
     }
 
     if (this.datamanager.hasInterface("instruction")) {
@@ -235,8 +239,10 @@ export class LSFWrapper {
     }
 
     if (!this.shouldLoadNext()) {
+      // Keep "skip" available in quick view (opening a single task) too — only the
+      // prev/next stream navigation is meaningless without a queue.
       interfaces = interfaces.filter((item) => {
-        return !["topbar:prevnext", "skip"].includes(item);
+        return !["topbar:prevnext"].includes(item);
       });
     }
 
