@@ -193,30 +193,25 @@ def build_fix_summary(original, corrected):
 
 @transaction.atomic
 def fix_and_accept(annotation, reviewer, content=None, comment='', stage=1):
-    """Create a new revision authored by the reviewer and approve it.
+    """Apply the reviewer's correction to the annotation in place and approve it.
 
-    Previous revisions are preserved; the new revision becomes the task's current
-    annotation. The review is recorded against the revision that was reviewed.
+    The correction overwrites the reviewed revision so the task keeps a SINGLE
+    annotation (no confusing second tab in the editor). What the reviewer changed is
+    preserved as a field-level summary in the review record for audit. ``.update()``
+    is used so this does not re-fire the annotation post_save signal.
     """
-    task = annotation.task
     corrected = content if content is not None else annotation.result
-    # Readable field-level change summary, captured before the original is superseded.
+    # Field-level change summary, captured before the result is overwritten.
     summary = build_fix_summary(annotation.result, corrected)
-    new_revision = Annotation.objects.create(
-        task=task,
-        project=annotation.project,
-        completed_by=reviewer,
-        result=corrected,
-        parent_annotation=annotation,
-        status=Annotation.Status.APPROVED,
-    )
-    # Point the task at the new revision and stamp its version explicitly. The post_save
-    # signal does this for review-enabled projects, but not for review_strategy=NONE
-    # projects (where the signal is not connected), so do it here to be self-sufficient.
-    assign_revision(new_revision)
+    Annotation.objects.filter(pk=annotation.pk).update(result=corrected, status=Annotation.Status.APPROVED)
+    annotation.result = corrected
+    annotation.status = Annotation.Status.APPROVED
     review = _record_review(annotation, reviewer, Review.Decision.FIX_AND_ACCEPT, comment=summary, stage=stage)
-    Task.objects.filter(pk=task.pk).update(review_status=Task.ReviewStatus.FIXED_AND_ACCEPTED)
-    return review, new_revision
+    Task.objects.filter(pk=annotation.task_id).update(
+        review_status=Task.ReviewStatus.FIXED_AND_ACCEPTED,
+        current_annotation=annotation,
+    )
+    return review, annotation
 
 
 def review_annotation(annotation, reviewer, decision, comment='', content=None, stage=1):
