@@ -78,26 +78,44 @@ def on_annotation_created(annotation):
         apply_review_selection(annotation)
 
 
+def on_annotation_updated(annotation):
+    """A labeler edited an already-reviewed annotation.
+
+    Editing an accepted or rejected revision invalidates that decision, so the revision
+    is put back to COMPLETED and re-run through review selection (returning it to the
+    reviewer's queue). Reviewer-authored revisions are new annotations (create path),
+    so they are not affected here.
+    """
+    if annotation.was_cancelled:
+        return
+    if annotation.status in (Annotation.Status.APPROVED, Annotation.Status.REWORK_REQUIRED):
+        Annotation.objects.filter(pk=annotation.pk).update(status=Annotation.Status.COMPLETED)
+        annotation.status = Annotation.Status.COMPLETED
+        # Edited revision goes back to the reviewer's queue regardless of the project's
+        # auto-selection strategy (this project reviews manually with strategy=NONE).
+        Task.objects.filter(pk=annotation.task_id).update(
+            review_status=Task.ReviewStatus.PENDING,
+            is_labeled=True,
+        )
+
+
 # --- review actions ----------------------------------------------------------
 
 
 def _record_review(annotation, reviewer, decision, comment='', stage=1):
-    """Upsert this reviewer's decision for the annotation revision.
+    """Record a review decision, keeping the decision history as an audit trail.
 
-    A reviewer has a single decision per annotation revision (and stage): re-deciding
-    updates that row instead of piling up duplicate review records. Any pre-existing
-    duplicates are collapsed into the first row.
+    Distinct decisions accumulate (e.g. ACCEPT then REJECT = two rows), but repeating
+    the *same* decision does not pile up duplicate rows — it just refreshes the comment
+    on the latest one. This fixes double-clicking Accept creating identical records
+    while preserving genuine decision history.
     """
-    existing = list(Review.objects.filter(annotation=annotation, reviewer=reviewer, stage=stage).order_by('id'))
-    if existing:
-        review = existing[0]
-        if len(existing) > 1:
-            Review.objects.filter(pk__in=[r.pk for r in existing[1:]]).delete()
-        review.project = annotation.project
-        review.decision = decision
-        review.comment = comment or ''
-        review.save(update_fields=['project', 'decision', 'comment'])
-        return review
+    latest = Review.objects.filter(annotation=annotation, reviewer=reviewer, stage=stage).order_by('-id').first()
+    if latest and latest.decision == decision:
+        if (comment or '') != (latest.comment or ''):
+            latest.comment = comment or ''
+            latest.save(update_fields=['comment'])
+        return latest
     return Review.objects.create(
         annotation=annotation,
         project=annotation.project,

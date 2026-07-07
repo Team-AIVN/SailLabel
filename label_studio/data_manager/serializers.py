@@ -592,7 +592,7 @@ class DataManagerTaskSerializer(TaskSerializer):
 
         reviews = (
             Review.objects.filter(annotation__task=obj)
-            .select_related('annotation')
+            .select_related('annotation', 'reviewer')
             .order_by('stage', 'created_at', 'id')
         )
         return [
@@ -600,8 +600,10 @@ class DataManagerTaskSerializer(TaskSerializer):
                 'id': r.id,
                 'stage': r.stage,
                 'decision': r.decision,
+                'comment': r.comment or '',
                 'created_at': r.created_at,
                 'reviewer_id': r.reviewer_id,
+                'reviewer_email': getattr(r.reviewer, 'email', None),
                 'annotation_id': r.annotation_id,
                 'annotation_version': getattr(r.annotation, 'version', None),
             }
