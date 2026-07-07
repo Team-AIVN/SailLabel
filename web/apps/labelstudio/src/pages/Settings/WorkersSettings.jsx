@@ -3,6 +3,7 @@ import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import { Button, useToast } from "@humansignal/ui";
 import { ProjectContext } from "../../providers/ProjectProvider";
 import { useAPI } from "../../providers/ApiProvider";
+import { projectPermissions } from "../../utils/permissions";
 import { cn } from "../../utils/bem";
 import "../CreateProject/WorkerAssignment.prefix.css";
 
@@ -42,6 +43,9 @@ export const WorkersSettings = () => {
   const root = useMemo(() => cn("worker-assign"), []);
 
   const projectId = project?.id;
+  // Only workspace managers / super admins may invite a PM into the project; a plain PM
+  // viewing this screen sees the worker roles only (backend enforces the same rule).
+  const canAssignPM = projectPermissions(project?.current_user_role).canAssignManagers;
 
   const [members, setMembers] = useState([]); // this project's workers (assignable pool)
   const [userInfo, setUserInfo] = useState({}); // user_id -> user_detail
@@ -254,6 +258,7 @@ export const WorkersSettings = () => {
               <option value="member">Worker (미배정)</option>
               <option value="annotator">라벨러</option>
               <option value="reviewer">검수자</option>
+              {canAssignPM && <option value="project_manager">PM (프로젝트 관리자)</option>}
             </select>
             <Button size="small" onClick={generateInvite} waiting={inviting}>
               초대 링크 생성

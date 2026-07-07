@@ -48,6 +48,9 @@ export function projectPermissions(role?: string | null) {
     canManage: PROJECT_MANAGER_ROLES.includes(role ?? ""),
     /** Delete/create projects — workspace managers / super admins only, NOT PMs. */
     canDelete: [Role.SUPER_ADMIN, Role.WORKSPACE_MANAGER].includes(role ?? ""),
+    /** Add project managers (PMs) to this project — workspace managers / super admins
+     * only. A PM may invite workers but not other managers (mirrors the backend). */
+    canAssignManagers: [Role.SUPER_ADMIN, Role.WORKSPACE_MANAGER].includes(role ?? ""),
     /** Review page (accept / reject / fix). */
     canReview: [...PROJECT_MANAGER_ROLES, Role.REVIEWER].includes(role ?? ""),
     /** Export labeled data. */
