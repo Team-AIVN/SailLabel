@@ -282,6 +282,28 @@ export const WorkspaceDetail = () => {
         </div>
       )}
 
+      {/* Workers (no management tabs) get a simple list of their assigned projects
+          so the workspace page isn't an empty screen — click through to labeling. */}
+      {!perms.canViewTabs && (
+        <section className={root.elem("panel").toClassName()}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>내 프로젝트</div>
+          {projects.length === 0 ? (
+            <p className={root.elem("muted").toClassName()}>{t("workspaces.detail.noProjects")}</p>
+          ) : (
+            <div className={root.elem("cards").toClassName()}>
+              {projects.map((p) => (
+                <a key={p.id} href={`/projects/${p.id}/data`} className={root.elem("card").toClassName()}>
+                  <div className={root.elem("card-head").toClassName()}>
+                    <h3>{p.title || t("projects.newProject", "New Project")}</h3>
+                    {p.label_type && <span className={root.elem("badge").toClassName()}>{p.label_type}</span>}
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Tabs — hidden from plain workspace members (WMb), who see only the header */}
       {perms.canViewTabs && (
         <>

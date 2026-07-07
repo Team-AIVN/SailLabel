@@ -292,7 +292,8 @@ class WorkspaceProjectsAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
     }
 
     def get_queryset(self):
-        from projects.models import Project
+        from projects.models import Project, ProjectMember
+        from users.rules import is_super_admin, is_workspace_manager_of
 
         workspace = self._get_workspace()
         # with_counts() is a manager method (adds task_number / finished_task_number
@@ -304,6 +305,14 @@ class WorkspaceProjectsAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
             .select_related('task_pool', 'created_by')
             .filter(workspace=workspace, deleted_at__isnull=True)
         )
+
+        # Workers see only projects they belong to; managers (WM/SA) see all.
+        user = self.request.user
+        if not (is_super_admin.test(user) or is_workspace_manager_of.test(user, workspace)):
+            member_ids = ProjectMember.objects.filter(user=user, deleted_at__isnull=True).values_list(
+                'project_id', flat=True
+            )
+            qs = qs.filter(id__in=member_ids)
 
         params = self.request.query_params
         search = params.get('search')
