@@ -35,6 +35,7 @@ class ReviewCandidateSerializer(serializers.Serializer):
     review_status = serializers.CharField()
     reviewer = serializers.SerializerMethodField()
     comments = serializers.SerializerMethodField()
+    reviews = serializers.SerializerMethodField()
 
     def get_annotation_version(self, task):
         return getattr(task.current_annotation, 'version', None)
@@ -74,6 +75,26 @@ class ReviewCandidateSerializer(serializers.Serializer):
                 'decision': r.decision,
                 'reviewer': UserSimpleSerializer(r.reviewer).data if r.reviewer else None,
                 'created_at': r.created_at,
+            }
+            for r in reviews
+        ]
+
+    def get_reviews(self, task):
+        # Every review decision on the task (across revisions), newest first, so the
+        # Review page can list each decision as its own row.
+        reviews = (
+            Review.objects.filter(annotation__task=task)
+            .select_related('reviewer', 'annotation')
+            .order_by('-created_at', '-id')
+        )
+        return [
+            {
+                'id': r.id,
+                'decision': r.decision,
+                'comment': r.comment or '',
+                'reviewer': UserSimpleSerializer(r.reviewer).data if r.reviewer else None,
+                'created_at': r.created_at,
+                'annotation_version': getattr(r.annotation, 'version', None),
             }
             for r in reviews
         ]
