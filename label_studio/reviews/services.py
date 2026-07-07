@@ -89,6 +89,11 @@ def on_annotation_updated(annotation):
     if annotation.was_cancelled:
         return
     if annotation.status in (Annotation.Status.APPROVED, Annotation.Status.REWORK_REQUIRED):
+        # Only release the review when the labeler actually changed the result. A
+        # metadata-only / bulk save (same result) must not undo an accepted decision.
+        prev = getattr(annotation, '_prev_result', None)
+        if prev == annotation.result:
+            return
         Annotation.objects.filter(pk=annotation.pk).update(status=Annotation.Status.COMPLETED)
         annotation.status = Annotation.Status.COMPLETED
         # Edited revision goes back to the reviewer's queue regardless of the project's

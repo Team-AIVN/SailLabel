@@ -186,6 +186,7 @@ class ExportStorageSyncAPI(generics.GenericAPIView):
 
 class StorageValidateAPI(generics.CreateAPIView):
     permission_required = all_permissions.storages_change
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [WorkspaceManagerBodyPermission]
     parser_classes = (JSONParser, FormParser, MultiPartParser)
 
     def create(self, request, *args, **kwargs):
@@ -198,6 +199,7 @@ class StorageValidateAPI(generics.CreateAPIView):
 @extend_schema(exclude=True)
 class ImportStorageListFilesAPI(generics.CreateAPIView):
     permission_required = all_permissions.storages_change
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [WorkspaceManagerBodyPermission]
     parser_classes = (JSONParser, FormParser, MultiPartParser)
     serializer_class = None  # Default serializer
 
