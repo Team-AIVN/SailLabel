@@ -11,18 +11,22 @@ import { workspacePermissions } from "../../utils/permissions";
 import { CreateProject } from "../CreateProject/CreateProject";
 import { Compensation } from "./Compensation";
 import { InviteMember } from "./InviteMember";
+import { StorageSettings } from "../Settings/StorageSettings/StorageSettings";
 import { TaskPools } from "./TaskPools";
 import { WorkspaceImportPage } from "./WorkspaceImport";
 import "./WorkspaceDetail.prefix.css";
 
-const TABS = ["projects", "datasets", "taskpools", "users", "compensation"];
+const TABS = ["projects", "datasets", "taskpools", "users", "compensation", "storage"];
 const TAB_LABEL_KEY = {
   projects: "workspaces.detail.projects",
   datasets: "workspaces.detail.dataset",
   taskpools: "workspaces.detail.taskpools",
   users: "workspaces.detail.members",
   compensation: "workspaces.detail.compensation",
+  storage: "workspaces.detail.storage",
 };
+// Tabs only workspace managers / super admins may see (not project managers).
+const MANAGER_ONLY_TABS = new Set(["storage"]);
 const WORKSPACE_ROLES = ["member", "workspace_manager"];
 
 const listOf = (response) => {
@@ -78,6 +82,7 @@ export const WorkspaceDetail = () => {
   const [ordering, setOrdering] = useState("-created_at");
   const [datasetSearch, setDatasetSearch] = useState("");
   const [userSearch, setUserSearch] = useState("");
+  const [storageProjectId, setStorageProjectId] = useState("");
 
   // create affordances
   const [showNewProject, setShowNewProject] = useState(false);
@@ -308,7 +313,7 @@ export const WorkspaceDetail = () => {
       {perms.canViewTabs && (
         <>
       <nav className={root.elem("tabs").toClassName()}>
-        {TABS.map((tab) => (
+        {TABS.filter((tab) => !MANAGER_ONLY_TABS.has(tab) || perms.canManage).map((tab) => (
           <button
             type="button"
             key={tab}
@@ -472,6 +477,32 @@ export const WorkspaceDetail = () => {
       {activeTab === "compensation" && (
         <section className={root.elem("panel").toClassName()}>
           <Compensation workspaceId={Number(id)} />
+        </section>
+      )}
+
+      {/* Cloud Storage tab (workspace managers only) — pick a project, manage its storage. */}
+      {activeTab === "storage" && perms.canManage && (
+        <section className={root.elem("panel").toClassName()}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+            <span style={{ fontWeight: 600 }}>프로젝트</span>
+            <select
+              value={storageProjectId}
+              onChange={(e) => setStorageProjectId(e.target.value)}
+              style={{ height: 32, padding: "0 8px", border: "1px solid var(--color-neutral-border)", borderRadius: 6 }}
+            >
+              <option value="">프로젝트 선택</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          {storageProjectId ? (
+            <StorageSettings projectId={Number(storageProjectId)} />
+          ) : (
+            <p className={root.elem("muted").toClassName()}>스토리지를 관리할 프로젝트를 선택하세요.</p>
+          )}
         </section>
       )}
 

@@ -34,7 +34,8 @@
       "workload": "작업량",
       "notFound": "워크스페이스를 찾을 수 없습니다",
       "taskpools": "작업집합",
-      "compensation": "보상"
+      "compensation": "보상",
+      "storage": "클라우드 스토리지"
     },
     "roles": {
       "member": "멤버",

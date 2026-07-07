@@ -102,6 +102,54 @@ class ProjectManagerBodyPermission(BasePermission):
         return bool(is_project_manager_of.test(user, project))
 
 
+class WorkspaceManagerSubresourcePermission(BasePermission):
+    """Object-level guard for workspace-manager-only sub-resources (cloud storage).
+
+    Unlike the project-manager variant, ALL access (read and write) requires
+    workspace-manager authority (WM/SA); project managers are excluded. Resolves the
+    workspace via ``obj.project.workspace``.
+    """
+
+    message = 'Only workspace managers or super admins can manage storage.'
+
+    def has_object_permission(self, request, view, obj):
+        from users.rules import is_super_admin, is_workspace_manager_of
+
+        user = request.user
+        project = getattr(obj, 'project', None)
+        workspace = getattr(project, 'workspace', None)
+        return bool(is_super_admin.test(user) or (workspace and is_workspace_manager_of.test(user, workspace)))
+
+
+class WorkspaceManagerBodyPermission(BasePermission):
+    """View-level guard for storage list/create endpoints restricted to WM/SA.
+
+    Gates both the list GET (project in query params) and POST (project in body), so
+    project managers can neither view nor create storage. Storage is always
+    project-scoped, so a request without a project is denied.
+    """
+
+    message = 'Only workspace managers or super admins can manage storage.'
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        from users.rules import is_super_admin, is_workspace_manager_of
+
+        if is_super_admin.test(user):
+            return True
+        pid = request.data.get('project') or request.query_params.get('project')
+        if pid is None:
+            return False
+        from projects.models import Project
+
+        project = Project.objects.filter(pk=pid).first()
+        if project is None or project.workspace_id is None:
+            return False
+        return bool(is_workspace_manager_of.test(user, project.workspace))
+
+
 class CanCreateWorkspacePermission(BasePermission):
     """View-level guard for workspace creation (POST): super admins and workspace
     managers only. Checked in ``initial()`` so a non-manager is rejected before

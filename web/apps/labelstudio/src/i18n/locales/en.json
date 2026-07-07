@@ -34,7 +34,8 @@
       "workload": "Workload",
       "notFound": "Workspace not found",
       "taskpools": "Task Pools",
-      "compensation": "Compensation"
+      "compensation": "Compensation",
+      "storage": "Cloud Storage"
     },
     "roles": {
       "member": "Member",
