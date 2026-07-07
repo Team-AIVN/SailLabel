@@ -44,8 +44,10 @@ export function projectPermissions(role?: string | null) {
   return {
     /** Can open the project / data manager at all. */
     canView: role != null,
-    /** Project settings, export, worker assignment, delete. */
+    /** Project settings, export, worker assignment (project managers and up). */
     canManage: PROJECT_MANAGER_ROLES.includes(role ?? ""),
+    /** Delete/create projects — workspace managers / super admins only, NOT PMs. */
+    canDelete: [Role.SUPER_ADMIN, Role.WORKSPACE_MANAGER].includes(role ?? ""),
     /** Review page (accept / reject / fix). */
     canReview: [...PROJECT_MANAGER_ROLES, Role.REVIEWER].includes(role ?? ""),
     /** Export labeled data. */

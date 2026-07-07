@@ -8,6 +8,7 @@ import { Spinner } from "../../components/Spinner/Spinner";
 import { ApiContext } from "../../providers/ApiProvider";
 import { useContextProps } from "../../providers/RoutesProvider";
 import { cn } from "../../utils/bem";
+import { usePermissions } from "../../utils/permissions";
 import { CreateProject } from "../CreateProject/CreateProject";
 import { DataManagerPage } from "../DataManager/DataManager";
 import { ReviewPage } from "../Review/Review";
@@ -175,6 +176,9 @@ ProjectsPage.routes = ({ store }) => [
 ];
 const CreateProjectContextButton = ({ openModal }) => {
   const { t } = useTranslation();
+  const { canCreateWorkspace } = usePermissions();
+  // Creating projects is a workspace-manager/super-admin action (matches the backend).
+  if (!canCreateWorkspace) return null;
   return (
     <Button onClick={openModal} size="small" aria-label={t("projects.createProjectAriaLabel")}>
       {t("projects.createButton")}

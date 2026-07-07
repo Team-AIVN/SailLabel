@@ -1,5 +1,7 @@
 import { SidebarMenu } from "../../components/SidebarMenu/SidebarMenu";
 import { ProjectRoleGuard } from "../../components/RoleGuard/RoleGuard";
+import { useProject } from "../../providers/ProjectProvider";
+import { projectPermissions } from "../../utils/permissions";
 import { FF_WORKSPACE, isFF } from "../../utils/feature-flags";
 import { WebhookPage } from "../WebhookPage/WebhookPage";
 import { DangerZone } from "./DangerZone";
@@ -13,6 +15,10 @@ import { StorageSettings } from "./StorageSettings/StorageSettings";
 import "./settings.prefix.css";
 
 export const MenuLayout = ({ children, ...routeProps }) => {
+  const { project } = useProject();
+  // Deleting a project is workspace-manager/super-admin only — project managers manage
+  // settings but can't delete, so hide Danger Zone from them.
+  const canDelete = projectPermissions(project?.current_user_role).canDelete;
   return (
     <SidebarMenu
       menuItems={[
@@ -24,7 +30,7 @@ export const MenuLayout = ({ children, ...routeProps }) => {
         PredictionsSettings,
         StorageSettings,
         WebhookPage,
-        DangerZone,
+        canDelete && DangerZone,
       ].filter(Boolean)}
       path={routeProps.match.url}
       children={<ProjectRoleGuard check={(perms) => perms.canManage}>{children}</ProjectRoleGuard>}

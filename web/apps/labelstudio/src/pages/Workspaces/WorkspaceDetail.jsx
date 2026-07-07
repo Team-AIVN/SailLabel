@@ -353,9 +353,11 @@ export const WorkspaceDetail = () => {
               <option value="-progress">{t("workspaces.dashboard.sortProgress", "Progress")}</option>
               <option value="title">{t("workspaces.dashboard.sortTitle", "Title")}</option>
             </select>
-            <Button size="small" onClick={() => setShowNewProject(true)}>
-              {t("workspaces.dashboard.newProject", "New Project")}
-            </Button>
+            {perms.canManage && (
+              <Button size="small" onClick={() => setShowNewProject(true)}>
+                {t("workspaces.dashboard.newProject", "New Project")}
+              </Button>
+            )}
           </div>
 
           {projects.length === 0 ? (

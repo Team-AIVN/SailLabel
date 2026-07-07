@@ -1,6 +1,8 @@
 import i18next from "i18next";
 import { useMemo, useState } from "react";
 import { useHistory } from "react-router";
+import { Redirect } from "react-router-dom";
+import { projectPermissions } from "../../utils/permissions";
 import { Button, Typography, useToast } from "@humansignal/ui";
 import { useUpdatePageTitle, createTitleFromSegments } from "@humansignal/core";
 import { Label } from "../../components/Form";
@@ -193,6 +195,11 @@ export const DangerZone = () => {
     ],
     [project],
   );
+
+  // Project managers can open settings but must not delete — send them back.
+  if (project?.id && !projectPermissions(project?.current_user_role).canDelete) {
+    return <Redirect to={`/projects/${project.id}/data`} />;
+  }
 
   return (
     <div className={cn("simple-settings").toClassName()}>
