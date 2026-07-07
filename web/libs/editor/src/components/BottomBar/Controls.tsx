@@ -47,6 +47,7 @@ type ControlButtonProps = {
 export const EMPTY_SUBMIT_TOOLTIP = "Empty annotations denied in this project";
 export const INCOMPLETE_SUBMIT_TOOLTIP = "Complete all regions before submitting";
 export const INCOMPLETE_UPDATE_TOOLTIP = "Complete all regions before updating";
+export const INCOMPLETE_REQUIRED_TOOLTIP = "필수 항목(*)을 모두 입력해야 합니다";
 export const INCOMPLETE_ACCEPT_TOOLTIP = "Complete all regions before accepting";
 
 /**
@@ -240,7 +241,15 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
 
       // Also disable when overlap is reached (only when feature flag is enabled)
       const overlapDisabled = isFF(FF_FIT_1304_STRICT_OVERLAP) && store.overlapReached === true;
-      const isDisabled = disabled || submitDisabled || overlapDisabled || hasIncompleteRegions;
+      // Disable until every required whole-object field has a value, so Submit/Update is
+      // only clickable when the annotation is complete (instead of erroring on click).
+      let hasUnmetRequired = false;
+      annotation.traverseTree?.((node: any) => {
+        if (node?.required && !node.perregion && !node.peritem && node.isVisible !== false && node.holdsState === false) {
+          hasUnmetRequired = true;
+        }
+      });
+      const isDisabled = disabled || submitDisabled || overlapDisabled || hasIncompleteRegions || hasUnmetRequired;
 
       const useExitOption = !isDisabled && isNotQuickView;
 
@@ -280,13 +289,15 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
       };
 
       if (userGenerate || (store.explore && !userGenerate && store.hasInterface("submit"))) {
-        const title = hasIncompleteRegions
-          ? INCOMPLETE_SUBMIT_TOOLTIP
-          : overlapDisabled
-            ? store.overlapReachedMessage
-            : submitDisabled
-              ? EMPTY_SUBMIT_TOOLTIP
-              : "Save results: [ Ctrl+Enter ]";
+        const title = hasUnmetRequired
+          ? INCOMPLETE_REQUIRED_TOOLTIP
+          : hasIncompleteRegions
+            ? INCOMPLETE_SUBMIT_TOOLTIP
+            : overlapDisabled
+              ? store.overlapReachedMessage
+              : submitDisabled
+                ? EMPTY_SUBMIT_TOOLTIP
+                : "Save results: [ Ctrl+Enter ]";
 
         buttons.push(
           <ButtonTooltip key="submit" title={title} className="whitespace-nowrap max-w-none">
@@ -337,11 +348,13 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
         // draft, but text/choice edits don't always register there — leaving labelers
         // unable to re-submit a corrected annotation. Allow Update whenever editable.
         const isUpdateDisabled = isDisabled;
-        const updateTitle = hasIncompleteRegions
-          ? INCOMPLETE_UPDATE_TOOLTIP
-          : overlapDisabled
-            ? store.overlapReachedMessage
-            : "Update this task: [ Ctrl+Enter ]";
+        const updateTitle = hasUnmetRequired
+          ? INCOMPLETE_REQUIRED_TOOLTIP
+          : hasIncompleteRegions
+            ? INCOMPLETE_UPDATE_TOOLTIP
+            : overlapDisabled
+              ? store.overlapReachedMessage
+              : "Update this task: [ Ctrl+Enter ]";
         const button = (
           <ButtonTooltip key="update" title={updateTitle} className="whitespace-nowrap max-w-none">
             <div className={cn("controls").elem("tooltip-wrapper").toClassName()}>
