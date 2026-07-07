@@ -159,6 +159,38 @@ def reject(annotation, reviewer, comment='', stage=1):
     return review
 
 
+def _result_field_map(result):
+    """Flatten an annotation result into {from_name: human-readable value}."""
+    out = {}
+    for r in result or []:
+        value = r.get('value', {}) if isinstance(r, dict) else {}
+        if 'choices' in value:
+            shown = ', '.join(value.get('choices') or [])
+        elif 'text' in value:
+            text = value.get('text')
+            shown = ' '.join(text) if isinstance(text, list) else str(text)
+        else:
+            shown = str(value)
+        out[r.get('from_name', '?')] = shown
+    return out
+
+
+def build_fix_summary(original, corrected):
+    """Readable field-level summary of what the reviewer changed (old -> new)."""
+    before = _result_field_map(original)
+    after = _result_field_map(corrected)
+    keys = list(dict.fromkeys(list(before.keys()) + list(after.keys())))
+    lines = []
+    for k in keys:
+        b = before.get(k, '(없음)')
+        a = after.get(k, '(없음)')
+        if b != a:
+            lines.append(f'{k}: {b or "(없음)"} → {a or "(없음)"}')
+    if not lines:
+        return '[수정 후 승인] 변경 없음'
+    return '[수정 후 승인]\n' + '\n'.join(lines)
+
+
 @transaction.atomic
 def fix_and_accept(annotation, reviewer, content=None, comment='', stage=1):
     """Create a new revision authored by the reviewer and approve it.
@@ -167,11 +199,14 @@ def fix_and_accept(annotation, reviewer, content=None, comment='', stage=1):
     annotation. The review is recorded against the revision that was reviewed.
     """
     task = annotation.task
+    corrected = content if content is not None else annotation.result
+    # Readable field-level change summary, captured before the original is superseded.
+    summary = build_fix_summary(annotation.result, corrected)
     new_revision = Annotation.objects.create(
         task=task,
         project=annotation.project,
         completed_by=reviewer,
-        result=content if content is not None else annotation.result,
+        result=corrected,
         parent_annotation=annotation,
         status=Annotation.Status.APPROVED,
     )
@@ -179,7 +214,7 @@ def fix_and_accept(annotation, reviewer, content=None, comment='', stage=1):
     # signal does this for review-enabled projects, but not for review_strategy=NONE
     # projects (where the signal is not connected), so do it here to be self-sufficient.
     assign_revision(new_revision)
-    review = _record_review(annotation, reviewer, Review.Decision.FIX_AND_ACCEPT, comment=comment, stage=stage)
+    review = _record_review(annotation, reviewer, Review.Decision.FIX_AND_ACCEPT, comment=summary, stage=stage)
     Task.objects.filter(pk=task.pk).update(review_status=Task.ReviewStatus.FIXED_AND_ACCEPTED)
     return review, new_revision
 

@@ -120,7 +120,7 @@ const ReviewPageInner = () => {
   // Render a review comment; a "[Fix + Accept]" auto-comment becomes a code-diff block.
   const renderCommentBody = (text) => {
     const fix = parseFixComment(text);
-    if (!fix) return text;
+    if (!fix) return <span style={{ whiteSpace: "pre-line" }}>{text}</span>;
     return (
       <div className={root.elem("diff").toClassName()}>
         <div className={root.elem("diff-title").toClassName()}>Fix + Accept</div>
