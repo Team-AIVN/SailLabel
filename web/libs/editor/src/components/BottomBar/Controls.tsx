@@ -222,7 +222,10 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
       );
       buttons.push(<UnskipButton key="unskip" disabled={disabled} store={store} />);
     } else {
-      if (store.hasInterface("skip")) {
+      // Only offer Skip for a fresh, not-yet-submitted annotation. You can't "skip" a
+      // task you've already labeled (or a reviewer approved) — skipping would cancel the
+      // existing annotation and wipe the result. Those show Update instead.
+      if (store.hasInterface("skip") && userGenerate) {
         const onSkipWithComment = (e: React.MouseEvent, action: () => any) => {
           handleActionWithComments(e, action, "Please enter a comment before skipping");
         };
