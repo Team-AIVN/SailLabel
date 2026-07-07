@@ -10,7 +10,12 @@ import "./Review.prefix.css";
 
 const REVIEW_STATUSES = ["NOT_SELECTED", "PENDING", "ACCEPTED", "REJECTED", "FIXED_AND_ACCEPTED"];
 // Each review decision maps to the badge status used for its pill color/label.
-const DECISION_STATUS = { ACCEPT: "ACCEPTED", REJECT: "REJECTED", FIX_AND_ACCEPT: "FIXED_AND_ACCEPTED" };
+const DECISION_STATUS = {
+  ACCEPT: "ACCEPTED",
+  REJECT: "REJECTED",
+  FIX_AND_ACCEPT: "FIXED_AND_ACCEPTED",
+  RESUBMITTED: "PENDING", // labeler edited -> back to pending
+};
 const fmtTime = (value) => {
   const date = new Date(value);
   return isValid(date) ? format(date, "MM/dd HH:mm") : "";
@@ -206,10 +211,11 @@ const ReviewPageInner = () => {
   );
 };
 
-// Reviewers (and project managers / workspace managers / super admins) only.
-// Labelers and unassigned members are redirected to the project data view.
+// Reviewers/managers see all tasks; labelers may open it too (the backend scopes
+// them to their own tasks) so they can see the decisions/reasons on their work.
+// Unassigned members are redirected to the project data view.
 export const ReviewPage = () => (
-  <ProjectRoleGuard check={(perms) => perms.canReview}>
+  <ProjectRoleGuard check={(perms) => perms.canReview || perms.canLabel}>
     <ReviewPageInner />
   </ProjectRoleGuard>
 );

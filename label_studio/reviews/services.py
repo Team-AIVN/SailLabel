@@ -97,6 +97,18 @@ def on_annotation_updated(annotation):
             review_status=Task.ReviewStatus.PENDING,
             is_labeled=True,
         )
+        # Log the edit as a timeline event (task went back to pending), unless the last
+        # event was already a resubmit — so repeated edits don't pile up rows.
+        last = Review.objects.filter(annotation=annotation).order_by('-created_at', '-id').first()
+        if not (last and last.decision == Review.Decision.RESUBMITTED):
+            Review.objects.create(
+                annotation=annotation,
+                project=annotation.project,
+                reviewer=None,
+                decision=Review.Decision.RESUBMITTED,
+                comment='',
+                stage=1,
+            )
 
 
 # --- review actions ----------------------------------------------------------

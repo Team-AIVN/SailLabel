@@ -17,6 +17,9 @@ class Review(models.Model):
         ACCEPT = 'ACCEPT', _('Accept')
         REJECT = 'REJECT', _('Reject')
         FIX_AND_ACCEPT = 'FIX_AND_ACCEPT', _('Fix and accept')
+        # Logged (not a reviewer action) when a labeler edits a reviewed revision,
+        # sending the task back to pending — shown in the review timeline.
+        RESUBMITTED = 'RESUBMITTED', _('Resubmitted after edit')
 
     annotation = models.ForeignKey(
         'tasks.Annotation',
