@@ -381,6 +381,9 @@ export const WorkspaceDetail = () => {
                       <span>
                         {t("workspaces.dashboard.reviewers", "Reviewers")}: <b>{p.reviewer_count ?? 0}</b>
                       </span>
+                      <span>
+                        {t("workspaces.dashboard.workers", "Workers")}: <b>{p.worker_count ?? 0}</b>
+                      </span>
                     </div>
                     <div className={root.elem("progress").toClassName()}>
                       <div className={root.elem("progress-bar").toClassName()} style={{ width: `${ann.percent}%` }} />

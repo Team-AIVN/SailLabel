@@ -95,6 +95,7 @@
       "poolItems": "Pool items",
       "annotators": "Labelers",
       "reviewers": "Reviewers",
+      "workers": "Workers",
       "annotationProgress": "Annotation Progress",
       "reviewProgressLine": "Review Progress",
       "approved": "Approved",

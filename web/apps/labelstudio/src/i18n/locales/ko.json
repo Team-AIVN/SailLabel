@@ -95,6 +95,7 @@
       "poolItems": "작업집합 데이터",
       "annotators": "라벨러",
       "reviewers": "검수자",
+      "workers": "Worker",
       "annotationProgress": "어노테이션 진행도",
       "reviewProgressLine": "검수 진행도",
       "approved": "승인됨",

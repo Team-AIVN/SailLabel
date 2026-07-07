@@ -167,6 +167,7 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
     task_pool_item_count = serializers.SerializerMethodField()
     annotator_count = serializers.SerializerMethodField()
     reviewer_count = serializers.SerializerMethodField()
+    worker_count = serializers.SerializerMethodField()
     stats = serializers.SerializerMethodField()
 
     class Meta:
@@ -184,6 +185,7 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
             'task_pool_item_count',
             'annotator_count',
             'reviewer_count',
+            'worker_count',
             'stats',
             'created_at',
         )
@@ -234,6 +236,7 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
             cached = ProjectMember.objects.filter(project=obj, deleted_at__isnull=True).aggregate(
                 annotators=Count('id', filter=Q(role=ProjectRole.ANNOTATOR)),
                 reviewers=Count('id', filter=Q(role=ProjectRole.REVIEWER)),
+                workers=Count('id', filter=Q(role=ProjectRole.MEMBER)),
             )
             obj._card_member_counts = cached
         return cached
@@ -248,6 +251,10 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
 
     def get_reviewer_count(self, obj) -> int:
         return self._member_counts(obj)['reviewers'] or 0
+
+    def get_worker_count(self, obj) -> int:
+        # Members assigned to the project but not yet given a labeler/reviewer role.
+        return self._member_counts(obj)['workers'] or 0
 
     def get_stats(self, obj):
         s = self._task_stats(obj)
