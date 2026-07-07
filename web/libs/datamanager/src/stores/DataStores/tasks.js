@@ -29,6 +29,8 @@ export const create = (columns) => {
     reviewed_by: types.optional(types.array(Assignee), []),
     // Raw review version records for the task (rendered as links by the Reviews cell).
     reviews: types.frozen([]),
+    // Current review status of the task (source of truth for the Reviews cell badge).
+    review_status: types.optional(types.maybeNull(types.string), null),
     annotations: types.optional(types.array(CustomJSON), []),
     predictions: types.optional(types.array(CustomJSON), []),
     drafts: types.frozen(),
