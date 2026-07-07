@@ -176,13 +176,29 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
         const onReject = async (e: React.MouseEvent) => {
           const selected = store.annotationStore?.selected;
 
-          if (store.hasInterface("comments:reject")) {
-            handleActionWithComments(e, action, "Please enter a comment before rejecting");
-          } else {
-            selected?.submissionInProgress();
-            await store.commentStore.commentFormSubmit();
-            action();
+          // Custom reject buttons keep their own flow.
+          if (hasCustomReject) {
+            if (store.hasInterface("comments:reject")) {
+              handleActionWithComments(e, action, "Please enter a comment before rejecting");
+            } else {
+              selected?.submissionInProgress();
+              await store.commentStore.commentFormSubmit();
+              action();
+            }
+            return;
           }
+
+          // Default reject always captures a reason: use the one typed in the Comments
+          // box if present, otherwise prompt for it so rejecting is never a dead click.
+          const comment = store.commentStore.currentComment?.[annotation.id];
+          let reason = ((comment?.text ?? comment) as string | undefined)?.trim?.() ?? "";
+          if (!reason) {
+            const entered = window.prompt(i18next.t("editor.rejectReasonPrompt", "거절 사유를 입력하세요"));
+            if (entered == null || !entered.trim()) return;
+            reason = entered.trim();
+          }
+          selected?.submissionInProgress();
+          store.rejectAnnotation({ comment: reason });
         };
 
         buttons.push(<ControlButton key={button.name} button={button} disabled={disabled} onClick={onReject} />);
@@ -299,16 +315,15 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
         );
       } else if ((userGenerate && sentUserGenerate) || (!userGenerate && store.hasInterface("update"))) {
         const isUpdate = Boolean(isFF(FF_REVIEWER_FLOW) || sentUserGenerate || versions.result);
-        // no changes were made over previously submitted version — no drafts, no pending changes
-        const noChanges = isFF(FF_REVIEWER_FLOW) && !history.canUndo && !annotation.draftId;
-        const isUpdateDisabled = isDisabled || noChanges;
+        // Previously Update was disabled unless the store reported undo history or a
+        // draft, but text/choice edits don't always register there — leaving labelers
+        // unable to re-submit a corrected annotation. Allow Update whenever editable.
+        const isUpdateDisabled = isDisabled;
         const updateTitle = hasIncompleteRegions
           ? INCOMPLETE_UPDATE_TOOLTIP
           : overlapDisabled
             ? store.overlapReachedMessage
-            : noChanges
-              ? "No changes were made"
-              : "Update this task: [ Ctrl+Enter ]";
+            : "Update this task: [ Ctrl+Enter ]";
         const button = (
           <ButtonTooltip key="update" title={updateTitle} className="whitespace-nowrap max-w-none">
             <div className={cn("controls").elem("tooltip-wrapper").toClassName()}>

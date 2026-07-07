@@ -81,16 +81,36 @@ def on_annotation_created(annotation):
 # --- review actions ----------------------------------------------------------
 
 
-@transaction.atomic
-def accept(annotation, reviewer, comment='', stage=1):
-    review = Review.objects.create(
+def _record_review(annotation, reviewer, decision, comment='', stage=1):
+    """Upsert this reviewer's decision for the annotation revision.
+
+    A reviewer has a single decision per annotation revision (and stage): re-deciding
+    updates that row instead of piling up duplicate review records. Any pre-existing
+    duplicates are collapsed into the first row.
+    """
+    existing = list(Review.objects.filter(annotation=annotation, reviewer=reviewer, stage=stage).order_by('id'))
+    if existing:
+        review = existing[0]
+        if len(existing) > 1:
+            Review.objects.filter(pk__in=[r.pk for r in existing[1:]]).delete()
+        review.project = annotation.project
+        review.decision = decision
+        review.comment = comment or ''
+        review.save(update_fields=['project', 'decision', 'comment'])
+        return review
+    return Review.objects.create(
         annotation=annotation,
         project=annotation.project,
         reviewer=reviewer,
-        decision=Review.Decision.ACCEPT,
+        decision=decision,
         comment=comment or '',
         stage=stage,
     )
+
+
+@transaction.atomic
+def accept(annotation, reviewer, comment='', stage=1):
+    review = _record_review(annotation, reviewer, Review.Decision.ACCEPT, comment=comment, stage=stage)
     Annotation.objects.filter(pk=annotation.pk).update(status=Annotation.Status.APPROVED)
     Task.objects.filter(pk=annotation.task_id).update(review_status=Task.ReviewStatus.ACCEPTED)
     return review
@@ -98,14 +118,7 @@ def accept(annotation, reviewer, comment='', stage=1):
 
 @transaction.atomic
 def reject(annotation, reviewer, comment='', stage=1):
-    review = Review.objects.create(
-        annotation=annotation,
-        project=annotation.project,
-        reviewer=reviewer,
-        decision=Review.Decision.REJECT,
-        comment=comment or '',
-        stage=stage,
-    )
+    review = _record_review(annotation, reviewer, Review.Decision.REJECT, comment=comment, stage=stage)
     # Mark the current revision as needing rework and return the task to the
     # annotator's queue (is_labeled=False makes it eligible for next-task again).
     Annotation.objects.filter(pk=annotation.pk).update(status=Annotation.Status.REWORK_REQUIRED)
@@ -136,14 +149,7 @@ def fix_and_accept(annotation, reviewer, content=None, comment='', stage=1):
     # signal does this for review-enabled projects, but not for review_strategy=NONE
     # projects (where the signal is not connected), so do it here to be self-sufficient.
     assign_revision(new_revision)
-    review = Review.objects.create(
-        annotation=annotation,
-        project=annotation.project,
-        reviewer=reviewer,
-        decision=Review.Decision.FIX_AND_ACCEPT,
-        comment=comment or '',
-        stage=stage,
-    )
+    review = _record_review(annotation, reviewer, Review.Decision.FIX_AND_ACCEPT, comment=comment, stage=stage)
     Task.objects.filter(pk=task.pk).update(review_status=Task.ReviewStatus.FIXED_AND_ACCEPTED)
     return review, new_revision
 
