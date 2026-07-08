@@ -27,8 +27,11 @@ export const WorkspaceStorageSources = ({ workspaceId }) => {
 
   const refresh = useCallback(async () => {
     const res = await api.callApi("workspaceStorages", {
-      params: { provider: PROVIDER, workspacePk: workspaceId },
+      // `workspace` is not a path key, so it becomes the query string (?workspace=N).
+      params: { provider: PROVIDER, workspace: workspaceId },
+      errorFilter: () => true,
     });
+    if (!res?.$meta?.ok) return;
     setStorages(Array.isArray(res) ? res : (res?.results ?? []));
   }, [api, workspaceId]);
 
@@ -51,7 +54,7 @@ export const WorkspaceStorageSources = ({ workspaceId }) => {
       body,
       errorFilter: () => true,
     });
-    if (res?.error || res?.$meta?.status >= 400) {
+    if (!res?.$meta?.ok) {
       toast.show({ message: res?.response?.detail ?? "스토리지 저장에 실패했습니다.", type: "error" });
       return;
     }
@@ -82,7 +85,7 @@ export const WorkspaceStorageSources = ({ workspaceId }) => {
           params: { provider: PROVIDER, pk: storage.id },
           errorFilter: () => true,
         });
-        if (res?.error || res?.$meta?.status >= 400) {
+        if (!res?.$meta?.ok) {
           toast.show({
             message: res?.response?.detail ?? "동기화에 실패했습니다. 연결 정보를 확인하세요.",
             type: "error",

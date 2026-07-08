@@ -79,7 +79,8 @@ export const API_CONFIG = {
     deleteWorkspacePayment: "DELETE:/workspaces/:pk/payments/:paymentPk",
 
     // Workspace-scope cloud storage templates (provider in path: s3 | gcs | azure | localfiles)
-    workspaceStorages: "/storages/:provider/workspace/?workspace=:workspacePk",
+    // NOTE: extra params (e.g. `workspace`) are auto-appended as the query string.
+    workspaceStorages: "/storages/:provider/workspace",
     createWorkspaceStorage: "POST:/storages/:provider/workspace/",
     workspaceStorage: "/storages/:provider/workspace/:pk",
     updateWorkspaceStorage: "PATCH:/storages/:provider/workspace/:pk",
