@@ -9,6 +9,10 @@ on:
         type: string
         default: "latest"
         required: true
+      deploy:
+        description: "빌드 후 VM에 자동 배포"
+        type: boolean
+        default: true
 
 jobs:
   build-push:
@@ -56,3 +60,38 @@ jobs:
           echo "### 이미지 푸시 완료 :rocket:" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`ghcr.io/${{ steps.img.outputs.name }}:${{ inputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`ghcr.io/${{ steps.img.outputs.name }}:${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: "Deploy to Azure VM"
+    needs: build-push
+    if: ${{ inputs.deploy }}
+    runs-on: ubuntu-latest
+    concurrency: deploy-vm    # 동시 배포 방지
+    steps:
+      - name: Pull & restart on VM over SSH
+        env:
+          SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          VM_HOST: 20.200.209.213
+          VM_USER: label-sea
+        run: |
+          install -m 600 /dev/null key.pem && printf '%s\n' "$SSH_KEY" > key.pem
+          ssh -i key.pem -o StrictHostKeyChecking=accept-new "$VM_USER@$VM_HOST" '
+            set -e
+            cd ~/label-sea
+            docker compose pull app
+            docker compose up -d
+            docker image prune -f
+            sleep 20
+            docker compose ps
+          '
+      - name: Health check (public HTTPS)
+        run: |
+          for i in $(seq 1 10); do
+            if curl -sf -o /dev/null https://labelsea.aivn-dev.com/health; then
+              echo "HEALTH OK"; exit 0
+            fi
+            echo "waiting for app... ($i/10)"; sleep 10
+          done
+          echo "health check failed"; exit 1
+      - name: Deploy summary
+        run: echo "### VM 배포 완료 :white_check_mark: (https://labelsea.aivn-dev.com)" >> "$GITHUB_STEP_SUMMARY"
