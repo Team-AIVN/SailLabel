@@ -7,6 +7,7 @@ to role predicates from ``users.rules``. Imported from
 
 from core.permissions import make_perm
 from users.rules import (
+    can_create_project,
     is_project_manager_of,
     is_super_admin,
     is_workspace_manager_of,
@@ -23,5 +24,9 @@ project_cache_reset = project_mutator
 make_perm('projects.change', project_mutator, overwrite=True)
 make_perm('projects.delete', project_mutator, overwrite=True)
 make_perm('projects.reset_cache', project_cache_reset, overwrite=True)
-# projects.view and projects.create keep the default `is_authenticated` predicate —
+# Creation is a management action: workspace managers (of any workspace) and super
+# admins only. Whether to additionally require a target workspace and auto-assign the
+# creator as PM is still an open team decision (see permissions-actions.md).
+make_perm('projects.create', can_create_project, overwrite=True)
+# projects.view keeps the default `is_authenticated` predicate —
 # visibility is enforced in the DRF queryset filter (active_organization scope).

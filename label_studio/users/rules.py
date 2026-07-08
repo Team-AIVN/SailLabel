@@ -58,7 +58,11 @@ def is_super_admin(user):
     org_id = getattr(user, 'active_organization_id', None)
     if not org_id:
         return False
-    from organizations.models import OrganizationMember
+    from organizations.models import Organization, OrganizationMember
+
+    # The organization owner (creator) is the super admin for their organization.
+    if Organization.objects.filter(id=org_id, created_by=user).exists():
+        return True
 
     return OrganizationMember.objects.filter(
         user=user,
@@ -137,6 +141,40 @@ def is_project_member_of(user, obj):
     if project is None:
         return False
     return project.members.filter(user=user, deleted_at__isnull=True).exists()
+
+
+def _manages_a_workspace(user):
+    """Shared rule for creating projects/workspaces: super admins, and anyone who
+    manages at least one workspace in their active organization. Unary (create has no
+    target object), so a brand-new org is bootstrapped by its super admin, who can then
+    delegate by making others workspace managers."""
+    if not user or not user.is_authenticated:
+        return False
+    if is_super_admin.test(user):
+        return True
+    org_id = getattr(user, 'active_organization_id', None)
+    if not org_id:
+        return False
+    from workspaces.models import WorkspaceMember
+
+    return WorkspaceMember.objects.filter(
+        user=user,
+        workspace__organization_id=org_id,
+        role='workspace_manager',
+        deleted_at__isnull=True,
+    ).exists()
+
+
+@rules.predicate
+def can_create_project(user):
+    """Project creation is a management action (WM/SA) — see ``_manages_a_workspace``."""
+    return _manages_a_workspace(user)
+
+
+@rules.predicate
+def can_create_workspace(user):
+    """Workspace creation is a management action (WM/SA) — see ``_manages_a_workspace``."""
+    return _manages_a_workspace(user)
 
 
 @rules.predicate

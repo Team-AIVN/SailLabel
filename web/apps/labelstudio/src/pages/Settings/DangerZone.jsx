@@ -1,5 +1,8 @@
+import i18next from "i18next";
 import { useMemo, useState } from "react";
 import { useHistory } from "react-router";
+import { Redirect } from "react-router-dom";
+import { projectPermissions } from "../../utils/permissions";
 import { Button, Typography, useToast } from "@humansignal/ui";
 import { useUpdatePageTitle, createTitleFromSegments } from "@humansignal/core";
 import { Label } from "../../components/Form";
@@ -176,34 +179,35 @@ export const DangerZone = () => {
       },
       {
         type: "reset_cache",
-        help:
-          "Reset Cache may help in cases like if you are unable to modify the labeling configuration due " +
-          "to validation errors concerning existing labels, but you are confident that the labels don't exist. You can " +
-          "use this action to reset the cache and try again.",
-        label: "Reset Cache",
+        help: i18next.t("danger.resetCacheHelp"),
+        label: i18next.t("danger.resetCache"),
       },
       {
         type: "tabs",
-        help: "If the Data Manager is not loading, dropping all Data Manager tabs can help.",
-        label: "Drop All Tabs",
+        help: i18next.t("danger.dropTabsHelp"),
+        label: i18next.t("danger.dropTabs"),
       },
       {
         type: "project",
-        help: "Deleting a project removes all tasks, annotations, and project data from the database.",
-        label: "Delete Project",
+        help: i18next.t("danger.deleteProjectHelp"),
+        label: i18next.t("danger.deleteProject"),
       },
     ],
     [project],
   );
 
+  // Project managers can open settings but must not delete — send them back.
+  if (project?.id && !projectPermissions(project?.current_user_role).canDelete) {
+    return <Redirect to={`/projects/${project.id}/data`} />;
+  }
+
   return (
     <div className={cn("simple-settings").toClassName()}>
       <Typography variant="headline" size="medium" className="mb-tighter">
-        Danger Zone
+        {i18next.t("danger.title")}
       </Typography>
       <Typography variant="body" size="medium" className="text-neutral-content-subtler !mb-base">
-        Perform these actions at your own risk. Actions you take on this page can't be reverted. Make sure your data is
-        backed up.
+        {i18next.t("danger.description")}
       </Typography>
 
       {project.id ? (

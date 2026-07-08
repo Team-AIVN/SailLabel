@@ -1,4 +1,5 @@
 import { isStarterCloudPlan } from "@humansignal/core";
+import i18next from "i18next";
 import { cn } from "../../../utils/bem";
 import { ErrorBox } from "../../Common/ErrorBox";
 import { FieldsButton } from "../../Common/FieldsButton";
@@ -25,7 +26,7 @@ const style = {
  * If expired it renders disabled Import button with a tooltip.
  */
 const ImportButtonWithChecks = ({ size }) => {
-  const simpleButton = <ImportButton size={size}>Import</ImportButton>;
+  const simpleButton = <ImportButton size={size}>{i18next.t("dm.import")}</ImportButton>;
   const isOpenSource = !window.APP_SETTINGS.billing;
   // Check if user is on Starter Cloud plan
   const isStarterCloud = isStarterCloudPlan();
@@ -57,7 +58,7 @@ const ImportButtonWithChecks = ({ size }) => {
     >
       <div className={cn("button-wrapper").toClassName()}>
         <ImportButton disabled size={size}>
-          Import
+          {i18next.t("dm.import")}
         </ImportButton>
       </div>
     </Tooltip>
@@ -73,7 +74,13 @@ export const instruments = {
   },
   columns: ({ size }) => {
     return (
-      <FieldsButton multiSelect={true} title={"Columns"} size={size} style={style} openUpwardForShortViewport={false} />
+      <FieldsButton
+        multiSelect={true}
+        title={i18next.t("dm.columns")}
+        size={size}
+        style={style}
+        openUpwardForShortViewport={false}
+      />
     );
   },
   filters: ({ size }) => {
@@ -110,7 +117,7 @@ export const instruments = {
   "export-button": ({ size }) => {
     return (
       <Interface name="export">
-        <ExportButton size={size}>Export</ExportButton>
+        <ExportButton size={size}>{i18next.t("dm.export")}</ExportButton>
       </Interface>
     );
   },

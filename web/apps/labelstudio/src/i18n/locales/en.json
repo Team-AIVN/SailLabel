@@ -34,7 +34,8 @@
       "workload": "Workload",
       "notFound": "Workspace not found",
       "taskpools": "Task Pools",
-      "compensation": "Compensation"
+      "compensation": "Compensation",
+      "storage": "Cloud Storage"
     },
     "roles": {
       "member": "Member",
@@ -73,7 +74,7 @@
     "dashboard": {
       "newProject": "New Project",
       "newDataset": "New Dataset",
-      "inviteUser": "Invite User",
+      "inviteUser": "Add existing member",
       "searchProjects": "Search projects",
       "searchDatasets": "Search datasets",
       "searchUsers": "Search users",
@@ -95,6 +96,7 @@
       "poolItems": "Pool items",
       "annotators": "Labelers",
       "reviewers": "Reviewers",
+      "workers": "Workers",
       "annotationProgress": "Annotation Progress",
       "reviewProgressLine": "Review Progress",
       "approved": "Approved",
@@ -144,6 +146,7 @@
     "welcome": "Welcome 👋",
     "getStarted": "Let's get you started.",
     "actions": {
+      "createWorkspace": "Create Workspace",
       "createProject": "Create Project",
       "inviteMembers": "Invite Members"
     },
@@ -151,10 +154,13 @@
     "viewAll": "View All",
     "loadError": "Can't load projects",
     "empty": {
-      "title": "Create your first project",
-      "description": "Import your data and set up the labeling interface to start annotating",
-      "cta": "Create Project",
-      "createProjectAriaLabel": "Create new project"
+      "title": "Create your first workspace",
+      "description": "A workspace is where you upload datasets and organize projects. Start by creating one.",
+      "cta": "Create Workspace",
+      "createWorkspaceAriaLabel": "Create new workspace",
+      "createProjectAriaLabel": "Create new project",
+      "memberTitle": "No assignments yet",
+      "memberDescription": "Once an administrator adds you to a workspace or project, it will show up here."
     },
     "tasksProgress": "{{finished}} of {{total}} Tasks ({{percent}}%)",
     "resources": {
@@ -403,5 +409,104 @@
     "added": "Workers assigned",
     "removed": "Workers removed",
     "actionFailed": "Could not update assignment"
+  },
+  "dm": {
+    "columns": "Columns",
+    "filters": "Filters",
+    "orderBy": "Order by",
+    "actions": "Actions",
+    "labelAll": "Label All Tasks",
+    "labelCount": "Label {{count}} Task",
+    "labelAsDisplayed": "Label Tasks As Displayed",
+    "export": "Export",
+    "import": "Import",
+    "reviewStatus": {
+      "NOT_SELECTED": "Not selected",
+      "PENDING": "Pending",
+      "ACCEPTED": "Accepted",
+      "REJECTED": "Rejected",
+      "FIXED_AND_ACCEPTED": "Fixed & accepted"
+    },
+    "viewMore": "View more"
+  },
+  "dmcol": {
+    "completed_at": "Completed",
+    "total_annotations": "Annotations",
+    "cancelled_annotations": "Cancelled",
+    "total_predictions": "Predictions",
+    "annotators": "Annotated by",
+    "reviewed_at": "Reviewed",
+    "reviewed_by": "Reviewed by",
+    "reviews": "Reviews",
+    "avg_lead_time": "Lead Time",
+    "created_at": "Created at",
+    "updated_at": "Updated at",
+    "draft_exists": "Drafts"
+  },
+  "settings": {
+    "general": "General",
+    "workers": "Workers",
+    "labelingInterface": "Labeling Interface",
+    "annotation": "Annotation",
+    "model": "Model",
+    "predictions": "Predictions",
+    "cloudStorage": "Cloud Storage",
+    "webhooks": "Webhooks",
+    "dangerZone": "Danger Zone"
+  },
+  "people": {
+    "inviteMembers": "Invite members",
+    "inviteDescription": "Invite members to join your instance. People that you invite have full access to all of your projects.",
+    "learnMore": "Learn more",
+    "resetLink": "Reset Link",
+    "copyLink": "Copy link",
+    "copied": "Copied!"
+  },
+  "templates": {
+    "computerVision": "Computer Vision",
+    "nlp": "Natural Language Processing",
+    "audioSpeech": "Audio/Speech Processing",
+    "conversationalAI": "Conversational AI",
+    "chat": "Chat",
+    "rankingScoring": "Ranking & Scoring",
+    "structuredData": "Structured Data Parsing",
+    "timeSeries": "Time Series Analysis",
+    "videos": "Videos",
+    "generativeAI": "Generative AI",
+    "community": "Community Contributions",
+    "customTemplate": "Custom template"
+  },
+  "editor": {
+    "compareAll": "Compare All",
+    "submit": "Submit",
+    "update": "Update",
+    "skip": "Skip",
+    "submitAndExit": "Submit and exit",
+    "updateAndExit": "Update and exit",
+    "accept": "Accept",
+    "reject": "Reject",
+    "fixAndAccept": "Fix + Accept",
+    "assignmentPending": "No role assigned yet. You can start once an admin assigns you as a labeler or reviewer.",
+    "rejectReasonPrompt": "Enter a reason for rejecting"
+  },
+  "danger": {
+    "title": "Danger Zone",
+    "description": "Perform these actions at your own risk. Actions you take on this page can't be reverted. Make sure your data is backed up.",
+    "resetCache": "Reset Cache",
+    "resetCacheHelp": "Reset Cache may help in cases like if you are unable to modify the labeling configuration due to validation errors concerning existing labels, but you are confident that the labels don't exist. You can use this action to reset the cache and try again.",
+    "dropTabs": "Drop All Tabs",
+    "dropTabsHelp": "If the Data Manager is not loading, dropping all Data Manager tabs can help.",
+    "deleteProject": "Delete Project",
+    "deleteProjectHelp": "Deleting a project removes all tasks, annotations, and project data from the database."
+  },
+  "annotationPage": {
+    "title": "Annotation Settings",
+    "labelingInstructions": "Labeling Instructions",
+    "instructionsHelp": "Write instructions to help users complete labeling tasks.",
+    "instructionsHtml": "The instruction field supports HTML markup and it allows use of images, iframes (pdf).",
+    "showBeforeLabeling": "Show before labeling",
+    "prelabeling": "Prelabeling",
+    "usePredictions": "Use predictions to prelabel tasks",
+    "usePredictionsHelp": "Enable and select which set of predictions to use for prelabeling."
   }
 }

@@ -16,7 +16,7 @@ from rest_framework import generics, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from users.constants import ProjectRole
-from users.rules import is_project_manager_of
+from users.rules import is_project_manager_of, is_super_admin
 from workspaces.models import Workspace
 from workspaces.rules import is_workspace_manager, is_workspace_member
 from workspaces.taskpools_api import _get_workspace
@@ -37,11 +37,12 @@ def _get_project(request, pk):
 
 
 def _require_project_comp_manager(user, project):
-    """Compensation is a workspace concept; only a workspace manager may configure it."""
+    """Compensation rates are a budget policy: only workspace managers or super admins
+    may configure them (project managers handle settlement, not pricing)."""
     if project.workspace_id is None:
         raise ValidationError('Compensation policies are only available for workspace projects.')
-    if not is_workspace_manager(user, project.workspace):
-        raise PermissionDenied('Only a workspace manager can configure compensation.')
+    if not (is_super_admin.test(user) or is_workspace_manager(user, project.workspace)):
+        raise PermissionDenied('Only a workspace manager or super admin can configure compensation.')
 
 
 def _get_workspace_for_compensation(request, pk):

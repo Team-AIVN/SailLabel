@@ -1,5 +1,6 @@
 import { IconChevronDown, IconChevronRight, IconTrash } from "@humansignal/icons";
 import { Button, Spinner, Badge, EnterpriseBadge } from "@humansignal/ui";
+import i18next from "i18next";
 import { inject, observer } from "mobx-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useActions } from "../../../hooks/useActions";
@@ -261,7 +262,7 @@ export const ActionsButton = injector(
           aria-label="Tasks Actions"
           {...rest}
         >
-          {selectedCount > 0 ? `${selectedCount} ${recordTypeLabel}${selectedCount > 1 ? "s" : ""}` : "Actions"}
+          {selectedCount > 0 ? `${selectedCount} ${recordTypeLabel}${selectedCount > 1 ? "s" : ""}` : i18next.t("dm.actions")}
         </Button>
       </Dropdown.Trigger>
     );

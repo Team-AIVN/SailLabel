@@ -21,8 +21,11 @@ import { StorageSet } from "./StorageSet";
 import { useStorageCard } from "./hooks/useStorageCard";
 import "./StorageSettings.prefix.css";
 
-export const StorageSettings = () => {
+export const StorageSettings = ({ projectId: projectIdProp } = {}) => {
   const { project } = useProject();
+  // projectId can be passed explicitly (workspace-level storage tab) or inferred from
+  // the current project context (legacy project-settings usage).
+  const projectId = projectIdProp ?? project?.id;
   const rootClass = cn("storage-settings"); // TODO: Remove in the next BEM cleanup
   const history = useHistory();
   const location = useLocation();
@@ -32,8 +35,8 @@ export const StorageSettings = () => {
   useUpdatePageTitle(createTitleFromSegments([project?.title, "Cloud Storage Settings"]));
 
   // Fetch storage data at parent level
-  const sourceStorage = useStorageCard("", project?.id);
-  const targetStorage = useStorageCard("export", project?.id);
+  const sourceStorage = useStorageCard("", projectId);
+  const targetStorage = useStorageCard("export", projectId);
 
   // Check if any storages exist
   const hasAnyStorages = sourceStorage.storages?.length > 0 || targetStorage.storages?.length > 0;
@@ -86,6 +89,7 @@ export const StorageSettings = () => {
             loading={sourceStorage.loading}
             loaded={sourceStorage.loaded}
             fetchStorages={sourceStorage.fetchStorages}
+            projectId={projectId}
           />
 
           <StorageSet
@@ -100,6 +104,7 @@ export const StorageSettings = () => {
             loading={targetStorage.loading}
             loaded={targetStorage.loaded}
             fetchStorages={targetStorage.fetchStorages}
+            projectId={projectId}
           />
         </div>
       </div>

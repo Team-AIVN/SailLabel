@@ -26,11 +26,15 @@ export const StorageSet = forwardRef(
       loading,
       loaded,
       fetchStorages,
+      projectId,
     },
     ref,
   ) => {
     const api = useContext(ApiContext);
-    const project = useAtomValue(projectAtom);
+    const atomProject = useAtomValue(projectAtom);
+    // Allow an explicit projectId (e.g. rendered from the workspace storage tab for a
+    // chosen project) to override the ambient current-project atom.
+    const project = projectId != null ? { id: projectId } : atomProject;
 
     const useNewStorageScreen = ff.isActive(ff.FF_NEW_STORAGES);
 

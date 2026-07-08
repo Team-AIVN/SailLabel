@@ -7,20 +7,26 @@ import { Space } from "../../components/Space/Space";
 import { Spinner } from "../../components/Spinner/Spinner";
 import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
+import { workspacePermissions } from "../../utils/permissions";
 import { CreateProject } from "../CreateProject/CreateProject";
 import { Compensation } from "./Compensation";
+import { InviteMember } from "./InviteMember";
+import { StorageSettings } from "../Settings/StorageSettings/StorageSettings";
 import { TaskPools } from "./TaskPools";
 import { WorkspaceImportPage } from "./WorkspaceImport";
 import "./WorkspaceDetail.prefix.css";
 
-const TABS = ["projects", "datasets", "taskpools", "users", "compensation"];
+const TABS = ["projects", "datasets", "taskpools", "users", "compensation", "storage"];
 const TAB_LABEL_KEY = {
   projects: "workspaces.detail.projects",
   datasets: "workspaces.detail.dataset",
   taskpools: "workspaces.detail.taskpools",
   users: "workspaces.detail.members",
   compensation: "workspaces.detail.compensation",
+  storage: "workspaces.detail.storage",
 };
+// Tabs only workspace managers / super admins may see (not project managers).
+const MANAGER_ONLY_TABS = new Set(["storage"]);
 const WORKSPACE_ROLES = ["member", "workspace_manager"];
 
 const listOf = (response) => {
@@ -76,10 +82,10 @@ export const WorkspaceDetail = () => {
   const [ordering, setOrdering] = useState("-created_at");
   const [datasetSearch, setDatasetSearch] = useState("");
   const [userSearch, setUserSearch] = useState("");
+  const [storageProjectId, setStorageProjectId] = useState("");
 
   // create affordances
   const [showNewProject, setShowNewProject] = useState(false);
-  const [showInvite, setShowInvite] = useState(false);
   const [inviteUser, setInviteUser] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [showImport, setShowImport] = useState(false);
@@ -174,7 +180,6 @@ export const WorkspaceDetail = () => {
       toast.show({ message: t("workspaces.members.added") });
       setInviteUser("");
       setInviteRole("member");
-      setShowInvite(false);
       loadUsers();
       loadSummary();
     } else {
@@ -211,12 +216,16 @@ export const WorkspaceDetail = () => {
         openImport();
       } else if (action === "user") {
         setTab("users");
-        setShowInvite(true);
-        loadOrgMembers();
       }
     },
     [setTab, loadOrgMembers, openImport],
   );
+
+  // Load the org member pool whenever the Members tab is shown, so the add-member
+  // dropdown is populated without needing a separate toggle.
+  useEffect(() => {
+    if (activeTab === "users") loadOrgMembers();
+  }, [activeTab, loadOrgMembers]);
 
   if (loading && !summary) {
     return (
@@ -230,6 +239,10 @@ export const WorkspaceDetail = () => {
   const addableUsers = orgMembers
     .map((m) => m.user_detail ?? m.user)
     .filter((u) => u && typeof u === "object" && !memberUserIds.has(u.id));
+
+  // Workspace-role gating: managers get the management actions; project managers
+  // may view the tabs (read-only); plain members (WMb) see only the header.
+  const perms = workspacePermissions(summary?.current_user_role);
 
   return (
     <div className={root.toClassName()}>
@@ -259,22 +272,48 @@ export const WorkspaceDetail = () => {
         </div>
       </header>
 
-      {/* Quick actions */}
-      <div className={root.elem("quick-actions").toClassName()}>
-        <Button size="small" onClick={() => openQuickAction("project")}>
-          {t("workspaces.dashboard.newProject", "New Project")}
-        </Button>
-        <Button size="small" look="outlined" onClick={() => openQuickAction("dataset")}>
-          {t("workspaces.dashboard.newDataset", "New Dataset")}
-        </Button>
-        <Button size="small" look="outlined" onClick={() => openQuickAction("user")}>
-          {t("workspaces.dashboard.inviteUser", "Invite User")}
-        </Button>
-      </div>
+      {/* Quick actions — workspace managers only */}
+      {perms.canManage && (
+        <div className={root.elem("quick-actions").toClassName()}>
+          <Button size="small" onClick={() => openQuickAction("project")}>
+            {t("workspaces.dashboard.newProject", "New Project")}
+          </Button>
+          <Button size="small" look="outlined" onClick={() => openQuickAction("dataset")}>
+            {t("workspaces.dashboard.newDataset", "New Dataset")}
+          </Button>
+          <Button size="small" look="outlined" onClick={() => openQuickAction("user")}>
+            {t("workspaces.dashboard.inviteUser", "Invite User")}
+          </Button>
+        </div>
+      )}
 
-      {/* Tabs */}
+      {/* Workers (no management tabs) get a simple list of their assigned projects
+          so the workspace page isn't an empty screen — click through to labeling. */}
+      {!perms.canViewTabs && (
+        <section className={root.elem("panel").toClassName()}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>내 프로젝트</div>
+          {projects.length === 0 ? (
+            <p className={root.elem("muted").toClassName()}>{t("workspaces.detail.noProjects")}</p>
+          ) : (
+            <div className={root.elem("cards").toClassName()}>
+              {projects.map((p) => (
+                <a key={p.id} href={`/projects/${p.id}/data`} className={root.elem("card").toClassName()}>
+                  <div className={root.elem("card-head").toClassName()}>
+                    <h3>{p.title || t("projects.newProject", "New Project")}</h3>
+                    {p.label_type && <span className={root.elem("badge").toClassName()}>{p.label_type}</span>}
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Tabs — hidden from plain workspace members (WMb), who see only the header */}
+      {perms.canViewTabs && (
+        <>
       <nav className={root.elem("tabs").toClassName()}>
-        {TABS.map((tab) => (
+        {TABS.filter((tab) => !MANAGER_ONLY_TABS.has(tab) || perms.canManage).map((tab) => (
           <button
             type="button"
             key={tab}
@@ -319,9 +358,11 @@ export const WorkspaceDetail = () => {
               <option value="-progress">{t("workspaces.dashboard.sortProgress", "Progress")}</option>
               <option value="title">{t("workspaces.dashboard.sortTitle", "Title")}</option>
             </select>
-            <Button size="small" onClick={() => setShowNewProject(true)}>
-              {t("workspaces.dashboard.newProject", "New Project")}
-            </Button>
+            {perms.canManage && (
+              <Button size="small" onClick={() => setShowNewProject(true)}>
+                {t("workspaces.dashboard.newProject", "New Project")}
+              </Button>
+            )}
           </div>
 
           {projects.length === 0 ? (
@@ -346,6 +387,9 @@ export const WorkspaceDetail = () => {
                       </span>
                       <span>
                         {t("workspaces.dashboard.reviewers", "Reviewers")}: <b>{p.reviewer_count ?? 0}</b>
+                      </span>
+                      <span>
+                        {t("workspaces.dashboard.workers", "Workers")}: <b>{p.worker_count ?? 0}</b>
                       </span>
                     </div>
                     <div className={root.elem("progress").toClassName()}>
@@ -436,9 +480,72 @@ export const WorkspaceDetail = () => {
         </section>
       )}
 
+      {/* Cloud Storage tab (workspace managers only) — pick a project, manage its storage. */}
+      {activeTab === "storage" && perms.canManage && (
+        <section className={root.elem("panel").toClassName()}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+            <span style={{ fontWeight: 600 }}>프로젝트</span>
+            <select
+              value={storageProjectId}
+              onChange={(e) => setStorageProjectId(e.target.value)}
+              style={{ height: 32, padding: "0 8px", border: "1px solid var(--color-neutral-border)", borderRadius: 6 }}
+            >
+              <option value="">프로젝트 선택</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          {storageProjectId ? (
+            <StorageSettings projectId={Number(storageProjectId)} />
+          ) : (
+            <p className={root.elem("muted").toClassName()}>스토리지를 관리할 프로젝트를 선택하세요.</p>
+          )}
+        </section>
+      )}
+
       {/* Users tab */}
       {activeTab === "users" && (
         <section className={root.elem("panel").toClassName()}>
+          {perms.canManage && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontWeight: 600, marginBottom: 2 }}>새 멤버 초대 (계정이 없는 사람)</div>
+              <div style={{ fontSize: 13, color: "var(--color-neutral-content-subtler)", marginBottom: 8 }}>
+                초대 링크를 만들어 전달하세요. 상대가 그 링크로 가입하면 아래 역할로 자동 배치됩니다. (자동 이메일 발송이
+                아닙니다)
+              </div>
+              <InviteMember workspaceId={Number(id)} projects={projects} />
+            </div>
+          )}
+          {perms.canManage && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>기존 멤버 추가 (이미 가입된 사람)</div>
+              <div className={root.elem("inline-form").toClassName()}>
+                <select value={inviteUser} onChange={(e) => setInviteUser(e.target.value)}>
+                  <option value="">{t("workspaces.members.selectUser")}</option>
+                  {addableUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {userLabel(u)}
+                    </option>
+                  ))}
+                </select>
+                <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+                  {WORKSPACE_ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {t(`workspaces.roles.${r}`, r)}
+                    </option>
+                  ))}
+                </select>
+                <Button size="small" onClick={inviteMember} disabled={!inviteUser}>
+                  {t("workspaces.members.add")}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>{t("workspaces.detail.members", "Members")}</div>
           <div className={root.elem("toolbar").toClassName()}>
             <input
               className={root.elem("search").toClassName()}
@@ -446,39 +553,7 @@ export const WorkspaceDetail = () => {
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
             />
-            <Button
-              size="small"
-              onClick={() => {
-                setShowInvite((v) => !v);
-                loadOrgMembers();
-              }}
-            >
-              {t("workspaces.dashboard.inviteUser", "Invite User")}
-            </Button>
           </div>
-
-          {showInvite && (
-            <div className={root.elem("inline-form").toClassName()}>
-              <select value={inviteUser} onChange={(e) => setInviteUser(e.target.value)}>
-                <option value="">{t("workspaces.members.selectUser")}</option>
-                {addableUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {userLabel(u)}
-                  </option>
-                ))}
-              </select>
-              <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
-                {WORKSPACE_ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {t(`workspaces.roles.${r}`, r)}
-                  </option>
-                ))}
-              </select>
-              <Button size="small" onClick={inviteMember} disabled={!inviteUser}>
-                {t("workspaces.members.add")}
-              </Button>
-            </div>
-          )}
 
           <table className={root.elem("table").toClassName()}>
             <thead>
@@ -511,6 +586,8 @@ export const WorkspaceDetail = () => {
             </tbody>
           </table>
         </section>
+      )}
+        </>
       )}
 
       {showImport && (

@@ -151,6 +151,21 @@ export class LSFWrapper {
 
     let interfaces = [...DEFAULT_INTERFACES];
 
+    // Hide the region sidebar (Regions / Relations / Info panels) for label configs
+    // that don't create regions — e.g. text-only description tasks, where the panel
+    // is always empty. Configs with region controls (bounding boxes, polygons, etc.)
+    // keep it.
+    const labelConfigXml = this.project?.label_config ?? "";
+    const hasRegionControls =
+      /<(RectangleLabels|PolygonLabels|BrushLabels|KeyPointLabels|EllipseLabels|Labels|HyperTextLabels|ParagraphLabels|TimeSeriesLabels|Rectangle|Polygon|Brush|KeyPoint|Ellipse|MagicWand)\b/i.test(
+        labelConfigXml,
+      );
+    // Only hide when we actually have a config and it has no region controls;
+    // if the config is missing for any reason, keep the default panel.
+    if (labelConfigXml && !hasRegionControls) {
+      interfaces = interfaces.filter((name) => name !== "side-column");
+    }
+
     if (this.project.enable_empty_annotation === false) {
       interfaces.push("annotations:deny-empty");
     }
@@ -178,6 +193,10 @@ export class LSFWrapper {
         "predictions:tabs",
         "annotations:copy-link",
       );
+      // Allow skipping in quick view (opening a single task) too, not only in the stream.
+      if (this.project.show_skip_button) {
+        interfaces.push("skip");
+      }
     }
 
     if (this.datamanager.hasInterface("instruction")) {
@@ -207,13 +226,23 @@ export class LSFWrapper {
       interfaces.push("review", "comments:reject");
     }
 
+    // A worker who is in the project but has not been assigned a labeling/review role
+    // yet ("member") gets no actions — buttons are replaced with a "waiting for
+    // assignment" notice until an admin makes them a labeler or reviewer.
+    if (this.project.current_user_role === "member") {
+      interfaces = interfaces.filter((i) => !["submit", "update", "skip", "review"].includes(i));
+      interfaces.push("assignment:pending");
+    }
+
     if (this.interfacesModifier) {
       interfaces = this.interfacesModifier(interfaces, this.labelStream);
     }
 
     if (!this.shouldLoadNext()) {
+      // Keep "skip" available in quick view (opening a single task) too — only the
+      // prev/next stream navigation is meaningless without a queue.
       interfaces = interfaces.filter((item) => {
-        return !["topbar:prevnext", "skip"].includes(item);
+        return !["topbar:prevnext"].includes(item);
       });
     }
 

@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Button } from "@humansignal/ui";
 import { useUpdatePageTitle, createTitleFromSegments } from "@humansignal/core";
@@ -28,7 +29,7 @@ export const AnnotationSettings = () => {
   return (
     <div className={cn("annotation-settings").toClassName()}>
       <div className={cn("annotation-settings").elem("wrapper").toClassName()}>
-        <h1>Annotation Settings</h1>
+        <h1>{i18next.t("annotationPage.title")}</h1>
         <div className={cn("settings-wrapper").toClassName()}>
           <Form
             ref={formRef}
@@ -38,15 +39,15 @@ export const AnnotationSettings = () => {
             onSubmit={updateProject}
           >
             <Form.Row columnCount={1}>
-              <div className={cn("settings-wrapper").elem("header").toClassName()}>Labeling Instructions</div>
+              <div className={cn("settings-wrapper").elem("header").toClassName()}>
+                {i18next.t("annotationPage.labelingInstructions")}
+              </div>
               <div class="settings-description">
-                <p style={{ marginBottom: "0" }}>Write instructions to help users complete labeling tasks.</p>
-                <p style={{ marginTop: "8px" }}>
-                  The instruction field supports HTML markup and it allows use of images, iframes (pdf).
-                </p>
+                <p style={{ marginBottom: "0" }}>{i18next.t("annotationPage.instructionsHelp")}</p>
+                <p style={{ marginTop: "8px" }}>{i18next.t("annotationPage.instructionsHtml")}</p>
               </div>
               <div>
-                <Toggle label="Show before labeling" name="show_instruction" />
+                <Toggle label={i18next.t("annotationPage.showBeforeLabeling")} name="show_instruction" />
               </div>
               <TextArea name="expert_instruction" style={{ minHeight: 128, maxWidth: "520px" }} />
             </Form.Row>
@@ -55,11 +56,13 @@ export const AnnotationSettings = () => {
 
             <Form.Row columnCount={1}>
               <br />
-              <div className={cn("settings-wrapper").elem("header").toClassName()}>Prelabeling</div>
+              <div className={cn("settings-wrapper").elem("header").toClassName()}>
+                {i18next.t("annotationPage.prelabeling")}
+              </div>
               <div>
                 <Toggle
-                  label="Use predictions to prelabel tasks"
-                  description={<span>Enable and select which set of predictions to use for prelabeling.</span>}
+                  label={i18next.t("annotationPage.usePredictions")}
+                  description={<span>{i18next.t("annotationPage.usePredictionsHelp")}</span>}
                   name="show_collab_predictions"
                   onChange={(e) => {
                     setCollab(e.target.checked);

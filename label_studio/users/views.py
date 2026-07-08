@@ -1,7 +1,7 @@
 """This file and its contents are licensed under the Apache License 2.0. Please see the included NOTICE for copyright information and LICENSE for a copy of the license."""
 
 import logging
-from urllib.parse import quote, urlencode
+from urllib.parse import quote
 
 from core.feature_flags import flag_set
 from core.middleware import enforce_csrf_checks
@@ -13,9 +13,10 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from organizations.forms import OrganizationSignupForm
-from organizations.models import Organization
+from organizations.models import Invitation, Organization
 from rest_framework.authtoken.models import Token
 from users import forms
+from users.models import User
 from users.functions import login, proceed_registration
 
 logger = logging.getLogger()
@@ -23,11 +24,6 @@ logger = logging.getLogger()
 
 @login_required
 def logout(request):
-    # In Keycloak mode, hand off to mozilla-django-oidc so the SSO session
-    # (id_token) is terminated upstream, not just the local Django session.
-    if settings.KEYCLOAK_ENABLED:
-        return redirect(reverse('oidc_logout'))
-
     auth.logout(request)
 
     if settings.LOGOUT_REDIRECT_URL:
@@ -47,6 +43,7 @@ def user_signup(request):
     user = request.user
     next_page = request.GET.get('next')
     token = request.GET.get('token')
+    invite_token = request.GET.get('invite') or request.POST.get('invite')
 
     # checks if the URL is a safe redirection.
     if not next_page or not url_has_allowed_host_and_scheme(url=next_page, allowed_hosts=request.get_host()):
@@ -55,30 +52,30 @@ def user_signup(request):
         else:
             next_page = reverse('projects:project-index')
 
-    # In Keycloak mode, local signup is disabled — the IdP owns identity.
-    # Send the user through the OIDC login flow; the Keycloak login page
-    # exposes its own "Register" link when realm registration is enabled.
-    if settings.KEYCLOAK_ENABLED:
-        if user.is_authenticated:
-            return redirect(next_page)
-        oidc_url = reverse('oidc_authentication_init')
-        return redirect(f'{oidc_url}?{urlencode({"next": next_page})}')
-
     user_form = forms.UserSignupForm()
     organization_form = OrganizationSignupForm()
 
     if user.is_authenticated:
         return redirect(next_page)
 
+    # A valid per-recipient invitation authorizes signup and carries the target
+    # workspace/project/role to apply once the account exists.
+    invitation = None
+    if invite_token:
+        # Reusable link: look up by token only (not "unaccepted"), so multiple people
+        # can sign up through the same invite.
+        invitation = Invitation.objects.filter(token=invite_token).first()
+
     # make a new user
     if request.method == 'POST':
         organization = Organization.objects.first()
-        if settings.DISABLE_SIGNUP_WITHOUT_LINK is True:
-            if not (token and organization and token == organization.token):
-                raise PermissionDenied()
-        else:
-            if token and organization and token != organization.token:
-                raise PermissionDenied()
+        if invitation is None:
+            if settings.DISABLE_SIGNUP_WITHOUT_LINK is True:
+                if not (token and organization and token == organization.token):
+                    raise PermissionDenied()
+            else:
+                if token and organization and token != organization.token:
+                    raise PermissionDenied()
 
         user_form = forms.UserSignupForm(request.POST)
         organization_form = OrganizationSignupForm(request.POST)
@@ -86,6 +83,10 @@ def user_signup(request):
         if user_form.is_valid():
             redirect_response = proceed_registration(request, user_form, organization_form, next_page)
             if redirect_response:
+                if invitation is not None:
+                    new_user = User.objects.filter(email__iexact=user_form.cleaned_data.get('email')).order_by('-id').first()
+                    if new_user is not None:
+                        invitation.apply(new_user)
                 return redirect_response
 
     if flag_set('fflag_feat_front_lsdv_e_297_increase_oss_to_enterprise_adoption_short'):
@@ -97,6 +98,7 @@ def user_signup(request):
                 'organization_form': organization_form,
                 'next': quote(next_page),
                 'token': token,
+                'invite': invite_token or '',
                 'found_us_options': forms.FOUND_US_OPTIONS,
                 'elaborate': forms.FOUND_US_ELABORATE,
             },
@@ -110,6 +112,7 @@ def user_signup(request):
             'organization_form': organization_form,
             'next': quote(next_page),
             'token': token,
+            'invite': invite_token or '',
         },
     )
 
@@ -126,20 +129,6 @@ def user_login(request):
             next_page = reverse('main')
         else:
             next_page = reverse('projects:project-index')
-
-    # In Keycloak mode, render a LabelSea-branded landing page with a button
-    # that hands off to the OIDC authorization code + PKCE flow when clicked,
-    # instead of forcing an immediate upstream redirect on every visit.
-    if settings.KEYCLOAK_ENABLED:
-        if user.is_authenticated:
-            return redirect(next_page)
-        oidc_url = reverse('oidc_authentication_init')
-        oidc_login_url = f'{oidc_url}?{urlencode({"next": next_page})}'
-        return render(
-            request,
-            'users/sail_landing.html',
-            {'oidc_login_url': oidc_login_url, 'next': quote(next_page)},
-        )
 
     login_form = load_func(settings.USER_LOGIN_FORM)
     form = login_form()

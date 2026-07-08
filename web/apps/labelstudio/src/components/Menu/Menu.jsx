@@ -1,9 +1,29 @@
+import i18next from "i18next";
 import { forwardRef, useCallback, useMemo } from "react";
 import { cn } from "../../utils/bem";
 import { useDropdown } from "@humansignal/ui";
 import "./Menu.prefix.css";
 import { MenuContext } from "./MenuContext";
 import { MenuItem } from "./MenuItem";
+
+// Settings sidebar labels come from static page props (`.title`/`.menuItem`) in
+// English. Map them to i18n keys and localize at render so both locales work.
+const MENU_LABEL_KEYS = {
+  General: "settings.general",
+  Workers: "settings.workers",
+  "Labeling Interface": "settings.labelingInterface",
+  Annotation: "settings.annotation",
+  Model: "settings.model",
+  Predictions: "settings.predictions",
+  "Cloud Storage": "settings.cloudStorage",
+  Webhooks: "settings.webhooks",
+  "Danger Zone": "settings.dangerZone",
+};
+
+const localizeMenuLabel = (label) => {
+  const key = typeof label === "string" ? MENU_LABEL_KEYS[label] : null;
+  return key && i18next.exists(key) ? i18next.t(key) : label;
+};
 
 export const Menu = forwardRef(
   ({ children, className, style, size, selectedKeys, closeDropdownOnItemClick, contextual }, ref) => {
@@ -61,6 +81,8 @@ Menu.Builder = (url, menuItems) => {
       pageLabel = title ?? menuItem;
       pagePath = path;
     }
+
+    pageLabel = localizeMenuLabel(pageLabel);
 
     if (typeof pagePath === "function") {
       return (

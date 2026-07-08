@@ -18,4 +18,10 @@ export type APIUser = {
   allow_newsletters: boolean;
   date_joined: string;
   permissions?: Ability[];
+  /** RBAC (from whoami): true when the user is a super admin / organization owner. */
+  is_super_admin?: boolean;
+  /** RBAC (from whoami): true when the user can access at least one workspace. */
+  has_workspace_access?: boolean;
+  /** RBAC (from whoami): true when the user can access at least one project. */
+  has_project_access?: boolean;
 };

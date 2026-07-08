@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { inject, observer } from "mobx-react";
 import React, { useEffect, useRef } from "react";
 import { IconChevronDown } from "@humansignal/icons";
@@ -31,7 +32,7 @@ export const FiltersButton = buttonInjector(
           aria-label="Filters"
           {...rest}
         >
-          Filters{" "}
+          {i18next.t("dm.filters")}{" "}
           {hasFilters && (
             <Badge size="small" className="ml-tightest">
               {activeFiltersNumber}

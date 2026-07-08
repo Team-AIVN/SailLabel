@@ -22,6 +22,7 @@ def _derive_label_type(parsed_label_config):
 
 class WorkspaceSerializer(serializers.ModelSerializer):
     project_count = serializers.SerializerMethodField(read_only=True)
+    current_user_role = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Workspace
@@ -34,6 +35,7 @@ class WorkspaceSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'project_count',
+            'current_user_role',
         )
         read_only_fields = ('organization', 'created_by', 'created_at', 'updated_at', 'project_count')
 
@@ -43,6 +45,13 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         if projects is None:
             return 0
         return projects.filter(deleted_at__isnull=True).count()
+
+    def get_current_user_role(self, obj: Workspace):
+        from users.roles import resolve_workspace_role
+
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        return resolve_workspace_role(user, obj)
 
 
 class WorkspaceMemberSerializer(serializers.ModelSerializer):
@@ -77,6 +86,7 @@ class WorkspaceSummarySerializer(serializers.ModelSerializer):
     total_datasets = serializers.SerializerMethodField()
     total_projects = serializers.SerializerMethodField()
     total_task_pools = serializers.SerializerMethodField()
+    current_user_role = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Workspace
@@ -89,10 +99,18 @@ class WorkspaceSummarySerializer(serializers.ModelSerializer):
             'total_datasets',
             'total_projects',
             'total_task_pools',
+            'current_user_role',
         )
 
     def get_total_users(self, obj) -> int:
         return obj.members.filter(deleted_at__isnull=True).count()
+
+    def get_current_user_role(self, obj):
+        from users.roles import resolve_workspace_role
+
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        return resolve_workspace_role(user, obj)
 
     def get_total_datasets(self, obj) -> int:
         return obj.file_uploads.count()
@@ -149,6 +167,7 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
     task_pool_item_count = serializers.SerializerMethodField()
     annotator_count = serializers.SerializerMethodField()
     reviewer_count = serializers.SerializerMethodField()
+    worker_count = serializers.SerializerMethodField()
     stats = serializers.SerializerMethodField()
 
     class Meta:
@@ -166,6 +185,7 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
             'task_pool_item_count',
             'annotator_count',
             'reviewer_count',
+            'worker_count',
             'stats',
             'created_at',
         )
@@ -216,6 +236,7 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
             cached = ProjectMember.objects.filter(project=obj, deleted_at__isnull=True).aggregate(
                 annotators=Count('id', filter=Q(role=ProjectRole.ANNOTATOR)),
                 reviewers=Count('id', filter=Q(role=ProjectRole.REVIEWER)),
+                workers=Count('id', filter=Q(role=ProjectRole.MEMBER)),
             )
             obj._card_member_counts = cached
         return cached
@@ -230,6 +251,10 @@ class WorkspaceProjectCardSerializer(serializers.ModelSerializer):
 
     def get_reviewer_count(self, obj) -> int:
         return self._member_counts(obj)['reviewers'] or 0
+
+    def get_worker_count(self, obj) -> int:
+        # Members assigned to the project but not yet given a labeler/reviewer role.
+        return self._member_counts(obj)['workers'] or 0
 
     def get_stats(self, obj):
         s = self._task_stats(obj)

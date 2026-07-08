@@ -3,12 +3,11 @@
 `core.middleware.InactivitySessionTimeoutMiddleWare` treats a missing
 `session['last_login']` as "epoch 0" and force-logs-out the user when
 `current_time - 0 > MAX_SESSION_AGE`. The project's local login wrapper
-(`users.functions.common.login`) sets `last_login` explicitly, but third-party
-backends such as mozilla-django-oidc call `django.contrib.auth.login` directly
-and skip that wrapper, which caused a redirect loop after OIDC callback.
+(`users.functions.common.login`) sets `last_login` explicitly, but any code path
+that calls `django.contrib.auth.login` directly skips that wrapper.
 
 Attaching a `user_logged_in` receiver guarantees `last_login` is populated for
-every authentication path (local, OIDC, SCIM, …).
+every authentication path.
 """
 
 from time import time

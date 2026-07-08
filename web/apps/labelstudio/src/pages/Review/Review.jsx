@@ -1,12 +1,25 @@
+import { format, isValid } from "date-fns";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Spinner } from "../../components/Spinner/Spinner";
 import { useAPI } from "../../providers/ApiProvider";
 import { useParams } from "../../providers/RoutesProvider";
 import { cn } from "../../utils/bem";
+import { ProjectRoleGuard } from "../../components/RoleGuard/RoleGuard";
 import "./Review.prefix.css";
 
 const REVIEW_STATUSES = ["NOT_SELECTED", "PENDING", "ACCEPTED", "REJECTED", "FIXED_AND_ACCEPTED"];
+// Each review decision maps to the badge status used for its pill color/label.
+const DECISION_STATUS = {
+  ACCEPT: "ACCEPTED",
+  REJECT: "REJECTED",
+  FIX_AND_ACCEPT: "FIXED_AND_ACCEPTED",
+  RESUBMITTED: "PENDING", // labeler edited -> back to pending
+};
+const fmtTime = (value) => {
+  const date = new Date(value);
+  return isValid(date) ? format(date, "MM/dd HH:mm") : "";
+};
 
 const listOf = (response) => {
   if (!response) return [];
@@ -46,7 +59,7 @@ const signLines = (block, sign) =>
     .map((line) => `${sign} ${line}`)
     .join("\n");
 
-export const ReviewPage = () => {
+const ReviewPageInner = () => {
   const { t } = useTranslation();
   const api = useAPI();
   const routeParams = useParams();
@@ -107,7 +120,7 @@ export const ReviewPage = () => {
   // Render a review comment; a "[Fix + Accept]" auto-comment becomes a code-diff block.
   const renderCommentBody = (text) => {
     const fix = parseFixComment(text);
-    if (!fix) return text;
+    if (!fix) return <span style={{ whiteSpace: "pre-line" }}>{text}</span>;
     return (
       <div className={root.elem("diff").toClassName()}>
         <div className={root.elem("diff-title").toClassName()}>Fix + Accept</div>
@@ -116,6 +129,11 @@ export const ReviewPage = () => {
       </div>
     );
   };
+
+  // Flatten every task's reviews into one row per decision, newest first.
+  const reviewRows = tasks
+    .flatMap((task) => (task.reviews ?? []).map((r) => ({ ...r, task_id: task.task_id, annotator: task.annotator })))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   return (
     <div className={root.toClassName()}>
@@ -162,47 +180,45 @@ export const ReviewPage = () => {
             <th>{t("review.col.taskId", "Task ID")}</th>
             <th>{t("review.col.version", "Version")}</th>
             <th>{t("review.col.annotator", "Labeler")}</th>
-            <th>{t("review.col.reviewStatus", "Review status")}</th>
+            <th>{t("review.col.decision", "Decision")}</th>
             <th>{t("review.col.reviewer", "Reviewer")}</th>
-            <th>{t("review.col.comments", "Comments")}</th>
+            <th>{t("review.col.comments", "Comment")}</th>
+            <th>{t("review.col.time", "Time")}</th>
           </tr>
         </thead>
         <tbody>
-          {tasks.map((row) => (
-            <tr key={row.task_id}>
+          {reviewRows.map((r) => (
+            <tr key={r.id}>
               <td>
-                <a href={`/projects/${id}/data?task=${row.task_id}`}>{row.task_id}</a>
+                <a href={`/projects/${id}/data?task=${r.task_id}`}>{r.task_id}</a>
               </td>
-              <td>{row.annotation_version ?? "—"}</td>
-              <td>{userLabel(row.annotator)}</td>
+              <td>{r.annotation_version ?? "—"}</td>
+              <td>{userLabel(r.annotator)}</td>
               <td>
-                <span className={root.elem("badge").mod({ status: row.review_status }).toClassName()}>
-                  {statusLabel(row.review_status)}
+                <span className={root.elem("badge").mod({ status: DECISION_STATUS[r.decision] }).toClassName()}>
+                  {statusLabel(DECISION_STATUS[r.decision] ?? r.decision)}
                 </span>
               </td>
-              <td>{userLabel(row.reviewer)}</td>
-              <td>
-                {Array.isArray(row.comments) && row.comments.length > 0 ? (
-                  <ul className={root.elem("comments").toClassName()}>
-                    {row.comments.map((c) => (
-                      <li key={c.id} className={root.elem("comment").toClassName()}>
-                        <span className={root.elem("comment-author").toClassName()}>{userLabel(c.reviewer)}:</span>{" "}
-                        {renderCommentBody(c.comment)}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  "—"
-                )}
-              </td>
+              <td>{userLabel(r.reviewer)}</td>
+              <td>{r.comment ? renderCommentBody(r.comment) : "—"}</td>
+              <td className={root.elem("muted").toClassName()}>{fmtTime(r.created_at)}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      {tasks.length === 0 && <p className={root.elem("muted").toClassName()}>{t("review.empty", "No tasks.")}</p>}
+      {reviewRows.length === 0 && <p className={root.elem("muted").toClassName()}>{t("review.empty", "No reviews.")}</p>}
     </div>
   );
 };
+
+// Reviewers/managers see all tasks; labelers may open it too (the backend scopes
+// them to their own tasks) so they can see the decisions/reasons on their work.
+// Unassigned members are redirected to the project data view.
+export const ReviewPage = () => (
+  <ProjectRoleGuard check={(perms) => perms.canReview || perms.canLabel}>
+    <ReviewPageInner />
+  </ProjectRoleGuard>
+);
 
 ReviewPage.title = "Review";
 ReviewPage.path = "/review";

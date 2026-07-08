@@ -143,4 +143,61 @@
     color: var(--color-neutral-content-subtler);
     list-style: none;
   }
+
+  /* --- Drag-and-drop variant (Workers settings tab) --- */
+  &_dnd {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  &__hint {
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: var(--color-neutral-content-subtler);
+  }
+
+  &__card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    margin: 4px;
+    border: 1px solid var(--color-neutral-border);
+    border-radius: 8px;
+    background: var(--color-neutral-background);
+    font-size: 13px;
+    cursor: grab;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    user-select: none;
+
+    &:hover {
+      border-color: var(--color-primary-border, #6b7cff);
+    }
+    &_dragging {
+      cursor: grabbing;
+      border-color: var(--color-primary-border, #6b7cff);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+    }
+  }
+
+  &__grip {
+    color: var(--color-neutral-content-subtler);
+    cursor: grab;
+    line-height: 1;
+  }
+
+  &__items_over {
+    background: var(--color-primary-emphasis, #eef0ff);
+    outline: 2px dashed var(--color-primary-border, #6b7cff);
+    outline-offset: -4px;
+    border-radius: 8px;
+  }
+
+  &_dnd &__items {
+    min-height: 64px;
+  }
+
+  /* Three role zones (Worker/Labelers/Reviewers) stacked on the right. */
+  &_triple &__box {
+    max-height: 22vh;
+  }
 }

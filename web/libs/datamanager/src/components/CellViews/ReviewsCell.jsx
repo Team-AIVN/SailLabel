@@ -1,49 +1,61 @@
-import { format, isValid } from "date-fns";
+import i18next from "i18next";
 import { getRoot } from "mobx-state-tree";
 
-const DECISION_LABEL = {
-  ACCEPT: "Accepted",
-  REJECT: "Rejected",
-  FIX_AND_ACCEPT: "Fixed & accepted",
-};
-
-const fmtDate = (value) => {
-  const date = new Date(value);
-  return isValid(date) ? format(date, "MMM dd, HH:mm") : "";
+// Current review status of the task (source of truth), shown as a single badge.
+// Colors use theme vars (subtle tint bg + strong content text) so the pill adapts to
+// light/dark mode. Labels are resolved via i18n at render time (module-load i18n is
+// unreliable) with a Korean fallback.
+const NEUTRAL = { bg: "var(--color-neutral-emphasis-subtle)", fg: "var(--color-neutral-content)" };
+const POSITIVE = { bg: "var(--color-positive-emphasis-subtle)", fg: "var(--color-positive-content)" };
+const NEGATIVE = { bg: "var(--color-negative-emphasis-subtle)", fg: "var(--color-negative-content)" };
+const WARNING = { bg: "var(--color-warning-emphasis-subtle)", fg: "var(--color-warning-content)" };
+const STATUS = {
+  NOT_SELECTED: { fallback: "미선정", ...NEUTRAL },
+  PENDING: { fallback: "대기", ...WARNING },
+  ACCEPTED: { fallback: "승인", ...POSITIVE },
+  REJECTED: { fallback: "거절", ...NEGATIVE },
+  FIXED_AND_ACCEPTED: { fallback: "수정+승인", ...POSITIVE },
 };
 
 /**
- * Renders the task's reviews as links: a "View reviews" link to the project's review
- * page (focused on this task) plus one link per review version so every version is
- * reachable. Value is the raw `reviews` array from the task serializer.
+ * Shows the task's current review status as one badge, plus a "더보기" link to the
+ * review page where the full decision history (with comments) lives. The per-review
+ * history is intentionally NOT dumped inline here.
  */
 export const ReviewsCell = (cell) => {
   const { original: task, value } = cell;
   const reviews = Array.isArray(value) ? value : [];
+  const status = task.review_status;
 
-  if (reviews.length === 0) return "";
+  if (!status && reviews.length === 0) return "";
 
   const projectId = getRoot(task)?.SDK?.projectId;
-  const taskId = task.id;
-  const href = projectId ? `/projects/${projectId}/review?task=${taskId}` : "#";
+  const href = projectId ? `/projects/${projectId}/review?task=${task.id}` : null;
   const stop = (e) => e.stopPropagation();
+  const meta = STATUS[status] ?? (reviews.length ? { fallback: status ?? "리뷰됨", ...NEUTRAL } : null);
+  const label = meta ? i18next.t(`dm.reviewStatus.${status}`, meta.fallback) : "";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2, whiteSpace: "nowrap" }}>
-      <a href={href} onClick={stop} data-testid="dm-reviews-link">
-        View reviews ({reviews.length})
-      </a>
-      {reviews.map((review) => (
-        <a
-          key={review.id}
-          href={href}
-          onClick={stop}
-          title={`${DECISION_LABEL[review.decision] ?? review.decision} · ${fmtDate(review.created_at)}`}
-          style={{ fontSize: 12, color: "var(--color-neutral-content-subtler)" }}
+    <div style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+      {meta ? (
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            padding: "2px 10px",
+            borderRadius: 999,
+            background: meta.bg,
+            color: meta.fg,
+          }}
         >
-          v{review.annotation_version ?? review.stage} · {DECISION_LABEL[review.decision] ?? review.decision}
+          {label}
+        </span>
+      ) : null}
+      {reviews.length > 0 && href ? (
+        <a href={href} onClick={stop} data-testid="dm-reviews-link" style={{ fontSize: 12 }}>
+          {i18next.t("dm.viewMore", "더보기")} ({reviews.length})
         </a>
-      ))}
+      ) : null}
     </div>
   );
 };

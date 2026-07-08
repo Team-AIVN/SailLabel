@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { observer } from "mobx-react";
 import { IconViewAll } from "@humansignal/icons";
 import { Typography } from "@humansignal/ui";
@@ -25,7 +26,7 @@ export const ViewAllToggle = observer(({ isActive, onClick }: ViewAllToggleProps
         </div>
         <div className={cn("view-all-toggle").elem("content").toClassName()}>
           <Typography variant="label" size="small" className={cn("view-all-toggle").elem("label").toClassName()}>
-            Compare All
+            {i18next.t("editor.compareAll")}
           </Typography>
         </div>
       </div>

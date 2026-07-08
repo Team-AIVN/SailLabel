@@ -7,6 +7,7 @@ import pathlib
 from audit.models import AuditAction
 from audit.services import record_project_event
 
+from core.api_permissions import ProjectManagerObjectPermission
 from core.feature_flags import flag_set
 from core.filters import ListFilter
 from core.label_config import config_essential_data_has_changed
@@ -21,7 +22,7 @@ from core.utils.serializer_to_openapi_params import serializer_to_openapi_params
 from data_manager.functions import filters_ordering_selected_items_exist, get_prepared_queryset
 from django.conf import settings
 from django.db import IntegrityError
-from django.db.models import F
+from django.db.models import F, Q
 from django.http import Http404
 from django.utils.decorators import method_decorator
 from django_filters import CharFilter, FilterSet
@@ -33,7 +34,7 @@ from ml.serializers import MLBackendSerializer
 from projects.functions.next_task import get_next_task
 from projects.functions.stream_history import get_label_stream_history
 from projects.functions.utils import recalculate_created_annotations_and_labels_from_scratch
-from projects.models import Project, ProjectImport, ProjectManager, ProjectReimport, ProjectSummary
+from projects.models import Project, ProjectImport, ProjectManager, ProjectMember, ProjectReimport, ProjectSummary
 from projects.serializers import (
     GetFieldsSerializer,
     ProjectCountsSerializer,
@@ -46,8 +47,10 @@ from projects.serializers import (
     ProjectSummarySerializer,
 )
 from rest_framework import filters, generics, status
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.exceptions import ValidationError as RestValidationError
+from users.rules import can_create_project, is_super_admin
+from workspaces.models import WorkspaceMember
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
@@ -182,6 +185,19 @@ class ProjectListAPI(generics.ListCreateAPIView):
         projects = Project.objects.filter(organization=self.request.user.active_organization).order_by(
             F('pinned_at').desc(nulls_last=True), '-created_at'
         )
+        # Scope the list to projects the user may actually see. Super admins see
+        # every project in the org; everyone else sees only projects they belong to
+        # (as a member of any role) plus projects in workspaces they manage. Without
+        # this, any org member (e.g. a freshly invited user) would see all projects.
+        user = self.request.user
+        if not is_super_admin.test(user):
+            member_project_ids = ProjectMember.objects.filter(user=user, deleted_at__isnull=True).values_list(
+                'project_id', flat=True
+            )
+            managed_workspace_ids = WorkspaceMember.objects.filter(
+                user=user, role='workspace_manager', deleted_at__isnull=True
+            ).values_list('workspace_id', flat=True)
+            projects = projects.filter(Q(id__in=member_project_ids) | Q(workspace_id__in=managed_workspace_ids))
         if filter in ['pinned_only', 'exclude_pinned']:
             projects = projects.filter(pinned_at__isnull=filter == 'exclude_pinned')
         projects = ProjectManager.with_counts_annotate(projects, fields=fields)
@@ -200,6 +216,11 @@ class ProjectListAPI(generics.ListCreateAPIView):
         return context
 
     def perform_create(self, ser):
+        # Project creation is a management action (workspace managers / super admins).
+        # Enforced explicitly here because the core view otherwise only checks org
+        # membership (Community edition), not the RBAC role.
+        if not can_create_project.test(self.request.user):
+            raise PermissionDenied('Only workspace managers or super admins can create projects.')
         try:
             ser.save(organization=self.request.user.active_organization)
         except IntegrityError as e:
@@ -376,6 +397,10 @@ class ProjectAPI(generics.RetrieveUpdateDestroyAPIView):
         PUT=all_permissions.projects_change,
         POST=all_permissions.projects_create,
     )
+    # ``permission_required`` above is declarative only; enforce project-manager
+    # authority for mutations (change/delete) at the object level so labelers and
+    # other non-managers cannot alter a project through the API.
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [ProjectManagerObjectPermission]
     serializer_class = ProjectSerializer
 
     redirect_route = 'projects:project-detail'

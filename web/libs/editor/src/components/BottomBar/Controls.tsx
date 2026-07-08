@@ -4,6 +4,7 @@
  * Only this component should get interface updates, other versions should be removed.
  */
 
+import i18next from "i18next";
 import { observer } from "mobx-react";
 import type React from "react";
 import { useCallback, useState } from "react";
@@ -46,6 +47,7 @@ type ControlButtonProps = {
 export const EMPTY_SUBMIT_TOOLTIP = "Empty annotations denied in this project";
 export const INCOMPLETE_SUBMIT_TOOLTIP = "Complete all regions before submitting";
 export const INCOMPLETE_UPDATE_TOOLTIP = "Complete all regions before updating";
+export const INCOMPLETE_REQUIRED_TOOLTIP = "필수 항목(*)을 모두 입력해야 합니다";
 export const INCOMPLETE_ACCEPT_TOOLTIP = "Complete all regions before accepting";
 
 /**
@@ -126,6 +128,21 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
 
     if (annotation.isNonEditableDraft) return <></>;
 
+    // Worker not yet assigned a labeling/review role — show a waiting notice, no actions.
+    // (Returned after all hooks above so hook order stays stable across renders.)
+    if (store.hasInterface("assignment:pending")) {
+      return (
+        <div className={cn("controls").toClassName()}>
+          <div className={cn("controls").elem("assignment-pending").toClassName()}>
+            {i18next.t(
+              "editor.assignmentPending",
+              "아직 역할이 배정되지 않았습니다. 관리자가 라벨러 또는 검수자로 배정하면 작업할 수 있어요.",
+            )}
+          </div>
+        </div>
+      );
+    }
+
     const buttonsBefore = customButtons.get("_before");
     const buttonsReplacement = customButtons.get("_replace");
     const firstToRender = buttonsReplacement ?? buttonsBefore;
@@ -175,13 +192,29 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
         const onReject = async (e: React.MouseEvent) => {
           const selected = store.annotationStore?.selected;
 
-          if (store.hasInterface("comments:reject")) {
-            handleActionWithComments(e, action, "Please enter a comment before rejecting");
-          } else {
-            selected?.submissionInProgress();
-            await store.commentStore.commentFormSubmit();
-            action();
+          // Custom reject buttons keep their own flow.
+          if (hasCustomReject) {
+            if (store.hasInterface("comments:reject")) {
+              handleActionWithComments(e, action, "Please enter a comment before rejecting");
+            } else {
+              selected?.submissionInProgress();
+              await store.commentStore.commentFormSubmit();
+              action();
+            }
+            return;
           }
+
+          // Default reject always captures a reason: use the one typed in the Comments
+          // box if present, otherwise prompt for it so rejecting is never a dead click.
+          const comment = store.commentStore.currentComment?.[annotation.id];
+          let reason = ((comment?.text ?? comment) as string | undefined)?.trim?.() ?? "";
+          if (!reason) {
+            const entered = window.prompt(i18next.t("editor.rejectReasonPrompt", "거절 사유를 입력하세요"));
+            if (entered == null || !entered.trim()) return;
+            reason = entered.trim();
+          }
+          selected?.submissionInProgress();
+          store.rejectAnnotation({ comment: reason });
         };
 
         buttons.push(<ControlButton key={button.name} button={button} disabled={disabled} onClick={onReject} />);
@@ -195,7 +228,10 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
       );
       buttons.push(<UnskipButton key="unskip" disabled={disabled} store={store} />);
     } else {
-      if (store.hasInterface("skip")) {
+      // Only offer Skip for a fresh, not-yet-submitted annotation. You can't "skip" a
+      // task you've already labeled (or a reviewer approved) — skipping would cancel the
+      // existing annotation and wipe the result. Those show Update instead.
+      if (store.hasInterface("skip") && userGenerate) {
         const onSkipWithComment = (e: React.MouseEvent, action: () => any) => {
           handleActionWithComments(e, action, "Please enter a comment before skipping");
         };
@@ -205,7 +241,15 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
 
       // Also disable when overlap is reached (only when feature flag is enabled)
       const overlapDisabled = isFF(FF_FIT_1304_STRICT_OVERLAP) && store.overlapReached === true;
-      const isDisabled = disabled || submitDisabled || overlapDisabled || hasIncompleteRegions;
+      // Disable until every required whole-object field has a value, so Submit/Update is
+      // only clickable when the annotation is complete (instead of erroring on click).
+      let hasUnmetRequired = false;
+      annotation.traverseTree?.((node: any) => {
+        if (node?.required && !node.perregion && !node.peritem && node.isVisible !== false && node.holdsState === false) {
+          hasUnmetRequired = true;
+        }
+      });
+      const isDisabled = disabled || submitDisabled || overlapDisabled || hasIncompleteRegions || hasUnmetRequired;
 
       const useExitOption = !isDisabled && isNotQuickView;
 
@@ -238,20 +282,22 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
               }}
               data-testid={`bottombar-${isUpdate ? "update" : "submit"}-and-exit-button`}
             >
-              {`${isUpdate ? "Update" : "Submit"} and exit`}
+              {isUpdate ? i18next.t("editor.updateAndExit") : i18next.t("editor.submitAndExit")}
             </Button>
           </div>
         );
       };
 
       if (userGenerate || (store.explore && !userGenerate && store.hasInterface("submit"))) {
-        const title = hasIncompleteRegions
-          ? INCOMPLETE_SUBMIT_TOOLTIP
-          : overlapDisabled
-            ? store.overlapReachedMessage
-            : submitDisabled
-              ? EMPTY_SUBMIT_TOOLTIP
-              : "Save results: [ Ctrl+Enter ]";
+        const title = hasUnmetRequired
+          ? INCOMPLETE_REQUIRED_TOOLTIP
+          : hasIncompleteRegions
+            ? INCOMPLETE_SUBMIT_TOOLTIP
+            : overlapDisabled
+              ? store.overlapReachedMessage
+              : submitDisabled
+                ? EMPTY_SUBMIT_TOOLTIP
+                : "Save results: [ Ctrl+Enter ]";
 
         buttons.push(
           <ButtonTooltip key="submit" title={title} className="whitespace-nowrap max-w-none">
@@ -298,15 +344,16 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
         );
       } else if ((userGenerate && sentUserGenerate) || (!userGenerate && store.hasInterface("update"))) {
         const isUpdate = Boolean(isFF(FF_REVIEWER_FLOW) || sentUserGenerate || versions.result);
-        // no changes were made over previously submitted version — no drafts, no pending changes
-        const noChanges = isFF(FF_REVIEWER_FLOW) && !history.canUndo && !annotation.draftId;
-        const isUpdateDisabled = isDisabled || noChanges;
-        const updateTitle = hasIncompleteRegions
-          ? INCOMPLETE_UPDATE_TOOLTIP
-          : overlapDisabled
-            ? store.overlapReachedMessage
-            : noChanges
-              ? "No changes were made"
+        // Previously Update was disabled unless the store reported undo history or a
+        // draft, but text/choice edits don't always register there — leaving labelers
+        // unable to re-submit a corrected annotation. Allow Update whenever editable.
+        const isUpdateDisabled = isDisabled;
+        const updateTitle = hasUnmetRequired
+          ? INCOMPLETE_REQUIRED_TOOLTIP
+          : hasIncompleteRegions
+            ? INCOMPLETE_UPDATE_TOOLTIP
+            : overlapDisabled
+              ? store.overlapReachedMessage
               : "Update this task: [ Ctrl+Enter ]";
         const button = (
           <ButtonTooltip key="update" title={updateTitle} className="whitespace-nowrap max-w-none">
@@ -327,7 +374,7 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
                   }}
                   data-testid="bottombar-update-button"
                 >
-                  {isUpdate ? "Update" : "Submit"}
+                  {isUpdate ? i18next.t("editor.update") : i18next.t("editor.submit")}
                 </Button>
                 {useExitOption ? (
                   <Dropdown.Trigger

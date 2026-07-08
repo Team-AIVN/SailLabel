@@ -7,6 +7,7 @@ import { modal } from "../../components/Modal/Modal";
 import { Space } from "../../components/Space/Space";
 import { useAPI } from "../../providers/ApiProvider";
 import { useProject } from "../../providers/ProjectProvider";
+import { projectPermissions } from "../../utils/permissions";
 import { useContextProps, useParams } from "../../providers/RoutesProvider";
 import { addCrumb, deleteCrumb } from "../../services/breadrumbs";
 import { cn } from "../../utils/bem";
@@ -38,7 +39,8 @@ const initializeDataManager = async (root, props, params) => {
     interfaces: {
       // Project-scoped import was removed; data is uploaded via the workspace.
       import: false,
-      export: true,
+      // Export is a manager action (super admin / workspace manager / project manager).
+      export: projectPermissions(params.project?.current_user_role).canExport,
       backButton: false,
       labelingHeader: false,
       autoAnnotation: params.autoAnnotation,
@@ -237,9 +239,9 @@ DataManagerPage.context = ({ dmRef }) => {
   const { project } = useProject();
   const [mode, setMode] = useState(dmRef?.mode ?? "explorer");
 
-  const links = {
-    "/settings": "Settings",
-  };
+  // Settings is a manager action; hide the link from labelers/reviewers.
+  const canManageProject = projectPermissions(project?.current_user_role).canManage;
+  const links = canManageProject ? { "/settings": "Settings" } : {};
 
   const updateCrumbs = (currentMode) => {
     const isExplorer = currentMode === "explorer";

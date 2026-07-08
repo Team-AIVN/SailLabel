@@ -595,13 +595,14 @@ class DataManagerTaskSerializer(TaskSerializer):
             .select_related('annotation')
             .order_by('stage', 'created_at', 'id')
         )
+        # The Data Manager cell only needs the count and the task's current status
+        # (rendered as a badge); per-review comment/reviewer live on the Review page.
         return [
             {
                 'id': r.id,
                 'stage': r.stage,
                 'decision': r.decision,
                 'created_at': r.created_at,
-                'reviewer_id': r.reviewer_id,
                 'annotation_id': r.annotation_id,
                 'annotation_version': getattr(r.annotation, 'version', None),
             }

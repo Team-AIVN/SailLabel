@@ -1,5 +1,6 @@
 import { IconSortDown, IconSortUp } from "@humansignal/icons";
 import { Button, ButtonGroup } from "@humansignal/ui";
+import i18next from "i18next";
 import { inject, observer } from "mobx-react";
 import { ColumnPicker } from "../../Common/ColumnPicker";
 import { Space } from "../../Common/Space/Space";
@@ -27,7 +28,7 @@ export const OrderButton = injector(
             columnFilter={orderableFilter}
             value={ordering?.field ?? null}
             onChange={(key) => view.setOrdering(key)}
-            placeholder="Order by"
+            placeholder={i18next.t("dm.orderBy")}
             triggerProps={{
               style: {
                 padding: "var(--spacing-tight)",

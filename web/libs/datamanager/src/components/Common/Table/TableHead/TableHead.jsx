@@ -1,6 +1,18 @@
+import i18next from "i18next";
 import { observer, useLocalStore } from "mobx-react";
 import { toJS } from "mobx";
 import React, { forwardRef, useCallback, useEffect, useRef } from "react";
+
+/**
+ * Localized header title for a built-in Data Manager column. Columns carry their
+ * backend id as `original.alias` (see stores/Tabs/store.js), so a `dmcol.<id>` key
+ * gives the translation; user data columns (no such key) keep their raw title.
+ */
+const localizedColumnTitle = (column) => {
+  const alias = column?.original?.alias;
+  const key = alias ? `dmcol.${alias}` : null;
+  return key && i18next.exists(key) ? i18next.t(key) : column.title;
+};
 import { ViewColumnType, ViewColumnTypeName, ViewColumnTypeShort } from "../../../../stores/Tabs/tab_column";
 import { Button, Dropdown } from "@humansignal/ui";
 import { Menu } from "../../Menu/Menu";
@@ -162,7 +174,7 @@ const ColumnRenderer = observer(
     const canOrder = sortingEnabled && column.original?.canOrder;
     const Decoration = decoration?.get?.(column);
     const extra = !isDE && columnHeaderExtra ? columnHeaderExtra(column, Decoration) : null;
-    const content = Decoration?.content ? Decoration.content(column) : column.title;
+    const content = Decoration?.content ? Decoration.content(column) : localizedColumnTitle(column);
     const style = getStyle(cellViews, column, Decoration);
 
     const isAgreementColumn =

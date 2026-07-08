@@ -5,6 +5,7 @@ import mimetypes
 
 from audit.models import AuditAction
 from audit.services import record_role_change, record_workspace_event
+from core.api_permissions import CanCreateWorkspacePermission
 from core.decorators import override_report_only_csp
 from core.mixins import GetParentObjectMixin
 from core.permissions import ViewClassPermission, all_permissions
@@ -19,6 +20,8 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
+from users.rules import can_create_workspace
 
 from .models import Workspace, WorkspaceFileUpload, WorkspaceMember
 from .rules import is_workspace_manager, is_workspace_member
@@ -62,6 +65,7 @@ def _active_org_or_400(user):
 )
 class WorkspaceListAPI(generics.ListCreateAPIView):
     serializer_class = WorkspaceSerializer
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [CanCreateWorkspacePermission]
     permission_required = ViewClassPermission(
         GET=all_permissions.workspaces_view,
         POST=all_permissions.workspaces_create,
@@ -74,6 +78,8 @@ class WorkspaceListAPI(generics.ListCreateAPIView):
     @transaction.atomic
     def perform_create(self, serializer):
         org = _active_org_or_400(self.request.user)
+        if not can_create_workspace.test(self.request.user):
+            raise PermissionDenied('Only workspace managers or super admins can create workspaces.')
         workspace = serializer.save(organization=org, created_by=self.request.user)
         WorkspaceMember.objects.get_or_create(
             user=self.request.user,
@@ -286,7 +292,8 @@ class WorkspaceProjectsAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
     }
 
     def get_queryset(self):
-        from projects.models import Project
+        from projects.models import Project, ProjectMember
+        from users.rules import is_super_admin, is_workspace_manager_of
 
         workspace = self._get_workspace()
         # with_counts() is a manager method (adds task_number / finished_task_number
@@ -298,6 +305,14 @@ class WorkspaceProjectsAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
             .select_related('task_pool', 'created_by')
             .filter(workspace=workspace, deleted_at__isnull=True)
         )
+
+        # Workers see only projects they belong to; managers (WM/SA) see all.
+        user = self.request.user
+        if not (is_super_admin.test(user) or is_workspace_manager_of.test(user, workspace)):
+            member_ids = ProjectMember.objects.filter(user=user, deleted_at__isnull=True).values_list(
+                'project_id', flat=True
+            )
+            qs = qs.filter(id__in=member_ids)
 
         params = self.request.query_params
         search = params.get('search')

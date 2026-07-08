@@ -6,6 +6,7 @@ import traceback as tb
 from datetime import datetime
 from urllib.parse import urlparse
 
+from core.api_permissions import IsProjectManager
 from core.feature_flags import flag_set
 from core.permissions import all_permissions
 from core.redis import start_job_async_or_sync
@@ -25,6 +26,7 @@ from ranged_fileresponse import RangedFileResponse
 from rest_framework import generics, status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
 from rest_framework.views import APIView
 from tasks.models import Task
 
@@ -176,6 +178,7 @@ class ExportFormatsListAPI(generics.RetrieveAPIView):
 )
 class ExportAPI(generics.RetrieveAPIView):
     permission_required = all_permissions.projects_change
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [IsProjectManager]
 
     def get_queryset(self):
         return Project.objects.filter(organization=self.request.user.active_organization)
@@ -268,6 +271,7 @@ class ExportAPI(generics.RetrieveAPIView):
 @extend_schema(exclude=True)
 class ProjectExportFiles(generics.RetrieveAPIView):
     permission_required = all_permissions.projects_change
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [IsProjectManager]
 
     def get_queryset(self):
         return Project.objects.filter(organization=self.request.user.active_organization)
@@ -293,6 +297,7 @@ class ProjectExportFilesAuthCheck(APIView):
 
     http_method_names = ['get']
     permission_required = all_permissions.projects_change
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [IsProjectManager]
 
     def get(self, request, *args, **kwargs):
         """Get export files list"""
@@ -355,6 +360,7 @@ class ExportListAPI(generics.ListCreateAPIView):
     project_model = Project
     serializer_class = ExportSerializer
     permission_required = all_permissions.projects_change
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [IsProjectManager]
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
@@ -461,6 +467,7 @@ class ExportDetailAPI(generics.RetrieveDestroyAPIView):
     serializer_class = ExportSerializer
     lookup_url_kwarg = 'export_pk'
     permission_required = all_permissions.projects_change
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [IsProjectManager]
 
     def delete(self, *args, **kwargs):
         if flag_set('ff_back_dev_4664_remove_storage_file_on_export_delete_29032023_short'):
@@ -550,6 +557,7 @@ class ExportDownloadAPI(generics.RetrieveAPIView):
     serializer_class = None
     lookup_url_kwarg = 'export_pk'
     permission_required = all_permissions.projects_change
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [IsProjectManager]
 
     def _get_project(self):
         project_pk = self.kwargs.get('pk')
@@ -704,6 +712,7 @@ class ExportConvertAPI(generics.CreateAPIView):
     queryset = Export.objects.all()
     lookup_url_kwarg = 'export_pk'
     permission_required = all_permissions.projects_change
+    permission_classes = api_settings.DEFAULT_PERMISSION_CLASSES + [IsProjectManager]
 
     def post(self, request, *args, **kwargs):
         snapshot = self.get_object()

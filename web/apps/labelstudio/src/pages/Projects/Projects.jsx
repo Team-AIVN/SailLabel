@@ -8,10 +8,12 @@ import { Spinner } from "../../components/Spinner/Spinner";
 import { ApiContext } from "../../providers/ApiProvider";
 import { useContextProps } from "../../providers/RoutesProvider";
 import { cn } from "../../utils/bem";
+import { usePermissions } from "../../utils/permissions";
 import { CreateProject } from "../CreateProject/CreateProject";
 import { DataManagerPage } from "../DataManager/DataManager";
 import { ReviewPage } from "../Review/Review";
 import { SettingsPage } from "../Settings";
+import { ProjectAccessGuard } from "../../components/RoleGuard/RoleGuard";
 import { EmptyProjectsList, ProjectsList } from "./ProjectsList";
 import { useAbortController, useUpdatePageTitle } from "@humansignal/core";
 import "./Projects.prefix.css";
@@ -22,7 +24,7 @@ const getCurrentPage = () => {
   return pageNumberFromURL ? Number.parseInt(pageNumberFromURL) : 1;
 };
 
-export const ProjectsPage = () => {
+const ProjectsPageInner = () => {
   const { t } = useTranslation();
   const api = React.useContext(ApiContext);
   const abortController = useAbortController();
@@ -144,6 +146,14 @@ export const ProjectsPage = () => {
   );
 };
 
+// The projects list is hidden from workspace-only members (WMb), who are sent
+// to the workspaces list instead. Everyone else with project access sees it.
+export const ProjectsPage = () => (
+  <ProjectAccessGuard>
+    <ProjectsPageInner />
+  </ProjectAccessGuard>
+);
+
 ProjectsPage.title = "Projects";
 ProjectsPage.path = "/projects";
 ProjectsPage.exact = true;
@@ -166,6 +176,9 @@ ProjectsPage.routes = ({ store }) => [
 ];
 const CreateProjectContextButton = ({ openModal }) => {
   const { t } = useTranslation();
+  const { canCreateWorkspace } = usePermissions();
+  // Creating projects is a workspace-manager/super-admin action (matches the backend).
+  if (!canCreateWorkspace) return null;
   return (
     <Button onClick={openModal} size="small" aria-label={t("projects.createProjectAriaLabel")}>
       {t("projects.createButton")}

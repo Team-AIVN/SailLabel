@@ -15,6 +15,7 @@ export const API_CONFIG = {
     userMemberships: "/organizations/:pk/memberships/:userPk",
     inviteLink: "/invite",
     resetInviteLink: "POST:/invite/reset-token",
+    createInvitation: "POST:/invitations",
 
     // Project
     projects: "/projects",

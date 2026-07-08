@@ -1,19 +1,18 @@
-import { IconExternal, IconFolderAdd, IconHumanSignal, IconUserAdd, IconFolderOpen } from "@humansignal/icons";
+import { IconExternal, IconFolderAdd, IconHumanSignal, IconFolderOpen } from "@humansignal/icons";
 import { Button, SimpleCard, Spinner, Tooltip, Typography } from "@humansignal/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useHistory, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useUpdatePageTitle } from "@humansignal/core";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { HeidiTips } from "../../components/HeidiTips/HeidiTips";
+import { usePermissions } from "../../utils/permissions";
 import { useAPI } from "../../providers/ApiProvider";
 import { CreateProject } from "../CreateProject/CreateProject";
-import { InviteLink } from "../Organization/PeoplePage/InviteLink";
 import type { Page } from "../types/Page";
 import {
   creationDialogOpen,
-  invitationOpen,
   locationKeyAtom,
   PROJECTS_TO_SHOW,
   projectsDataAtom,
@@ -29,9 +28,11 @@ const resourceLinks = [
   { key: "slackCommunity", url: "https://slack.labelstud.io" },
 ] as const;
 
+// Member invites now live in the workspace (email invite with project/role), so
+// the home no longer shows a separate org-wide invite action.
 const actions = [
+  { type: "createWorkspace", labelKey: "home.actions.createWorkspace", icon: IconFolderOpen },
   { type: "createProject", labelKey: "home.actions.createProject", icon: IconFolderAdd },
-  { type: "inviteMembers", labelKey: "home.actions.inviteMembers", icon: IconUserAdd },
 ] as const;
 
 type Action = (typeof actions)[number]["type"];
@@ -40,12 +41,17 @@ export const HomePage: Page = () => {
   const { t } = useTranslation();
   const api = useAPI();
   const location = useLocation();
+  const history = useHistory();
   const [modalIsOpen, setModalIsOpen] = useAtom(creationDialogOpen);
-  const [invitationIsOpen, setInvitationIsOpen] = useAtom(invitationOpen);
   const setLocationKey = useSetAtom(locationKeyAtom);
   const setProjectsData = useSetAtom(projectsDataAtom);
   const sortedProjects = useAtomValue(sortedProjectsAtom);
   const visitedIds = useAtomValue(visitedIdsAtom);
+  const { canCreateWorkspace } = usePermissions();
+
+  // Only workspace managers / super admins create workspaces and projects. Plain
+  // members see no create actions and get a "wait to be assigned" empty state.
+  const visibleActions = canCreateWorkspace ? actions : [];
 
   useUpdatePageTitle(t("home.pageTitle"));
 
@@ -99,11 +105,13 @@ export const HomePage: Page = () => {
   const handleActions = (action: Action) => {
     return () => {
       switch (action) {
+        case "createWorkspace":
+          // Workspace is the top-level container (datasets live here); send the
+          // user to the Workspaces page to create one before projects.
+          history.push("/workspaces");
+          break;
         case "createProject":
           setModalIsOpen(true);
-          break;
-        case "inviteMembers":
-          setInvitationIsOpen(true);
           break;
       }
     };
@@ -111,7 +119,7 @@ export const HomePage: Page = () => {
 
   return (
     <main className="p-6">
-      <div className="grid grid-cols-[minmax(0,1fr)_450px] gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_450px]">
         <section className="flex flex-col gap-6">
           <div className="flex flex-col gap-1">
             <Typography variant="headline" size="small">
@@ -121,8 +129,8 @@ export const HomePage: Page = () => {
               {t("home.getStarted")}
             </Typography>
           </div>
-          <div className="flex justify-start gap-4">
-            {actions.map((action) => {
+          <div className="flex flex-wrap justify-start gap-4">
+            {visibleActions.map((action) => {
               const label = t(action.labelKey);
               return (
                 <Button
@@ -167,18 +175,20 @@ export const HomePage: Page = () => {
                   <IconFolderOpen />
                 </div>
                 <Typography variant="headline" size="small">
-                  {t("home.empty.title")}
+                  {t(canCreateWorkspace ? "home.empty.title" : "home.empty.memberTitle")}
                 </Typography>
                 <Typography size="small" className="text-neutral-content-subtler">
-                  {t("home.empty.description")}
+                  {t(canCreateWorkspace ? "home.empty.description" : "home.empty.memberDescription")}
                 </Typography>
-                <Button
-                  className="mt-4"
-                  onClick={() => setModalIsOpen(true)}
-                  aria-label={t("home.empty.createProjectAriaLabel")}
-                >
-                  {t("home.empty.cta")}
-                </Button>
+                {canCreateWorkspace && (
+                  <Button
+                    className="mt-4"
+                    onClick={() => history.push("/workspaces")}
+                    aria-label={t("home.empty.createWorkspaceAriaLabel")}
+                  >
+                    {t("home.empty.cta")}
+                  </Button>
+                )}
               </div>
             ) : isSuccess && data && sortedProjects.length > 0 ? (
               <div className="flex flex-col gap-1">
@@ -223,7 +233,6 @@ export const HomePage: Page = () => {
         </section>
       </div>
       {modalIsOpen && <CreateProject onClose={() => setModalIsOpen(false)} />}
-      <InviteLink opened={invitationIsOpen} onClosed={() => setInvitationIsOpen(false)} />
     </main>
   );
 };

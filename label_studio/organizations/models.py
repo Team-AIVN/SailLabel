@@ -209,3 +209,67 @@ class Organization(OrganizationMixin, models.Model):
 
     class Meta:
         db_table = 'organization'
+
+
+class Invitation(models.Model):
+    """A per-recipient invite link.
+
+    When a person signs up via ``/user/signup/?invite=<token>``, they are placed
+    into the invitation's workspace, and (if set) added to the project with the
+    given role. This replaces the single org-wide signup token for team invites.
+    """
+
+    email = models.EmailField(_('email'))
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='invitations')
+    workspace = models.ForeignKey(
+        'workspaces.Workspace', on_delete=models.CASCADE, null=True, blank=True, related_name='invitations'
+    )
+    project = models.ForeignKey(
+        'projects.Project', on_delete=models.CASCADE, null=True, blank=True, related_name='invitations'
+    )
+    # WorkspaceMember role when only a workspace is set, or ProjectMember role when
+    # a project is set (annotator/reviewer/member/project_manager).
+    role = models.CharField(_('role'), max_length=32, blank=True, default='')
+    token = models.CharField(_('token'), max_length=256, default=create_hash, unique=True, db_index=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='invitations_sent'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(_('accepted at'), null=True, blank=True)
+    accepted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invitations_accepted',
+    )
+
+    class Meta:
+        db_table = 'invitation'
+
+    @property
+    def is_accepted(self) -> bool:
+        return self.accepted_at is not None
+
+    def apply(self, user):
+        """Place the accepting ``user`` into the invited workspace/project/role.
+
+        Invite links are reusable: everyone who signs up through the link is placed,
+        so this is idempotent per user rather than single-use.
+        """
+        from projects.models import ProjectMember
+        from workspaces.models import WorkspaceMember
+
+        if self.project is not None:
+            ProjectMember.objects.get_or_create(
+                user=user, project=self.project, defaults={'role': self.role or 'annotator'}
+            )
+            if self.workspace_id:
+                WorkspaceMember.objects.get_or_create(user=user, workspace=self.workspace, defaults={'role': 'member'})
+        elif self.workspace is not None:
+            WorkspaceMember.objects.get_or_create(user=user, workspace=self.workspace, defaults={'role': self.role or 'member'})
+        # Record first use for reference, but keep the link usable for others.
+        if self.accepted_at is None:
+            self.accepted_at = timezone.now()
+            self.accepted_by = user
+            self.save(update_fields=['accepted_at', 'accepted_by'])

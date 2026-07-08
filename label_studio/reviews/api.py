@@ -10,7 +10,7 @@ from rest_framework import generics, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from tasks.models import Annotation, Task
-from users.rules import is_project_manager_of, is_reviewer_of
+from users.rules import is_project_manager_of, is_reviewer_of, is_super_admin, is_workspace_manager_of
 
 from . import services
 from .models import Review
@@ -35,6 +35,31 @@ def _require_reviewer(user, project):
     if is_reviewer_of.test(user, project) or is_project_manager_of.test(user, project):
         return
     raise PermissionDenied('Reviewer or project manager role is required.')
+
+
+def _is_review_manager(user, project):
+    """Can see every task's review info (reviewer, project manager, WM, super admin)."""
+    return (
+        is_super_admin.test(user)
+        or is_reviewer_of.test(user, project)
+        or is_project_manager_of.test(user, project)
+        or (project.workspace_id and is_workspace_manager_of.test(user, project.workspace))
+    )
+
+
+def _review_task_queryset(user, project):
+    """Reviewers/managers see all tasks; a labeler sees only tasks they annotated
+    (so they can review the decisions/reasons on their own work)."""
+    base = (
+        Task.objects.filter(project=project)
+        .select_related('current_annotation', 'current_annotation__completed_by')
+        # Prefetched so the serializer resolves annotator + reviews without a per-task
+        # query (avoids N+1 across the task list).
+        .prefetch_related('annotations__completed_by', 'annotations__reviews__reviewer')
+    )
+    if _is_review_manager(user, project):
+        return base
+    return base.filter(annotations__completed_by=user).distinct()
 
 
 @method_decorator(
@@ -75,10 +100,7 @@ class ReviewTasksAPI(generics.ListAPIView):
 
     def get_queryset(self):
         project = _project_in_active_org_or_404(self.request, self.kwargs['pk'])
-        _require_reviewer(self.request.user, project)
-        qs = Task.objects.filter(project=project).select_related(
-            'current_annotation', 'current_annotation__completed_by'
-        )
+        qs = _review_task_queryset(self.request.user, project)
         review_status = self.request.query_params.get('review_status')
         if review_status:
             valid = {c for c, _ in Task.ReviewStatus.choices}
@@ -102,7 +124,12 @@ class ReviewProgressAPI(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         project = _project_in_active_org_or_404(request, self.kwargs['pk'])
-        _require_reviewer(request.user, project)
+        # Managers see full progress; a labeler may view it for a project they work on.
+        if not (
+            _is_review_manager(request.user, project)
+            or Task.objects.filter(project=project, annotations__completed_by=request.user).exists()
+        ):
+            raise PermissionDenied('You do not have access to this project.')
         base = Task.objects.filter(project=project)
         selected = base.exclude(review_status=Task.ReviewStatus.NOT_SELECTED).count()
         completed = base.filter(

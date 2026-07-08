@@ -97,4 +97,11 @@ declare type APIProject = {
    * Number of finished tasks
    */
   queue_done: number;
+
+  /**
+   * Current user's effective role in this project (RBAC): one of
+   * super_admin | workspace_manager | project_manager | reviewer | annotator | member,
+   * or null when the user has no role/access. Used for UI access control.
+   */
+  current_user_role?: string | null;
 };

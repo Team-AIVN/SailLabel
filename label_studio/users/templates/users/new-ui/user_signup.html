@@ -17,7 +17,7 @@
   <div class="form-wrapper">
     <h2>Sign Up</h2>
     <form id="signup-form"
-        action="{% url 'user-signup' %}?next={{ next }}{% if token %}&token={{ token }}{% endif %}"
+        action="{% url 'user-signup' %}?next={{ next }}{% if token %}&token={{ token }}{% endif %}{% if invite %}&invite={{ invite }}{% endif %}"
         method="post"
     >
     {% csrf_token %}
