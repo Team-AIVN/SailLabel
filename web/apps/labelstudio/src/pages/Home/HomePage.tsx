@@ -1,7 +1,7 @@
-import { IconExternal, IconFolderAdd, IconHumanSignal, IconFolderOpen } from "@humansignal/icons";
+import { IconExternal, IconFolderAdd, IconFolderOpen } from "@humansignal/icons";
 import { Button, SimpleCard, Spinner, Tooltip, Typography } from "@humansignal/ui";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { Link, useHistory, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useUpdatePageTitle } from "@humansignal/core";
@@ -54,12 +54,6 @@ export const HomePage: Page = () => {
   const visibleActions = canCreateWorkspace ? actions : [];
 
   useUpdatePageTitle(t("home.pageTitle"));
-
-  const versionEdition = useMemo(() => {
-    const edition = (window as unknown as { APP_SETTINGS?: { version_edition?: string } })?.APP_SETTINGS
-      ?.version_edition;
-    return edition || "Community";
-  }, []);
 
   // Fetch regular projects
   const { data, isFetching, isSuccess, isError } = useQuery({
@@ -224,12 +218,6 @@ export const HomePage: Page = () => {
               })}
             </ul>
           </SimpleCard>
-          <div className="flex gap-2 items-center">
-            <IconHumanSignal />
-            <span className="text-neutral-content-subtle">
-              {t("home.versionLabel", { edition: versionEdition })}
-            </span>
-          </div>
         </section>
       </div>
       {modalIsOpen && <CreateProject onClose={() => setModalIsOpen(false)} />}
