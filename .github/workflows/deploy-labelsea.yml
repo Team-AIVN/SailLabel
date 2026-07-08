@@ -94,4 +94,5 @@ jobs:
           done
           echo "health check failed"; exit 1
       - name: Deploy summary
-        run: echo "### VM 배포 완료 :white_check_mark: (https://labelsea.aivn-dev.com)" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "### VM 배포 완료 ✅ (https://labelsea.aivn-dev.com)" >> "$GITHUB_STEP_SUMMARY"
