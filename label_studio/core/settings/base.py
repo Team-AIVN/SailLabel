@@ -868,6 +868,7 @@ if ENABLE_CSP := get_bool_env('ENABLE_CSP', True):
         'https://*.google-analytics.com',
         'https://*.googletagmanager.com',
         'https://*.google.com',
+        'https://static.wixstatic.com',
     )
     CSP_CONNECT_SRC = (
         "'self'",
