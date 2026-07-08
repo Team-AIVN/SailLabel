@@ -78,6 +78,9 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("projects", "0027_project_custom_task_lock_ttl"),
+        # This data migration writes to core_asyncmigrationstatus; on a fresh DB
+        # it must run after core migrations create/alter that table.
+        ("core", "0003_asyncmigrationstatus_add_scheduled_status"),
     ]
 
     operations = [

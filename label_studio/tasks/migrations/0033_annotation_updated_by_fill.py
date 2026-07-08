@@ -54,7 +54,10 @@ def backward(apps, _):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('tasks', '0032_annotation_updated_by')
+        ('tasks', '0032_annotation_updated_by'),
+        # This data migration writes to core_asyncmigrationstatus; on a fresh DB
+        # it must run after core migrations create/alter that table.
+        ('core', '0003_asyncmigrationstatus_add_scheduled_status'),
     ]
 
     operations = [
