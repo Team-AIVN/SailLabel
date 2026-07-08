@@ -35,6 +35,8 @@ export const TaskPools = ({ workspaceId }) => {
   const [poolDetail, setPoolDetail] = useState(null);
   const [items, setItems] = useState([]);
   const [typeFilter, setTypeFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [sourceOptions, setSourceOptions] = useState([]); // [{value: 'azure:3', label: '선박 1차분'}]
   const [search, setSearch] = useState("");
   const [leftSelected, setLeftSelected] = useState(() => new Set());
   const [rightSelected, setRightSelected] = useState(() => new Set());
@@ -63,11 +65,27 @@ export const TaskPools = ({ workspaceId }) => {
   const loadItems = useCallback(async () => {
     const params = { pk: workspaceId };
     if (typeFilter) params.data_type = typeFilter;
+    if (sourceFilter) params.source = sourceFilter;
     if (search) params.search = search;
     if (selectedPoolId) params.task_pool = selectedPoolId;
     const res = await api.callApi("workspaceTaskSourceItems", { params });
     setItems(listOf(res));
-  }, [api, workspaceId, typeFilter, search, selectedPoolId]);
+  }, [api, workspaceId, typeFilter, sourceFilter, search, selectedPoolId]);
+
+  // Cloud storage sources registered on this workspace -> filter options (azure:<id> -> title).
+  const loadSourceOptions = useCallback(async () => {
+    const res = await api.callApi("workspaceStorages", {
+      params: { provider: "azure", workspace: workspaceId },
+      errorFilter: () => true,
+    });
+    if (!res?.$meta?.ok) return;
+    const rows = Array.isArray(res) ? res : (res?.results ?? []);
+    setSourceOptions(rows.map((s) => ({ value: `azure:${s.id}`, label: s.title || s.container })));
+  }, [api, workspaceId]);
+
+  useEffect(() => {
+    loadSourceOptions();
+  }, [loadSourceOptions]);
 
   useEffect(() => {
     (async () => {
@@ -203,6 +221,15 @@ export const TaskPools = ({ workspaceId }) => {
             </Button>
           </div>
           <div className={root.elem("filters").toClassName()}>
+            <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} aria-label="source filter">
+              <option value="">{t("taskpools.allSources", "모든 소스")}</option>
+              <option value="upload">{t("taskpools.sourceUpload", "직접 업로드")}</option>
+              {sourceOptions.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label} (Azure)
+                </option>
+              ))}
+            </select>
             <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
               {DATA_TYPES.map((tp) => (
                 <option key={tp || "all"} value={tp}>

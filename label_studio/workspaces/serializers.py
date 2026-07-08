@@ -278,7 +278,7 @@ class TaskSourceItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaskSourceItem
-        fields = ('id', 'dataset', 'data', 'data_type', 'index', 'thumbnail', 'included')
+        fields = ('id', 'dataset', 'data', 'data_type', 'index', 'source', 'thumbnail', 'included')
 
     def get_thumbnail(self, obj):
         if isinstance(obj.data, dict):
