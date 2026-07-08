@@ -14,6 +14,7 @@ import { InviteMember } from "./InviteMember";
 import { StorageSettings } from "../Settings/StorageSettings/StorageSettings";
 import { TaskPools } from "./TaskPools";
 import { WorkspaceImportPage } from "./WorkspaceImport";
+import { WorkspaceStorageSources } from "./WorkspaceStorageSources";
 import "./WorkspaceDetail.prefix.css";
 
 const TABS = ["projects", "datasets", "taskpools", "users", "compensation", "storage"];
@@ -312,281 +313,300 @@ export const WorkspaceDetail = () => {
       {/* Tabs — hidden from plain workspace members (WMb), who see only the header */}
       {perms.canViewTabs && (
         <>
-      <nav className={root.elem("tabs").toClassName()}>
-        {TABS.filter((tab) => !MANAGER_ONLY_TABS.has(tab) || perms.canManage).map((tab) => (
-          <button
-            type="button"
-            key={tab}
-            className={root
-              .elem("tab")
-              .mod({ active: activeTab === tab })
-              .toClassName()}
-            onClick={() => setTab(tab)}
-          >
-            {t(TAB_LABEL_KEY[tab])}
-          </button>
-        ))}
-      </nav>
+          <nav className={root.elem("tabs").toClassName()}>
+            {TABS.filter((tab) => !MANAGER_ONLY_TABS.has(tab) || perms.canManage).map((tab) => (
+              <button
+                type="button"
+                key={tab}
+                className={root
+                  .elem("tab")
+                  .mod({ active: activeTab === tab })
+                  .toClassName()}
+                onClick={() => setTab(tab)}
+              >
+                {t(TAB_LABEL_KEY[tab])}
+              </button>
+            ))}
+          </nav>
 
-      {/* Projects tab (primary) */}
-      {activeTab === "projects" && (
-        <section className={root.elem("panel").toClassName()}>
-          <div className={root.elem("toolbar").toClassName()}>
-            <input
-              className={root.elem("search").toClassName()}
-              placeholder={t("workspaces.dashboard.searchProjects", "Search projects")}
-              value={projectSearch}
-              onChange={(e) => setProjectSearch(e.target.value)}
-            />
-            <select value={labelTypeFilter} onChange={(e) => setLabelTypeFilter(e.target.value)}>
-              <option value="">{t("workspaces.dashboard.allTypes", "All types")}</option>
-              {labelTypeOptions.map((lt) => (
-                <option key={lt} value={lt}>
-                  {lt}
-                </option>
-              ))}
-            </select>
-            <input
-              className={root.elem("tag-filter").toClassName()}
-              placeholder={t("workspaces.dashboard.filterTag", "Filter by tag")}
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-            />
-            <select value={ordering} onChange={(e) => setOrdering(e.target.value)}>
-              <option value="-created_at">{t("workspaces.dashboard.sortNewest", "Newest")}</option>
-              <option value="due_date">{t("workspaces.dashboard.sortDueDate", "Due date")}</option>
-              <option value="-progress">{t("workspaces.dashboard.sortProgress", "Progress")}</option>
-              <option value="title">{t("workspaces.dashboard.sortTitle", "Title")}</option>
-            </select>
-            {perms.canManage && (
-              <Button size="small" onClick={() => setShowNewProject(true)}>
-                {t("workspaces.dashboard.newProject", "New Project")}
-              </Button>
-            )}
-          </div>
-
-          {projects.length === 0 ? (
-            <p className={root.elem("muted").toClassName()}>{t("workspaces.detail.noProjects")}</p>
-          ) : (
-            <div className={root.elem("cards").toClassName()}>
-              {projects.map((p) => {
-                const ann = p.stats?.annotation ?? { done: 0, total: 0, percent: 0 };
-                const rev = p.stats?.review ?? { done: 0, total: 0, percent: 0 };
-                return (
-                  <a key={p.id} href={`/projects/${p.id}/data`} className={root.elem("card").toClassName()}>
-                    <div className={root.elem("card-head").toClassName()}>
-                      <h3>{p.title || t("projects.newProject", "New Project")}</h3>
-                      {p.label_type && <span className={root.elem("badge").toClassName()}>{p.label_type}</span>}
-                    </div>
-                    <div className={root.elem("card-counts").toClassName()}>
-                      <span>
-                        {t("workspaces.dashboard.poolItems", "Pool items")}: <b>{p.task_pool_item_count ?? 0}</b>
-                      </span>
-                      <span>
-                        {t("workspaces.dashboard.annotators", "Labelers")}: <b>{p.annotator_count ?? 0}</b>
-                      </span>
-                      <span>
-                        {t("workspaces.dashboard.reviewers", "Reviewers")}: <b>{p.reviewer_count ?? 0}</b>
-                      </span>
-                      <span>
-                        {t("workspaces.dashboard.workers", "Workers")}: <b>{p.worker_count ?? 0}</b>
-                      </span>
-                    </div>
-                    <div className={root.elem("progress").toClassName()}>
-                      <div className={root.elem("progress-bar").toClassName()} style={{ width: `${ann.percent}%` }} />
-                    </div>
-                    <div className={root.elem("stat-lines").toClassName()}>
-                      <div>
-                        {t("workspaces.dashboard.annotationProgress", "Annotation Progress")}: {ann.done} / {ann.total}{" "}
-                        ({ann.percent}%)
-                      </div>
-                      <div>
-                        {t("workspaces.dashboard.reviewProgressLine", "Review Progress")}: {rev.done} / {rev.total} (
-                        {rev.percent}%)
-                      </div>
-                      <div>
-                        {t("workspaces.dashboard.approved", "Approved")}: {p.stats?.approved ?? 0}
-                        <span className={root.elem("stat-sep").toClassName()}> · </span>
-                        {t("workspaces.dashboard.rejected", "Rejected")}: {p.stats?.rejected ?? 0}
-                      </div>
-                    </div>
-                    <div className={root.elem("card-meta").toClassName()}>
-                      <span>{formatDate(p.due_date)}</span>
-                    </div>
-                    {Array.isArray(p.tags) && p.tags.length > 0 && (
-                      <div className={root.elem("tags").toClassName()}>
-                        {p.tags.map((tag) => (
-                          <span key={tag} className={root.elem("tag").toClassName()}>
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </a>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Datasets tab */}
-      {activeTab === "datasets" && (
-        <section className={root.elem("panel").toClassName()}>
-          <div className={root.elem("toolbar").toClassName()}>
-            <input
-              className={root.elem("search").toClassName()}
-              placeholder={t("workspaces.dashboard.searchDatasets", "Search datasets")}
-              value={datasetSearch}
-              onChange={(e) => setDatasetSearch(e.target.value)}
-            />
-            <Button size="small" onClick={openImport}>
-              {t("workspaces.dashboard.newDataset", "New Dataset")}
-            </Button>
-          </div>
-          <table className={root.elem("table").toClassName()}>
-            <thead>
-              <tr>
-                <th>{t("workspaces.dashboard.datasetName", "Name")}</th>
-                <th>{t("workspaces.dashboard.dataType", "Type")}</th>
-                <th>{t("workspaces.dashboard.itemCount", "Items")}</th>
-                <th>{t("workspaces.dashboard.lastUpdated", "Last updated")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {datasets.map((d) => (
-                <tr key={d.id}>
-                  <td>{d.name}</td>
-                  <td>{d.data_type}</td>
-                  <td>{d.item_count ?? "—"}</td>
-                  <td>{formatDate(d.last_updated)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
-
-      {/* Task Pools tab */}
-      {activeTab === "taskpools" && (
-        <section className={root.elem("panel").toClassName()}>
-          <TaskPools workspaceId={Number(id)} />
-        </section>
-      )}
-
-      {activeTab === "compensation" && (
-        <section className={root.elem("panel").toClassName()}>
-          <Compensation workspaceId={Number(id)} />
-        </section>
-      )}
-
-      {/* Cloud Storage tab (workspace managers only) — pick a project, manage its storage. */}
-      {activeTab === "storage" && perms.canManage && (
-        <section className={root.elem("panel").toClassName()}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-            <span style={{ fontWeight: 600 }}>프로젝트</span>
-            <select
-              value={storageProjectId}
-              onChange={(e) => setStorageProjectId(e.target.value)}
-              style={{ height: 32, padding: "0 8px", border: "1px solid var(--color-neutral-border)", borderRadius: 6 }}
-            >
-              <option value="">프로젝트 선택</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </select>
-          </div>
-          {storageProjectId ? (
-            <StorageSettings projectId={Number(storageProjectId)} />
-          ) : (
-            <p className={root.elem("muted").toClassName()}>스토리지를 관리할 프로젝트를 선택하세요.</p>
-          )}
-        </section>
-      )}
-
-      {/* Users tab */}
-      {activeTab === "users" && (
-        <section className={root.elem("panel").toClassName()}>
-          {perms.canManage && (
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontWeight: 600, marginBottom: 2 }}>새 멤버 초대 (계정이 없는 사람)</div>
-              <div style={{ fontSize: 13, color: "var(--color-neutral-content-subtler)", marginBottom: 8 }}>
-                초대 링크를 만들어 전달하세요. 상대가 그 링크로 가입하면 아래 역할로 자동 배치됩니다. (자동 이메일 발송이
-                아닙니다)
+          {/* Projects tab (primary) */}
+          {activeTab === "projects" && (
+            <section className={root.elem("panel").toClassName()}>
+              <div className={root.elem("toolbar").toClassName()}>
+                <input
+                  className={root.elem("search").toClassName()}
+                  placeholder={t("workspaces.dashboard.searchProjects", "Search projects")}
+                  value={projectSearch}
+                  onChange={(e) => setProjectSearch(e.target.value)}
+                />
+                <select value={labelTypeFilter} onChange={(e) => setLabelTypeFilter(e.target.value)}>
+                  <option value="">{t("workspaces.dashboard.allTypes", "All types")}</option>
+                  {labelTypeOptions.map((lt) => (
+                    <option key={lt} value={lt}>
+                      {lt}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  className={root.elem("tag-filter").toClassName()}
+                  placeholder={t("workspaces.dashboard.filterTag", "Filter by tag")}
+                  value={tagFilter}
+                  onChange={(e) => setTagFilter(e.target.value)}
+                />
+                <select value={ordering} onChange={(e) => setOrdering(e.target.value)}>
+                  <option value="-created_at">{t("workspaces.dashboard.sortNewest", "Newest")}</option>
+                  <option value="due_date">{t("workspaces.dashboard.sortDueDate", "Due date")}</option>
+                  <option value="-progress">{t("workspaces.dashboard.sortProgress", "Progress")}</option>
+                  <option value="title">{t("workspaces.dashboard.sortTitle", "Title")}</option>
+                </select>
+                {perms.canManage && (
+                  <Button size="small" onClick={() => setShowNewProject(true)}>
+                    {t("workspaces.dashboard.newProject", "New Project")}
+                  </Button>
+                )}
               </div>
-              <InviteMember workspaceId={Number(id)} projects={projects} />
-            </div>
+
+              {projects.length === 0 ? (
+                <p className={root.elem("muted").toClassName()}>{t("workspaces.detail.noProjects")}</p>
+              ) : (
+                <div className={root.elem("cards").toClassName()}>
+                  {projects.map((p) => {
+                    const ann = p.stats?.annotation ?? { done: 0, total: 0, percent: 0 };
+                    const rev = p.stats?.review ?? { done: 0, total: 0, percent: 0 };
+                    return (
+                      <a key={p.id} href={`/projects/${p.id}/data`} className={root.elem("card").toClassName()}>
+                        <div className={root.elem("card-head").toClassName()}>
+                          <h3>{p.title || t("projects.newProject", "New Project")}</h3>
+                          {p.label_type && <span className={root.elem("badge").toClassName()}>{p.label_type}</span>}
+                        </div>
+                        <div className={root.elem("card-counts").toClassName()}>
+                          <span>
+                            {t("workspaces.dashboard.poolItems", "Pool items")}: <b>{p.task_pool_item_count ?? 0}</b>
+                          </span>
+                          <span>
+                            {t("workspaces.dashboard.annotators", "Labelers")}: <b>{p.annotator_count ?? 0}</b>
+                          </span>
+                          <span>
+                            {t("workspaces.dashboard.reviewers", "Reviewers")}: <b>{p.reviewer_count ?? 0}</b>
+                          </span>
+                          <span>
+                            {t("workspaces.dashboard.workers", "Workers")}: <b>{p.worker_count ?? 0}</b>
+                          </span>
+                        </div>
+                        <div className={root.elem("progress").toClassName()}>
+                          <div
+                            className={root.elem("progress-bar").toClassName()}
+                            style={{ width: `${ann.percent}%` }}
+                          />
+                        </div>
+                        <div className={root.elem("stat-lines").toClassName()}>
+                          <div>
+                            {t("workspaces.dashboard.annotationProgress", "Annotation Progress")}: {ann.done} /{" "}
+                            {ann.total} ({ann.percent}%)
+                          </div>
+                          <div>
+                            {t("workspaces.dashboard.reviewProgressLine", "Review Progress")}: {rev.done} / {rev.total}{" "}
+                            ({rev.percent}%)
+                          </div>
+                          <div>
+                            {t("workspaces.dashboard.approved", "Approved")}: {p.stats?.approved ?? 0}
+                            <span className={root.elem("stat-sep").toClassName()}> · </span>
+                            {t("workspaces.dashboard.rejected", "Rejected")}: {p.stats?.rejected ?? 0}
+                          </div>
+                        </div>
+                        <div className={root.elem("card-meta").toClassName()}>
+                          <span>{formatDate(p.due_date)}</span>
+                        </div>
+                        {Array.isArray(p.tags) && p.tags.length > 0 && (
+                          <div className={root.elem("tags").toClassName()}>
+                            {p.tags.map((tag) => (
+                              <span key={tag} className={root.elem("tag").toClassName()}>
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
           )}
-          {perms.canManage && (
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>기존 멤버 추가 (이미 가입된 사람)</div>
-              <div className={root.elem("inline-form").toClassName()}>
-                <select value={inviteUser} onChange={(e) => setInviteUser(e.target.value)}>
-                  <option value="">{t("workspaces.members.selectUser")}</option>
-                  {addableUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {userLabel(u)}
-                    </option>
-                  ))}
-                </select>
-                <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
-                  {WORKSPACE_ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {t(`workspaces.roles.${r}`, r)}
-                    </option>
-                  ))}
-                </select>
-                <Button size="small" onClick={inviteMember} disabled={!inviteUser}>
-                  {t("workspaces.members.add")}
+
+          {/* Datasets tab */}
+          {activeTab === "datasets" && (
+            <section className={root.elem("panel").toClassName()}>
+              <div className={root.elem("toolbar").toClassName()}>
+                <input
+                  className={root.elem("search").toClassName()}
+                  placeholder={t("workspaces.dashboard.searchDatasets", "Search datasets")}
+                  value={datasetSearch}
+                  onChange={(e) => setDatasetSearch(e.target.value)}
+                />
+                <Button size="small" onClick={openImport}>
+                  {t("workspaces.dashboard.newDataset", "New Dataset")}
                 </Button>
               </div>
-            </div>
+              <table className={root.elem("table").toClassName()}>
+                <thead>
+                  <tr>
+                    <th>{t("workspaces.dashboard.datasetName", "Name")}</th>
+                    <th>{t("workspaces.dashboard.dataType", "Type")}</th>
+                    <th>{t("workspaces.dashboard.itemCount", "Items")}</th>
+                    <th>{t("workspaces.dashboard.lastUpdated", "Last updated")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {datasets.map((d) => (
+                    <tr key={d.id}>
+                      <td>{d.name}</td>
+                      <td>{d.data_type}</td>
+                      <td>{d.item_count ?? "—"}</td>
+                      <td>{formatDate(d.last_updated)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
           )}
 
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>{t("workspaces.detail.members", "Members")}</div>
-          <div className={root.elem("toolbar").toClassName()}>
-            <input
-              className={root.elem("search").toClassName()}
-              placeholder={t("workspaces.dashboard.searchUsers", "Search users")}
-              value={userSearch}
-              onChange={(e) => setUserSearch(e.target.value)}
-            />
-          </div>
+          {/* Task Pools tab */}
+          {activeTab === "taskpools" && (
+            <section className={root.elem("panel").toClassName()}>
+              <TaskPools workspaceId={Number(id)} />
+            </section>
+          )}
 
-          <table className={root.elem("table").toClassName()}>
-            <thead>
-              <tr>
-                <th>{t("workspaces.members.user")}</th>
-                <th>{t("workspaces.members.role")}</th>
-                <th aria-label="actions" />
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((m) => (
-                <tr key={m.id}>
-                  <td>{userLabel(m.user_detail)}</td>
-                  <td>
-                    <select value={m.role} onChange={(e) => changeRole(m, e.target.value)}>
+          {activeTab === "compensation" && (
+            <section className={root.elem("panel").toClassName()}>
+              <Compensation workspaceId={Number(id)} />
+            </section>
+          )}
+
+          {/* Cloud Storage tab (workspace managers only) — workspace data sources + per-project storage. */}
+          {activeTab === "storage" && perms.canManage && (
+            <section className={root.elem("panel").toClassName()}>
+              {/* Workspace-level sources: synced blobs become task-pool source items. */}
+              <WorkspaceStorageSources workspaceId={Number(id)} />
+
+              <hr style={{ border: "none", borderTop: "1px solid var(--color-neutral-border)", margin: "16px 0" }} />
+
+              <div style={{ marginBottom: 8 }}>
+                <span style={{ fontWeight: 600 }}>프로젝트별 스토리지</span>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--color-neutral-content-subtler)" }}>
+                  작업집합을 거치지 않고 특정 프로젝트에 태스크를 직접 생성/내보내기하는 스토리지입니다.
+                </p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                <span style={{ fontWeight: 600 }}>프로젝트</span>
+                <select
+                  value={storageProjectId}
+                  onChange={(e) => setStorageProjectId(e.target.value)}
+                  style={{
+                    height: 32,
+                    padding: "0 8px",
+                    border: "1px solid var(--color-neutral-border)",
+                    borderRadius: 6,
+                  }}
+                >
+                  <option value="">프로젝트 선택</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {storageProjectId ? (
+                <StorageSettings projectId={Number(storageProjectId)} />
+              ) : (
+                <p className={root.elem("muted").toClassName()}>스토리지를 관리할 프로젝트를 선택하세요.</p>
+              )}
+            </section>
+          )}
+
+          {/* Users tab */}
+          {activeTab === "users" && (
+            <section className={root.elem("panel").toClassName()}>
+              {perms.canManage && (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 2 }}>새 멤버 초대 (계정이 없는 사람)</div>
+                  <div style={{ fontSize: 13, color: "var(--color-neutral-content-subtler)", marginBottom: 8 }}>
+                    초대 링크를 만들어 전달하세요. 상대가 그 링크로 가입하면 아래 역할로 자동 배치됩니다. (자동 이메일
+                    발송이 아닙니다)
+                  </div>
+                  <InviteMember workspaceId={Number(id)} projects={projects} />
+                </div>
+              )}
+              {perms.canManage && (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 8 }}>기존 멤버 추가 (이미 가입된 사람)</div>
+                  <div className={root.elem("inline-form").toClassName()}>
+                    <select value={inviteUser} onChange={(e) => setInviteUser(e.target.value)}>
+                      <option value="">{t("workspaces.members.selectUser")}</option>
+                      {addableUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {userLabel(u)}
+                        </option>
+                      ))}
+                    </select>
+                    <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
                       {WORKSPACE_ROLES.map((r) => (
                         <option key={r} value={r}>
                           {t(`workspaces.roles.${r}`, r)}
                         </option>
                       ))}
                     </select>
-                  </td>
-                  <td>
-                    <Button look="outlined" size="small" variant="negative" onClick={() => removeMember(m)}>
-                      {t("common.remove", "Remove")}
+                    <Button size="small" onClick={inviteMember} disabled={!inviteUser}>
+                      {t("workspaces.members.add")}
                     </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>{t("workspaces.detail.members", "Members")}</div>
+              <div className={root.elem("toolbar").toClassName()}>
+                <input
+                  className={root.elem("search").toClassName()}
+                  placeholder={t("workspaces.dashboard.searchUsers", "Search users")}
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                />
+              </div>
+
+              <table className={root.elem("table").toClassName()}>
+                <thead>
+                  <tr>
+                    <th>{t("workspaces.members.user")}</th>
+                    <th>{t("workspaces.members.role")}</th>
+                    <th aria-label="actions" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((m) => (
+                    <tr key={m.id}>
+                      <td>{userLabel(m.user_detail)}</td>
+                      <td>
+                        <select value={m.role} onChange={(e) => changeRole(m, e.target.value)}>
+                          {WORKSPACE_ROLES.map((r) => (
+                            <option key={r} value={r}>
+                              {t(`workspaces.roles.${r}`, r)}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <Button look="outlined" size="small" variant="negative" onClick={() => removeMember(m)}>
+                          {t("common.remove", "Remove")}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
         </>
       )}
 
