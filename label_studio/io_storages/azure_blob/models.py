@@ -276,13 +276,74 @@ class AzureBlobImportStorage(ProjectStorageMixin, AzureBlobImportStorageBase):
 
 
 class AzureBlobWorkspaceImportStorage(WorkspaceStorageMixin, AzureBlobImportStorageBase):
-    """Workspace-scope template for Azure Blob imports. See LocalFilesWorkspaceImportStorage."""
+    """Workspace-scope Azure Blob storage.
+
+    Serves two roles:
+    - Template for project-scope storages (see `parent_storage` on AzureBlobImportStorage).
+    - Task-pool data source: `scan_and_create_source_items` loads blobs as workspace
+      TaskSourceItem rows, so admins can curate them into Task Pools like uploaded datasets.
+    """
 
     def scan_and_create_links(self):  # pragma: no cover - defensive guard
         raise NotImplementedError(
-            'Workspace-scope storages are templates only. '
-            'Create a project-scope storage with parent_storage set to sync tasks.'
+            'Workspace-scope storages do not create project tasks directly. '
+            'Use scan_and_create_source_items to load task-pool source items, or create '
+            'a project-scope storage with parent_storage set.'
         )
+
+    @property
+    def source_id(self):
+        return f'azure:{self.pk}'
+
+    def scan_and_create_source_items(self, max_items=10000):
+        """Load blobs as TaskSourceItem rows for this workspace. Returns the created count.
+
+        Idempotent: items already imported (same `source` + `storage_key`) are skipped,
+        so re-sync only picks up new blobs. JSON blobs may carry `predictions`, which are
+        stored on the item and passed through when a pool is materialized into a project.
+        """
+        from workspaces.models import TaskSourceItem
+        from workspaces.taskpools import _infer_item_type
+
+        existing_qs = TaskSourceItem.objects.filter(workspace=self.workspace, source=self.source_id)
+        existing = set(existing_qs.values_list('storage_key', flat=True))
+        next_index = existing_qs.count()
+
+        items = []
+        for key in self.iter_keys():
+            for obj in self.get_data(key):
+                storage_key = obj.key if obj.row_index is None else f'{obj.key}#{obj.row_index}'
+                if storage_key in existing:
+                    continue
+                raw = obj.task_data or {}
+                data, predictions = raw, None
+                # Full task format ({"data": {...}, "predictions": [...]}) vs flat data dict.
+                if isinstance(raw, dict) and isinstance(raw.get('data'), dict):
+                    data = raw['data']
+                    predictions = raw.get('predictions') or None
+                items.append(
+                    TaskSourceItem(
+                        dataset=None,
+                        workspace=self.workspace,
+                        data=data,
+                        data_type=_infer_item_type(data, 'json'),
+                        index=next_index + len(items),
+                        source=self.source_id,
+                        storage_key=storage_key,
+                        predictions=predictions,
+                    )
+                )
+                existing.add(storage_key)
+                if len(items) >= max_items:
+                    break
+            if len(items) >= max_items:
+                break
+
+        TaskSourceItem.objects.bulk_create(items)
+        self.last_sync = timezone.now()
+        self.last_sync_count = len(items)
+        self.save(update_fields=['last_sync', 'last_sync_count'])
+        return len(items)
 
     class Meta:
         abstract = False

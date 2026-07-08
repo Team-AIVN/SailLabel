@@ -16,6 +16,7 @@ from io_storages.api import (
     ImportStorageValidateAPI,
     WorkspaceImportStorageDetailAPI,
     WorkspaceImportStorageListAPI,
+    WorkspaceImportStorageSyncAPI,
     WorkspaceStorageAssignMixin,
     _compose_prefix,
 )
@@ -375,6 +376,22 @@ class AzureBlobWorkspaceImportStorageListAPI(WorkspaceImportStorageListAPI):
     ),
 )
 class AzureBlobWorkspaceImportStorageDetailAPI(WorkspaceImportStorageDetailAPI):
+    queryset = AzureBlobWorkspaceImportStorage.objects.all()
+    serializer_class = AzureBlobWorkspaceImportStorageSerializer
+
+
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Storage: Azure'],
+        summary='Sync workspace-scope import storage',
+        description=(
+            'Scan the Azure container and load blobs as workspace task-pool source items '
+            '(TaskSourceItem). Idempotent: already-imported blobs are skipped.'
+        ),
+    ),
+)
+class AzureBlobWorkspaceImportStorageSyncAPI(WorkspaceImportStorageSyncAPI):
     queryset = AzureBlobWorkspaceImportStorage.objects.all()
     serializer_class = AzureBlobWorkspaceImportStorageSerializer
 

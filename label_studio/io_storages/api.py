@@ -308,6 +308,39 @@ class WorkspaceImportStorageListAPI(generics.ListCreateAPIView):
         serializer.save(workspace=workspace)
 
 
+class WorkspaceImportStorageSyncAPI(generics.GenericAPIView):
+    """Sync a workspace-scope import storage into workspace task-pool source items.
+
+    Unlike project storage sync (which creates project tasks), this loads blobs as
+    TaskSourceItem rows so workspace managers can curate them into Task Pools.
+    """
+
+    permission_required = ViewClassPermission(
+        POST=all_permissions.workspaces_change,
+    )
+    parser_classes = (JSONParser, FormParser, MultiPartParser)
+    serializer_class = ImportStorageSerializer
+
+    def get_queryset(self):
+        StorageClass = self.serializer_class.Meta.model
+        org = getattr(self.request.user, 'active_organization', None)
+        if org is None:
+            return StorageClass.objects.none()
+        return StorageClass.objects.filter(workspace__organization=org)
+
+    def post(self, request, *args, **kwargs):
+        storage = self.get_object()
+        if not is_workspace_manager(request.user, storage.workspace):
+            raise PermissionDenied('Only a workspace manager can sync workspace storages.')
+        # check connectivity & access, raise an exception if not satisfied
+        storage.validate_connection()
+        created = storage.scan_and_create_source_items()
+        storage.refresh_from_db()
+        data = self.serializer_class(storage).data
+        data['created_items'] = created
+        return Response(data)
+
+
 class WorkspaceImportStorageDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     """RUD workspace-scope import storage by pk."""
 

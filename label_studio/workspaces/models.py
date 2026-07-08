@@ -219,18 +219,21 @@ class WorkspaceFileUpload(models.Model):
 
 
 class TaskSourceItem(models.Model):
-    """An individual data item parsed from a dataset (WorkspaceFileUpload).
+    """An individual data item parsed from a dataset (WorkspaceFileUpload) or a cloud storage.
 
     A "dataset" is a WorkspaceFileUpload; its items are the selectable units that
     workspace admins curate into Task Pools. JSON/CSV uploads expand into many items;
-    a single media file becomes one item.
+    a single media file becomes one item. Items synced from a workspace cloud storage
+    have no dataset — `source`/`storage_key` identify where they came from instead.
     """
 
     dataset = models.ForeignKey(
         WorkspaceFileUpload,
         on_delete=models.CASCADE,
         related_name='items',
-        help_text='Dataset (workspace file upload) this item came from.',
+        null=True,
+        blank=True,
+        help_text='Dataset (workspace file upload) this item came from; null for cloud-storage items.',
     )
     workspace = models.ForeignKey(
         Workspace,
@@ -241,6 +244,25 @@ class TaskSourceItem(models.Model):
     data = models.JSONField(help_text='Task data for this item.')
     data_type = models.CharField(_('data type'), max_length=32, default='file', db_index=True)
     index = models.PositiveIntegerField(_('index'), default=0, help_text='Position within the source dataset.')
+    source = models.CharField(
+        _('source'),
+        max_length=64,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Cloud-storage source id (e.g. 'azure:3'); null for direct uploads.",
+    )
+    storage_key = models.TextField(
+        _('storage key'),
+        null=True,
+        blank=True,
+        help_text='Blob key (with row suffix for multi-task JSON) inside the source storage; used for idempotent re-sync.',
+    )
+    predictions = models.JSONField(
+        null=True,
+        blank=True,
+        help_text='Optional model predictions imported alongside the item (passed through to project tasks).',
+    )
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
 
     class Meta:
