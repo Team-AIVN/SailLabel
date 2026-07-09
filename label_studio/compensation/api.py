@@ -19,7 +19,6 @@ from users.constants import ProjectRole
 from users.rules import is_project_manager_of, is_super_admin
 from workspaces.models import Workspace
 from workspaces.rules import is_workspace_manager, is_workspace_member
-from workspaces.taskpools_api import _get_workspace
 
 from .models import PaymentRecord, ProjectCompensationPolicy
 from .serializers import PaymentRecordSerializer, ProjectCompensationPolicySerializer

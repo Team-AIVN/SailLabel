@@ -387,10 +387,6 @@ class WorkspaceSummaryAPI(_WorkspaceScopedMixin, generics.RetrieveAPIView):
         return self._get_workspace()
 
 
-@method_decorator(
-    name='get',
-    decorator=extend_schema(tags=['Workspaces'], summary='List workspace file uploads'),
-)
 def _save_workspace_upload(workspace, user, fileobj, materialize=True):
     """Create a WorkspaceFileUpload, sanitizing SVG content first.
 

@@ -14,7 +14,6 @@ import { WorkspaceDetail } from "./WorkspaceDetail";
 import { EmptyWorkspacesList, WorkspacesList } from "./WorkspacesList";
 // Reuse the project list design system (projects-page / project-card / empty-projects-page).
 import "../Projects/Projects.prefix.css";
-import "./Workspaces.prefix.css";
 
 const getCurrentPage = () => {
   const pageNumberFromURL = new URLSearchParams(location.search).get("page");
