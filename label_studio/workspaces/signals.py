@@ -27,3 +27,35 @@ def materialize_task_pool_on_project(sender, instance, **kwargs):
         materialize_pool_to_project(instance)
     except Exception:
         logger.exception('Failed to materialize task pool for project %s', instance.pk)
+
+
+@receiver(post_save, sender=Project)
+def attach_azure_export_storage(sender, instance, created, **kwargs):
+    """Auto-attach an Azure export storage to new workspace projects.
+
+    When the deployment has default Azure credentials (AZURE_BLOB_ACCOUNT_NAME/KEY and
+    AZURE_BLOB_DEFAULT_CONTAINER), every submitted annotation is then pushed to
+    `export/<project id>/` automatically (see export_annotation_to_azure_storages),
+    and the storage's Sync bulk-pushes everything when work is done. No-op when the
+    env is not configured, so setups without Azure are unaffected.
+    """
+    if not created or not instance.workspace_id:
+        return
+    try:
+        from core.utils.params import get_env
+        from io_storages.azure_blob.models import AzureBlobExportStorage
+
+        container = get_env('AZURE_BLOB_DEFAULT_CONTAINER')
+        if not (container and get_env('AZURE_BLOB_ACCOUNT_NAME') and get_env('AZURE_BLOB_ACCOUNT_KEY')):
+            return
+        if instance.io_storages_azureblobexportstorages.exists():
+            return
+        AzureBlobExportStorage.objects.create(
+            project=instance,
+            title='결과 자동 저장 (Azure)',
+            container=container,
+            prefix=f'export/{instance.pk}',
+        )
+        logger.info('Attached azure export storage to project %s (export/%s)', instance.pk, instance.pk)
+    except Exception:
+        logger.exception('Failed to attach azure export storage to project %s', instance.pk)

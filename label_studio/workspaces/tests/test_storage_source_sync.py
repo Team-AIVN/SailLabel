@@ -133,6 +133,29 @@ class WorkspaceStorageSourceSyncTests(APITestCase):
         assert Task.objects.filter(project=project).count() == 2
         assert Prediction.objects.filter(task__project=project).count() == 1
 
+    def test_project_auto_attaches_azure_export_storage(self):
+        """env에 Azure 기본 연결이 있으면 새 프로젝트에 결과 자동 저장 스토리지가 붙는다."""
+        env = {
+            'AZURE_BLOB_DEFAULT_CONTAINER': 'label-images',
+            'AZURE_BLOB_ACCOUNT_NAME': 'acc',
+            'AZURE_BLOB_ACCOUNT_KEY': 'key',
+        }
+        with patch('core.utils.params.get_env', side_effect=lambda k, *a, **kw: env.get(k)):
+            project = ProjectFactory(
+                organization=self.org, created_by=self.owner, workspace=self.ws, label_config=TEXT_CONFIG
+            )
+        st = project.io_storages_azureblobexportstorages.first()
+        assert st is not None
+        assert st.container == 'label-images'
+        assert st.prefix == f'export/{project.pk}'
+
+    def test_project_without_env_gets_no_export_storage(self):
+        with patch('core.utils.params.get_env', side_effect=lambda k, *a, **kw: None):
+            project = ProjectFactory(
+                organization=self.org, created_by=self.owner, workspace=self.ws, label_config=TEXT_CONFIG
+            )
+        assert not project.io_storages_azureblobexportstorages.exists()
+
     def test_sync_api_requires_manager(self):
         member = UserFactory()
         _join_org(member, self.org)
