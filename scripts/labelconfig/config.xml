@@ -16,7 +16,7 @@
     <View className="ref-pane">
       <Image name="image" value="$image"/>
       <View className="ref-table">
-        <Table name="data" value="$data"/>
+        <Table name="data" value="$data_csv" valueType="csv"/>
       </View>
     </View>
     <!-- 오른쪽: 입력 폼(스크롤) -->

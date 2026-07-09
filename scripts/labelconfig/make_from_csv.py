@@ -14,6 +14,7 @@ ship's heading, normalized 0–360. Own ship row shows "-".
 
 import csv
 import glob
+import io
 import json
 import math
 import os
@@ -59,6 +60,19 @@ def parse_rows(csv_path):
             "TCPA(sec)": f"{float(r['tcpa']):.1f}",
         })
     return out, len(rows)
+
+
+# 표 컬럼 순서(정본). LS <Table valueType="csv">는 CSV 헤더 순서를 컬럼 순서로 쓰고,
+# CSV는 문자열이라 Postgres jsonb가 순서를 재정렬하지 않는다(array-of-dicts는 재정렬됨).
+COLUMNS = ["구분", "길이(m)", "폭(m)", "속도(kn)", "방위(°)", "상대방위", "위도", "경도", "CPA(NM)", "TCPA(sec)"]
+
+
+def rows_to_csv(rows):
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=COLUMNS, extrasaction="ignore")
+    w.writeheader()
+    w.writerows(rows)
+    return buf.getvalue()
 
 
 def scenario_of(base):
@@ -129,7 +143,10 @@ def build_all(csv_dir):
             continue
         rows, ship_count = parse_rows(csv_path)
         task = {
-            "data": {"image": f"azure-blob://{CONTAINER}/images/{base}.png", "data": rows},
+            "data": {
+                "image": f"azure-blob://{CONTAINER}/images/{base}.png",
+                "data_csv": rows_to_csv(rows),  # CSV 문자열 → jsonb가 컬럼 순서 보존
+            },
             "predictions": [build_prediction(base, ship_count, i)],
         }
         tasks.append((base, task, png))

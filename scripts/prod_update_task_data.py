@@ -1,14 +1,19 @@
-"""데모 프로젝트 표 데이터 인플레이스 갱신 (wipe 없음).
+"""데모 프로젝트 태스크 인플레이스 갱신 (wipe 없음).
 
-Azure ``tasks/<base>.json`` 최신 내용으로 각 태스크의 ``data`` 를 교체한다.
-LS ``<Table>`` 는 컬럼을 데이터(행 dict) 키 순서에서 뽑으므로, 컬럼 순서/이름 변경은
-태스크 data 교체로 반영된다. 워크스페이스/프로젝트/초대/멤버십/주석은 전부 보존.
+Azure ``tasks/<base>.json`` 최신본으로 각 태스크의 ``data`` 와 ``predictions`` 를 교체하고,
+프로젝트 ``label_config`` (LABEL_CONFIG_B64 주입) 와 ``model_version`` 을 맞춘다.
+- 표 컬럼 순서: ``data.data_csv`` (CSV 문자열) + config의 ``<Table valueType="csv">`` 로 확정
+  (Postgres jsonb 는 dict 키 순서를 보존하지 않으므로 array-of-dicts 로는 순서 제어 불가).
+- 예측: prediction ``model_version`` 을 프로젝트 ``model_version`` 에도 반영해야 pre-fill 됨.
+워크스페이스/프로젝트/초대/멤버십/주석은 전부 보존.
 
 실행 (VM):
-  docker compose exec -T -e UPDATE_CONFIRM=yes app python3 label_studio/manage.py shell < prod_update_task_data.py
+  docker compose exec -T -e UPDATE_CONFIRM=yes -e LABEL_CONFIG_B64=... \
+    app python3 label_studio/manage.py shell < prod_update_task_data.py
 
 안전장치: UPDATE_CONFIRM=yes 아니면 변경 없이 종료.
 """
+import base64
 import json
 import os
 
@@ -17,6 +22,7 @@ if os.environ.get("UPDATE_CONFIRM") != "yes":
 
 from io_storages.azure_blob.models import AzureBlobWorkspaceImportStorage
 from projects.models import Project
+from tasks.models import Prediction
 
 proj = Project.objects.filter(title="선박 탐색 시연").order_by("id").last()
 if proj is None:
@@ -28,8 +34,8 @@ if storage is None:
 container = storage.get_container()
 
 cache = {}
-updated = 0
-total = proj.tasks.count()
+n_data = n_pred = 0
+model_version = None
 for task in proj.tasks.all().order_by("id"):
     img = (task.data or {}).get("image", "")
     base = img.rsplit("/", 1)[-1].rsplit(".", 1)[0]
@@ -42,15 +48,38 @@ for task in proj.tasks.all().order_by("id"):
         except Exception as e:
             print(f"  ! tasks/{base}.json 다운로드 실패: {e}")
             cache[base] = None
-    newj = cache[base]
-    if not newj or "data" not in newj:
+    j = cache[base]
+    if not j:
         continue
-    task.data = newj["data"]  # image + 재정렬된 표 행
-    task.save(update_fields=["data"])
-    updated += 1
+    if "data" in j:
+        task.data = j["data"]  # {image, data_csv}
+        task.save(update_fields=["data"])
+        n_data += 1
+    preds = j.get("predictions") or []
+    if preds:
+        Prediction.objects.filter(task=task).delete()
+        for p in preds:
+            mv = p.get("model_version") or "gpt-5.5"
+            model_version = mv
+            Prediction.objects.create(task=task, project=proj, result=p["result"], model_version=mv)
+            n_pred += 1
 
-print(f"[update] 태스크 data 갱신: {updated}/{total}")
+# label_config (base64 주입) + model_version 반영
+fields = []
+b64 = os.environ.get("LABEL_CONFIG_B64")
+if b64:
+    cfg = base64.b64decode(b64).decode("utf-8")
+    if "<Table" in cfg:
+        proj.label_config = cfg
+        fields.append("label_config")
+if model_version:
+    proj.model_version = model_version  # 예측 pre-fill 위해 프로젝트 model_version 일치
+    fields.append("model_version")
+if fields:
+    proj.save(update_fields=fields)
+
+print(f"[update] data {n_data} / predictions {n_pred} / model_version={proj.model_version}")
 t0 = proj.tasks.order_by("id").first()
-if t0 and t0.data.get("data"):
-    print("  적용된 컬럼 순서:", list(t0.data["data"][0].keys()))
+if t0:
+    print("  data 키:", list((t0.data or {}).keys()))
 print("DONE")

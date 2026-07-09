@@ -28,8 +28,13 @@ jobs:
           VM_USER: label-sea
         run: |
           install -m 600 /dev/null key.pem && printf '%s\n' "$SSH_KEY" > key.pem
+          # config.xml 을 base64 로 컨테이너 env 주입 (이미지엔 scripts/ 없음)
+          B64=$(base64 < scripts/labelconfig/config.xml | tr -d '\n')
           ssh -i key.pem -o StrictHostKeyChecking=accept-new "$VM_USER@$VM_HOST" \
-            "cd ~/label-sea && docker compose exec -T -e UPDATE_CONFIRM=yes app python3 label_studio/manage.py shell" \
+            "cd ~/label-sea && docker compose exec -T \
+               -e UPDATE_CONFIRM=yes \
+               -e LABEL_CONFIG_B64=$B64 \
+               app python3 label_studio/manage.py shell" \
             < scripts/prod_update_task_data.py
 
       - name: Summary
