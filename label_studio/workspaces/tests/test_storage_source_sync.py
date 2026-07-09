@@ -63,16 +63,16 @@ class WorkspaceStorageSourceSyncTests(APITestCase):
         )
         self.client.force_authenticate(self.owner)
 
-    def _sync(self):
+    def _sync(self, storage=None):
         iter_keys, get_data = _fake_blobs()
         with (
             patch.object(AzureBlobWorkspaceImportStorage, 'iter_keys', iter_keys),
             patch.object(AzureBlobWorkspaceImportStorage, 'get_data', get_data),
         ):
-            return self.storage.scan_and_create_source_items()
+            return (storage or self.storage).scan_and_create_source_items()
 
     def test_scan_creates_source_items(self):
-        created = self._sync()
+        created = self._sync()['created']
         assert created == 3
 
         items = list(TaskSourceItem.objects.filter(workspace=self.ws).order_by('index'))
@@ -95,9 +95,30 @@ class WorkspaceStorageSourceSyncTests(APITestCase):
         assert self.storage.last_sync_count == 3
 
     def test_rescan_is_idempotent(self):
-        assert self._sync() == 3
-        assert self._sync() == 0
+        assert self._sync()['created'] == 3
+        assert self._sync()['created'] == 0
         assert TaskSourceItem.objects.filter(workspace=self.ws).count() == 3
+
+    def test_same_folder_feeds_second_pool_without_duplicates(self):
+        """같은 폴더를 두 번째 작업집합에 연결하면 복사 없이 기존 아이템이 그 풀에 담긴다."""
+        pool_a = TaskPool.objects.create(workspace=self.ws, title='A', created_by=self.owner)
+        pool_b = TaskPool.objects.create(workspace=self.ws, title='B', created_by=self.owner)
+
+        self.storage.task_pool = pool_a
+        self.storage.save(update_fields=['task_pool'])
+        first = self._sync()
+        assert first == {'created': 3, 'linked': 0}
+        assert pool_a.items.count() == 3
+
+        second_conn = AzureBlobWorkspaceImportStorage.objects.create(
+            workspace=self.ws, title='src2', container='label-images', task_pool=pool_b
+        )
+        second = self._sync(second_conn)
+        assert second == {'created': 0, 'linked': 3}
+        assert TaskSourceItem.objects.filter(workspace=self.ws).count() == 3  # 복사본 없음
+        assert pool_b.items.count() == 3
+        # 재실행해도 변화 없음
+        assert self._sync(second_conn) == {'created': 0, 'linked': 0}
 
     def test_materialize_pool_passes_predictions(self):
         self._sync()

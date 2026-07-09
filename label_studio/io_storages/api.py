@@ -334,10 +334,12 @@ class WorkspaceImportStorageSyncAPI(generics.GenericAPIView):
             raise PermissionDenied('Only a workspace manager can sync workspace storages.')
         # check connectivity & access, raise an exception if not satisfied
         storage.validate_connection()
-        created = storage.scan_and_create_source_items()
+        result = storage.scan_and_create_source_items()
         storage.refresh_from_db()
         data = self.serializer_class(storage).data
-        data['created_items'] = created
+        data['created_items'] = result['created']
+        # pre-existing items (imported by another connection) newly added to this pool
+        data['linked_items'] = result['linked']
         return Response(data)
 
 

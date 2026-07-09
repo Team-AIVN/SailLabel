@@ -26,6 +26,7 @@ from io_storages.azure_blob.api import (
     AzureBlobWorkspaceImportStorageDetailAPI,
     AzureBlobWorkspaceImportStorageListAPI,
     AzureBlobWorkspaceImportStorageSyncAPI,
+    AzureBlobWorkspaceStorageBrowseAPI,
 )
 from io_storages.gcs.api import (
     GCSExportStorageDetailAPI,
@@ -159,6 +160,11 @@ _api_urlpatterns = [
         'azure/workspace/<int:pk>/sync',
         AzureBlobWorkspaceImportStorageSyncAPI.as_view(),
         name='storage-azure-workspace-sync',
+    ),
+    path(
+        'azure/workspace/browse',
+        AzureBlobWorkspaceStorageBrowseAPI.as_view(),
+        name='storage-azure-workspace-browse',
     ),
     # Google Cloud Storage
     path('gcs/', GCSImportStorageListAPI.as_view(), name='storage-gcs-list'),
