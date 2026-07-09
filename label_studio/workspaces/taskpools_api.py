@@ -77,6 +77,12 @@ class TaskSourceItemsAPI(generics.ListAPIView):
             qs = qs.filter(data_type=params['data_type'])
         if params.get('dataset'):
             qs = qs.filter(dataset_id=params['dataset'])
+        if params.get('source'):
+            # 'upload' = direct uploads (no cloud source); otherwise exact source id, e.g. 'azure:3'.
+            if params['source'] == 'upload':
+                qs = qs.filter(source__isnull=True)
+            else:
+                qs = qs.filter(source=params['source'])
         if params.get('search'):
             qs = qs.filter(data__icontains=params['search'])
         return qs.order_by('dataset_id', 'index')

@@ -200,7 +200,13 @@ def materialize_pool_to_project(project):
     from data_import.serializers import ImportApiSerializer
 
     task_source_items = TaskSourceItem.objects.filter(pool_items__task_pool=pool).order_by('id')
-    tasks = [{'data': it.data} for it in task_source_items]
+    tasks = []
+    for it in task_source_items:
+        task = {'data': it.data}
+        if it.predictions:
+            # Cloud-storage items may carry model predictions; pass them through.
+            task['predictions'] = it.predictions
+        tasks.append(task)
     if not tasks:
         return 0
 

@@ -276,13 +276,115 @@ class AzureBlobImportStorage(ProjectStorageMixin, AzureBlobImportStorageBase):
 
 
 class AzureBlobWorkspaceImportStorage(WorkspaceStorageMixin, AzureBlobImportStorageBase):
-    """Workspace-scope template for Azure Blob imports. See LocalFilesWorkspaceImportStorage."""
+    """Workspace-scope Azure Blob storage.
+
+    Serves two roles:
+    - Template for project-scope storages (see `parent_storage` on AzureBlobImportStorage).
+    - Task-pool data source: `scan_and_create_source_items` loads blobs as workspace
+      TaskSourceItem rows. When `task_pool` is set, new items land in that pool directly,
+      so a storage acts as an "Azure folder -> task pool" pipe.
+    """
+
+    task_pool = models.ForeignKey(
+        'workspaces.TaskPool',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='azure_sources',
+        help_text='Task pool that synced items are added to automatically.',
+    )
 
     def scan_and_create_links(self):  # pragma: no cover - defensive guard
         raise NotImplementedError(
-            'Workspace-scope storages are templates only. '
-            'Create a project-scope storage with parent_storage set to sync tasks.'
+            'Workspace-scope storages do not create project tasks directly. '
+            'Use scan_and_create_source_items to load task-pool source items, or create '
+            'a project-scope storage with parent_storage set.'
         )
+
+    @property
+    def source_id(self):
+        return f'azure:{self.pk}'
+
+    def scan_and_create_source_items(self, max_items=10000):
+        """Load blobs as TaskSourceItem rows for this workspace.
+
+        Idempotent per FILE (workspace + `storage_key`), not per connection: a blob that
+        any Azure connection already imported is never duplicated. Instead, when this
+        connection targets a `task_pool`, the existing item is added to that pool — so the
+        same folder can feed multiple task pools with a single copy of the data.
+        `regex_filter` is applied to blob keys. JSON blobs may carry `predictions`,
+        stored on the item and passed through when a pool is materialized.
+
+        Returns {'created': new item count, 'linked': pre-existing items newly added to the pool}.
+        """
+        from workspaces.models import TaskPoolItem, TaskSourceItem
+        from workspaces.taskpools import _infer_item_type
+
+        regex = re.compile(str(self.regex_filter)) if self.regex_filter else None
+
+        # File-level dedup across ALL azure connections of this workspace.
+        existing = dict(
+            TaskSourceItem.objects.filter(workspace=self.workspace, storage_key__isnull=False).values_list(
+                'storage_key', 'id'
+            )
+        )
+        next_index = TaskSourceItem.objects.filter(workspace=self.workspace, source=self.source_id).count()
+
+        items, existing_ids_for_pool = [], []
+        for key in self.iter_keys():
+            if regex and not regex.match(key):
+                continue
+            for obj in self.get_data(key):
+                storage_key = obj.key if obj.row_index is None else f'{obj.key}#{obj.row_index}'
+                if storage_key in existing:
+                    if existing[storage_key] is not None:
+                        existing_ids_for_pool.append(existing[storage_key])
+                    continue
+                raw = obj.task_data or {}
+                data, predictions = raw, None
+                # Full task format ({"data": {...}, "predictions": [...]}) vs flat data dict.
+                if isinstance(raw, dict) and isinstance(raw.get('data'), dict):
+                    data = raw['data']
+                    predictions = raw.get('predictions') or None
+                items.append(
+                    TaskSourceItem(
+                        dataset=None,
+                        workspace=self.workspace,
+                        data=data,
+                        data_type=_infer_item_type(data, 'json'),
+                        index=next_index + len(items),
+                        source=self.source_id,
+                        storage_key=storage_key,
+                        predictions=predictions,
+                    )
+                )
+                existing[storage_key] = None  # placeholder: created this run
+                if len(items) >= max_items:
+                    break
+            if len(items) >= max_items:
+                break
+
+        created = TaskSourceItem.objects.bulk_create(items)
+
+        linked = 0
+        if self.task_pool_id:
+            already_in_pool = set(
+                TaskPoolItem.objects.filter(
+                    task_pool_id=self.task_pool_id, task_source_item_id__in=existing_ids_for_pool
+                ).values_list('task_source_item_id', flat=True)
+            )
+            to_link = [i for i in existing_ids_for_pool if i not in already_in_pool]
+            linked = len(to_link)
+            TaskPoolItem.objects.bulk_create(
+                [TaskPoolItem(task_pool_id=self.task_pool_id, task_source_item_id=i) for i in to_link]
+                + [TaskPoolItem(task_pool_id=self.task_pool_id, task_source_item=it) for it in created],
+                ignore_conflicts=True,
+            )
+
+        self.last_sync = timezone.now()
+        self.last_sync_count = len(items)
+        self.save(update_fields=['last_sync', 'last_sync_count'])
+        return {'created': len(items), 'linked': linked}
 
     class Meta:
         abstract = False

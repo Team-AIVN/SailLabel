@@ -16,6 +16,7 @@ from io_storages.api import (
     ImportStorageValidateAPI,
     WorkspaceImportStorageDetailAPI,
     WorkspaceImportStorageListAPI,
+    WorkspaceImportStorageSyncAPI,
     WorkspaceStorageAssignMixin,
     _compose_prefix,
 )
@@ -29,6 +30,11 @@ from io_storages.azure_blob.serializers import (
     AzureBlobImportStorageSerializer,
     AzureBlobWorkspaceImportStorageSerializer,
 )
+
+from core.permissions import ViewClassPermission, all_permissions
+from rest_framework import generics, status
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
 
 from .openapi_schema import (
     _azure_blob_export_storage_schema,
@@ -377,6 +383,97 @@ class AzureBlobWorkspaceImportStorageListAPI(WorkspaceImportStorageListAPI):
 class AzureBlobWorkspaceImportStorageDetailAPI(WorkspaceImportStorageDetailAPI):
     queryset = AzureBlobWorkspaceImportStorage.objects.all()
     serializer_class = AzureBlobWorkspaceImportStorageSerializer
+
+
+@method_decorator(
+    name='post',
+    decorator=extend_schema(
+        tags=['Storage: Azure'],
+        summary='Sync workspace-scope import storage',
+        description=(
+            'Scan the Azure container and load blobs as workspace task-pool source items '
+            '(TaskSourceItem). Idempotent: already-imported blobs are skipped.'
+        ),
+    ),
+)
+class AzureBlobWorkspaceImportStorageSyncAPI(WorkspaceImportStorageSyncAPI):
+    queryset = AzureBlobWorkspaceImportStorage.objects.all()
+    serializer_class = AzureBlobWorkspaceImportStorageSerializer
+
+
+@method_decorator(
+    name='get',
+    decorator=extend_schema(
+        tags=['Storage: Azure'],
+        summary='Browse Azure container folders',
+        description=(
+            'List folders (one level) of the deployment-default Azure container using the '
+            'server credentials (AZURE_BLOB_ACCOUNT_NAME/KEY, AZURE_BLOB_DEFAULT_CONTAINER). '
+            'Used by the workspace storage UI so managers can pick a folder without knowing '
+            'container/prefix jargon.'
+        ),
+        parameters=[
+            OpenApiParameter(name='workspace', type=OpenApiTypes.INT, location='query', required=True),
+            OpenApiParameter(name='path', type=OpenApiTypes.STR, location='query', required=False),
+        ],
+    ),
+)
+class AzureBlobWorkspaceStorageBrowseAPI(generics.GenericAPIView):
+    permission_required = ViewClassPermission(GET=all_permissions.workspaces_view)
+    serializer_class = AzureBlobWorkspaceImportStorageSerializer  # for permission plumbing only
+
+    def get(self, request, *args, **kwargs):
+        from azure.storage.blob import BlobPrefix
+        from core.utils.params import get_env
+        from io_storages.api import _resolve_workspace_for_user
+        from io_storages.azure_blob.utils import AZURE
+        from workspaces.rules import is_workspace_manager
+
+        workspace_pk = request.query_params.get('workspace')
+        if not workspace_pk:
+            raise ValidationError('query parameter "workspace" is required')
+        workspace = _resolve_workspace_for_user(request, workspace_pk)
+        if not is_workspace_manager(request.user, workspace):
+            raise PermissionDenied('Only a workspace manager can browse storage folders.')
+
+        container_name = request.query_params.get('container') or get_env('AZURE_BLOB_DEFAULT_CONTAINER')
+        if not container_name:
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data={
+                    'configured': False,
+                    'detail': (
+                        '서버에 Azure 연결 정보가 없습니다. 환경변수 AZURE_BLOB_ACCOUNT_NAME, '
+                        'AZURE_BLOB_ACCOUNT_KEY, AZURE_BLOB_DEFAULT_CONTAINER를 설정해 주세요.'
+                    ),
+                },
+            )
+        path = (request.query_params.get('path') or '').lstrip('/')
+        if path and not path.endswith('/'):
+            path += '/'
+        # Folders that are never import targets (image originals, annotation exports).
+        hidden = {n.strip() for n in (get_env('AZURE_BLOB_BROWSE_HIDE') or 'images,export').split(',') if n.strip()}
+        try:
+            _, container = AZURE.get_client_and_container(container_name)
+            folders, file_count = [], 0
+            for entry in container.walk_blobs(name_starts_with=path or None, delimiter='/'):
+                if isinstance(entry, BlobPrefix):
+                    name = entry.name[len(path) :].rstrip('/')
+                    if name in hidden:
+                        continue
+                    folders.append({'name': name, 'path': entry.name})
+                else:
+                    file_count += 1
+        except ValueError as e:  # missing env credentials
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={'configured': False, 'detail': str(e)})
+        except Exception as e:
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data={'configured': True, 'detail': f'Azure 연결에 실패했습니다: {e}'},
+            )
+        return Response(
+            {'configured': True, 'container': container_name, 'path': path, 'folders': folders, 'file_count': file_count}
+        )
 
 
 @extend_schema(

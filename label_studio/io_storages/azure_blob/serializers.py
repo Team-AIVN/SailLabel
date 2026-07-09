@@ -51,6 +51,7 @@ class AzureBlobWorkspaceImportStorageSerializer(ImportStorageSerializer):
 
     type = serializers.ReadOnlyField(default='azure')
     presign = serializers.BooleanField(required=False, default=True)
+    task_pool_title = serializers.CharField(source='task_pool.title', read_only=True, default=None)
     secure_fields = ['account_name', 'account_key']
 
     class Meta:

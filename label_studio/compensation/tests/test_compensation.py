@@ -194,12 +194,13 @@ class CompensationTests(APITestCase):
         review_services.accept(self._annotate(task, self.annotator), self.reviewer)
 
         self.client.force_authenticate(user=self.manager)
+        # Settlement is per project, so payments must name the project.
         resp = self.client.post(
             f'/api/workspaces/{self.workspace.id}/payments/',
-            {'user': self.annotator.id, 'currency': 'USD', 'amount': '0.05'},
+            {'user': self.annotator.id, 'currency': 'USD', 'amount': '0.05', 'project': self.project.id},
             format='json',
         )
-        assert resp.status_code == 201
+        assert resp.status_code == 201, resp.content
 
         resp = self.client.get(f'/api/workspaces/{self.workspace.id}/compensation/')
         assert resp.status_code == 200
