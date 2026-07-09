@@ -327,6 +327,11 @@ def compute_member_compensation(workspace, user, allowed_project_ids=None):
             }
         )
 
+    # Payment history is scoped to the projects the caller may see — otherwise a
+    # non-manager could read another member's full payment ledger via this endpoint.
+    payment_qs = PaymentRecord.objects.filter(workspace=workspace, user=user)
+    if allowed_project_ids is not None:
+        payment_qs = payment_qs.filter(project_id__in=allowed_project_ids)
     payments = [
         {
             'id': rec.id,
@@ -335,7 +340,7 @@ def compute_member_compensation(workspace, user, allowed_project_ids=None):
             'currency': rec.currency,
             'memo': rec.memo,
         }
-        for rec in PaymentRecord.objects.filter(workspace=workspace, user=user)
+        for rec in payment_qs
     ]
 
     return {

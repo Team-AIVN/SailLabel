@@ -66,6 +66,20 @@ class AzureBlobWorkspaceImportStorageSerializer(ImportStorageSerializer):
 
     def validate(self, data):
         data = super().validate(data)
+        # When the storage piggybacks on the server's shared credentials (no account_key
+        # supplied → env fallback), pin the container to the deployment default. Otherwise
+        # a manager could point a workspace storage at any container in the shared account.
+        # A manager bringing their OWN account_key may use any container.
+        from core.utils.params import get_env
+
+        provided_key = data.get('account_key') or (self.instance and self.instance.account_key)
+        if not provided_key:
+            default_container = get_env('AZURE_BLOB_DEFAULT_CONTAINER')
+            requested = data.get('container') or (self.instance and self.instance.container)
+            if default_container and requested and requested != default_container:
+                raise ValidationError(
+                    {'container': f'Only the default container ({default_container}) is allowed with server credentials.'}
+                )
         storage = self.instance
         if storage:
             for key, value in data.items():

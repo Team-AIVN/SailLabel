@@ -243,6 +243,11 @@ class Invitation(models.Model):
         blank=True,
         related_name='invitations_accepted',
     )
+    # Reusable links stay open forever without this. A null expiry means never expires
+    # (backward compatible for existing rows); new invites get a bounded lifetime so a
+    # leaked link can't be used indefinitely, and can be revoked by setting it in the past.
+    expires_at = models.DateTimeField(_('expires at'), null=True, blank=True)
+    revoked = models.BooleanField(_('revoked'), default=False)
 
     class Meta:
         db_table = 'invitation'
@@ -250,6 +255,15 @@ class Invitation(models.Model):
     @property
     def is_accepted(self) -> bool:
         return self.accepted_at is not None
+
+    @property
+    def is_usable(self) -> bool:
+        """A link is usable unless revoked or past its expiry."""
+        if self.revoked:
+            return False
+        if self.expires_at is not None and self.expires_at < timezone.now():
+            return False
+        return True
 
     def apply(self, user):
         """Place the accepting ``user`` into the invited workspace/project/role.
