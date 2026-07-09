@@ -485,7 +485,7 @@ class WorkspaceFileUploadsAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView)
                 ids = _json.loads(query)
             except Exception:
                 raise ValidationError('ids must be a JSON-encoded integer array')
-            if not isinstance(ids, list):
+            if not isinstance(ids, list) or not all(isinstance(i, int) for i in ids):
                 raise ValidationError('ids must be a JSON-encoded integer array')
             qs = qs.filter(id__in=ids)
         return qs

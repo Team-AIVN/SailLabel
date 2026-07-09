@@ -137,7 +137,10 @@ class WorkspaceCompensationAPI(generics.GenericAPIView):
         allowed = _allowed_project_ids(request.user, workspace)
         project_id = request.query_params.get('project')
         if project_id:
-            project_id = int(project_id)
+            try:
+                project_id = int(project_id)
+            except (TypeError, ValueError):
+                raise ValidationError({'project': 'project must be an integer id.'})
             if project_id not in allowed:
                 raise PermissionDenied('You do not have access to this project.')
         return Response(

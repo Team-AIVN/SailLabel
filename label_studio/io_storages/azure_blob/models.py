@@ -330,12 +330,24 @@ class AzureBlobWorkspaceImportStorage(WorkspaceStorageMixin, AzureBlobImportStor
         )
         next_index = TaskSourceItem.objects.filter(workspace=self.workspace, source=self.source_id).count()
 
-        items, existing_ids_for_pool = [], []
+        # storage_key is namespaced by container so the same blob path in a different
+        # container is a distinct item (was: bare path -> silent skip / mis-link).
+        container = str(self.container)
+        items, existing_ids_for_pool, errors = [], [], 0
         for key in self.iter_keys():
             if regex and not regex.match(key):
                 continue
-            for obj in self.get_data(key):
-                storage_key = obj.key if obj.row_index is None else f'{obj.key}#{obj.row_index}'
+            # A single malformed blob (e.g. broken JSON) must not abort the whole sync;
+            # skip it, count it, and keep importing the rest.
+            try:
+                objs = list(self.get_data(key))
+            except Exception:
+                logger.warning('workspace sync: skipping unreadable blob %s', key, exc_info=True)
+                errors += 1
+                continue
+            for obj in objs:
+                base_key = obj.key if obj.row_index is None else f'{obj.key}#{obj.row_index}'
+                storage_key = f'{container}/{base_key}'
                 if storage_key in existing:
                     if existing[storage_key] is not None:
                         existing_ids_for_pool.append(existing[storage_key])
@@ -384,7 +396,8 @@ class AzureBlobWorkspaceImportStorage(WorkspaceStorageMixin, AzureBlobImportStor
         self.last_sync = timezone.now()
         self.last_sync_count = len(items)
         self.save(update_fields=['last_sync', 'last_sync_count'])
-        return {'created': len(items), 'linked': linked}
+        # `truncated` signals that max_items was hit and more blobs remain for a re-sync.
+        return {'created': len(items), 'linked': linked, 'errors': errors, 'truncated': len(items) >= max_items}
 
     class Meta:
         abstract = False

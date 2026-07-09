@@ -198,6 +198,15 @@ def materialize_pool_to_project(project):
     if pool is None:
         return 0
     from data_import.serializers import ImportApiSerializer
+    from projects.models import Project
+
+    # Lock the project row and re-check emptiness inside the lock: the caller's
+    # tasks.exists() guard runs outside any lock, so two concurrent project saves could
+    # both pass it and double-materialize the pool. Whoever gets the lock second sees the
+    # tasks the first created and bails.
+    Project.objects.select_for_update().filter(pk=project.pk).first()
+    if project.tasks.exists():
+        return 0
 
     task_source_items = TaskSourceItem.objects.filter(pool_items__task_pool=pool).order_by('id')
     tasks = []
