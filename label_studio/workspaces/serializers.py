@@ -40,7 +40,11 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         read_only_fields = ('organization', 'created_by', 'created_at', 'updated_at', 'project_count')
 
     def get_project_count(self, obj: Workspace) -> int:
-        # Uses the related manager named "projects" declared on Project.workspace FK.
+        # Prefer a queryset annotation (set by the list view's get_queryset) to avoid a
+        # per-row COUNT; fall back to a query for single-object / un-annotated reads.
+        annotated = getattr(obj, 'active_project_count', None)
+        if annotated is not None:
+            return annotated
         projects = getattr(obj, 'projects', None)
         if projects is None:
             return 0

@@ -74,8 +74,15 @@ class WorkspaceListAPI(generics.ListCreateAPIView):
     )
 
     def get_queryset(self):
+        from django.db.models import Count, Q
+
         org = _active_org_or_400(self.request.user)
-        return Workspace.objects.filter(organization=org).order_by('-created_at')
+        # Annotate the active project count so the serializer doesn't COUNT per row.
+        return (
+            Workspace.objects.filter(organization=org)
+            .annotate(active_project_count=Count('projects', filter=Q(projects__deleted_at__isnull=True)))
+            .order_by('-created_at')
+        )
 
     @transaction.atomic
     def perform_create(self, serializer):

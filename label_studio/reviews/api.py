@@ -80,6 +80,9 @@ class ReviewCandidatesAPI(generics.ListAPIView):
         return (
             Task.objects.filter(project=project, review_status=Task.ReviewStatus.PENDING)
             .select_related('current_annotation', 'current_annotation__completed_by')
+            # Same serializer as ReviewTasksAPI: prefetch annotations/reviews so annotator +
+            # reviews resolve without a per-task query (was 2N+1).
+            .prefetch_related('annotations__completed_by', 'annotations__reviews__reviewer')
             .order_by('id')
         )
 
