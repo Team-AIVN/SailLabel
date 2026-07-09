@@ -17,7 +17,7 @@ Qualification rules (a "data item" is a Task):
 """
 
 from collections import defaultdict
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.db.models import Min
 from reviews.models import Review
@@ -61,9 +61,12 @@ def qualified_counts_for_project(project):
         ).values_list('id', flat=True)
     )
     if ann_task_ids:
-        # Root annotation per task = lowest-id annotation = the original annotator's work.
+        # Root annotation per task = lowest-id NON-cancelled annotation = the original
+        # annotator's real work. Excluding was_cancelled skips means a skipped task with
+        # no real annotation earns nothing, and a skip-then-relabel credits the relabeler
+        # (not whoever skipped first with a lower id).
         roots = (
-            Annotation.objects.filter(task_id__in=ann_task_ids)
+            Annotation.objects.filter(task_id__in=ann_task_ids, was_cancelled=False)
             .values('task_id')
             .annotate(root_id=Min('id'))
         )
@@ -102,9 +105,13 @@ def qualified_counts_for_project(project):
     return counts
 
 
-def _status_for(earned: Decimal, paid: Decimal) -> str:
-    from .models import Currency  # noqa: F401  (kept local to avoid import cycle noise)
+def _money(d: Decimal) -> float:
+    """Round a Decimal to 2 places before float() so JSON never shows binary noise
+    (e.g. 0.05*3 = 0.15000000000000002)."""
+    return float(Decimal(d).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
+
+def _status_for(earned: Decimal, paid: Decimal) -> str:
     if paid <= 0:
         return 'UNPAID'
     if paid >= earned:
@@ -129,9 +136,11 @@ def _user_label(user):
 
 
 def _policies_by_project(workspace):
+    # Exclude soft-deleted projects so their earnings never resurface in settlement.
     return (
-        ProjectCompensationPolicy.objects.filter(project__workspace=workspace)
-        .select_related('project')
+        ProjectCompensationPolicy.objects.filter(
+            project__workspace=workspace, project__deleted_at__isnull=True
+        ).select_related('project')
     )
 
 
@@ -188,9 +197,9 @@ def compute_workspace_compensation(workspace):
                 'currency': currency,
                 'annotation_count': bucket['annotation_count'] if bucket else 0,
                 'review_count': bucket['review_count'] if bucket else 0,
-                'total_earned': float(earned),
-                'total_paid': float(paid),
-                'remaining_balance': float(earned - paid),
+                'total_earned': _money(earned),
+                'total_paid': _money(paid),
+                'remaining_balance': _money(earned - paid),
                 'status': _status_for(earned, paid),
             }
         )
@@ -222,11 +231,16 @@ def compute_project_compensation(workspace, allowed_project_ids, project_id=None
         if p.project_id in allowed_project_ids and (project_id is None or p.project_id == project_id)
     ]
     project_meta = {p.project_id: (p.currency, p.project.title) for p in policies}
+    project_currency = {pid: cur for pid, (cur, _) in project_meta.items()}
 
-    # Payments per (project, user), restricted to the visible projects.
+    # Payments per (project, user), restricted to the visible projects. Only payments in
+    # the project's settlement currency count — a mismatched-currency record must never
+    # be added to a different-currency balance (would corrupt paid/status). Creation is
+    # also validated (see PaymentRecordListCreateAPI), so this is defense-in-depth.
     paid_map = defaultdict(lambda: Decimal('0'))
     for rec in PaymentRecord.objects.filter(workspace=workspace, project_id__in=list(project_meta)):
-        paid_map[(rec.project_id, rec.user_id)] += rec.amount
+        if rec.currency == project_currency.get(rec.project_id):
+            paid_map[(rec.project_id, rec.user_id)] += rec.amount
 
     # Earnings per (project, user).
     per = {}
@@ -274,11 +288,11 @@ def compute_project_compensation(workspace, allowed_project_ids, project_id=None
                 'currency': currency,
                 'annotation_count': d['annotation_count'],
                 'review_count': d['review_count'],
-                'annotation_earnings': float(d['annotation_earnings']),
-                'review_earnings': float(d['review_earnings']),
-                'total_earned': float(earned),
-                'total_paid': float(paid),
-                'remaining_balance': float(earned - paid),
+                'annotation_earnings': _money(d['annotation_earnings']),
+                'review_earnings': _money(d['review_earnings']),
+                'total_earned': _money(earned),
+                'total_paid': _money(paid),
+                'remaining_balance': _money(earned - paid),
                 'status': _status_for(earned, paid),
             }
         )
@@ -304,12 +318,12 @@ def compute_member_compensation(workspace, user, allowed_project_ids=None):
                 'project_name': policy.project.title,
                 'currency': policy.currency,
                 'qualified_annotation_count': counts['annotation'],
-                'annotation_unit_price': float(policy.annotation_unit_price),
-                'annotation_earnings': float(annotation_earnings),
+                'annotation_unit_price': _money(policy.annotation_unit_price),
+                'annotation_earnings': _money(annotation_earnings),
                 'qualified_review_count': counts['review'],
-                'review_unit_price': float(policy.review_unit_price),
-                'review_earnings': float(review_earnings),
-                'total_earnings': float(annotation_earnings + review_earnings),
+                'review_unit_price': _money(policy.review_unit_price),
+                'review_earnings': _money(review_earnings),
+                'total_earnings': _money(annotation_earnings + review_earnings),
             }
         )
 
@@ -317,7 +331,7 @@ def compute_member_compensation(workspace, user, allowed_project_ids=None):
         {
             'id': rec.id,
             'paid_at': rec.paid_at,
-            'amount': float(rec.amount),
+            'amount': _money(rec.amount),
             'currency': rec.currency,
             'memo': rec.memo,
         }

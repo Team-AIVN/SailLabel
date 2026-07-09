@@ -198,6 +198,13 @@ class PaymentRecordListCreateAPI(generics.ListCreateAPIView):
         user = serializer.validated_data.get('user')
         if user is None or not is_workspace_member(user, workspace):
             raise ValidationError({'user': 'Payee must be a member of this workspace.'})
+        # Payment currency must match the project's settlement currency, otherwise the
+        # amount would be added to a different-currency balance and corrupt the status.
+        policy = getattr(project, 'compensation_policy', None)
+        if policy is not None and serializer.validated_data.get('currency') != policy.currency:
+            raise ValidationError(
+                {'currency': f'Payment currency must match the project settlement currency ({policy.currency}).'}
+            )
         serializer.save(workspace=workspace, created_by=self.request.user)
 
 
