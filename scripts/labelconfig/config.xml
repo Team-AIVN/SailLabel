@@ -1,0 +1,114 @@
+<View style="font-size: 13px; line-height: 1.2;">
+  <Style>
+    .section-description { background: #F3F8FF; border: 1px solid #D9E8FF; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+    .section-advice { background: #F7FFF4; border: 1px solid #DDF2D4; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+    .section-title { font-size: 15px; font-weight: bold; margin-bottom: 4px; }
+    .section-help { font-size: 12px; color: #777; font-style: italic; margin-bottom: 4px; }
+    .section-spacer { font-size: 4px; color: transparent; margin-bottom: 6px; }
+  
+    .split { display: flex; gap: 16px; align-items: stretch; height: 82vh; }
+    .ref-pane { flex: 0 0 54%; overflow: auto; padding-right: 6px; }
+    .form-pane { flex: 1 1 44%; min-width: 340px; overflow-y: auto; padding-right: 6px; }
+    .ref-table { overflow-x: auto; }
+  </Style>
+  <View className="split">
+    <!-- 왼쪽: 참고자료(이미지+표) — 독립 스크롤, 오른쪽 폼 내려도 안 사라짐 -->
+    <View className="ref-pane">
+      <Image name="image" value="$image"/>
+      <View className="ref-table">
+        <Table name="data" value="$data"/>
+      </View>
+    </View>
+    <!-- 오른쪽: 입력 폼(스크롤) -->
+    <View className="form-pane">
+      <View className="section-description">
+    <Header value="항해상황묘사" className="section-title" />
+    <Text name="descriptionSectionHelpText" value="시각적으로 확인되는 객관적 사실을 기준으로 시간대, 날씨, 선박 수, 선박 배치와 거리 등을 묘사합니다." className="section-help" />
+    <Text name="descriptionSectionSpacerText" value=" " className="section-spacer" />
+    <View style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 6px;">
+      <Text name="timeOfDayText" value="시간대 *" style="width: 110px; font-weight: bold;" />
+      <Choices name="timeOfDay" toName="timeOfDayText" showInline="true" required="true">
+        <Choice value="주간" alias="DAYTIME" />
+        <Choice value="조간 / 새벽" alias="DAWN" />
+        <Choice value="석간 / 황혼" alias="DUSK" />
+      </Choices>
+    </View>
+    <View style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 6px;">
+      <Text name="skyConditionText" value="하늘 상태 *" style="width: 110px; font-weight: bold;" />
+      <Choices name="skyCondition" toName="skyConditionText" showInline="true" required="true">
+        <Choice value="맑음" alias="CLEAR" />
+        <Choice value="흐림" alias="CLOUDY" />
+        <Choice value="역광" alias="BACKLIGHT" />
+        <Choice value="이슬비" alias="DRIZZLE" />
+        <Choice value="연무" alias="HAZE" />
+      </Choices>
+    </View>
+    <View style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 6px;">
+      <Text name="identifiedVesselCountText" value="식별된 선박 수 *" style="width: 110px; font-weight: bold;" />
+      <Choices name="identifiedVesselCount" toName="identifiedVesselCountText" showInline="true" required="true">
+        <Choice value="1" />
+        <Choice value="2" />
+        <Choice value="3" />
+        <Choice value="4+" />
+      </Choices>
+    </View>
+    <View style="margin-top: 10px; margin-bottom: 2px;">
+      <Text name="descriptionSummaryText" value="묘사 요약 *" style="font-weight: bold; margin-bottom: 4px;" />
+      <TextArea name="descriptionSummary" toName="descriptionSummaryText" placeholder="..." rows="3" required="true" />
+    </View>
+  </View>
+      <View className="section-advice">
+    <Header value="항해조언" className="section-title" />
+    <Text name="adviceSectionHelpText" value="COLREGs 등 항법에 의거해 항해 상황을 판단하고, 자선의 역할과 권고 조종·속력·교신 대응을 제시합니다." className="section-help" />
+    <Text name="adviceSectionSpacerText" value=" " className="section-spacer" />
+    <View style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 6px;">
+      <Text name="ownShipResponsibilityText" value="자선 역할 *" style="width: 110px; font-weight: bold;" />
+      <Choices name="ownShipResponsibility" toName="ownShipResponsibilityText" showInline="true" required="true">
+        <Choice value="피항선 / 추월선" alias="GIVE-WAY" />
+        <Choice value="유지선 / 피추월선" alias="STAND-ON" />
+      </Choices>
+    </View>
+    <View style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px;">
+      <Text name="navigationRuleText" value="적용 항법 원리 *" style="width: 110px; font-weight: bold;" />
+      <Choices name="navigationRule" toName="navigationRuleText" showInline="true" required="true">
+        <Choice value="마주치는 상태 (Head-on)" alias="HEAD_ON" />
+        <Choice value="횡단 상태 (Crossing)" alias="CROSSING" />
+        <Choice value="추월 상태 (Overtaking)" alias="OVERTAKING" />
+      </Choices>
+    </View>
+    <View style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+      <Text name="courseAlterationAngleText" value="변침 방향 및 각도 *" style="width: 110px; font-weight: bold;" />
+      <Choices name="courseAlterationAngle" toName="courseAlterationAngleText" showInline="true" required="true">
+        <Choice value="좌현 60도" alias="-60" />
+        <Choice value="좌현 30도" alias="-30" />
+        <Choice value="좌현 10도" alias="-10" />
+        <Choice value="유지" alias="0" />
+        <Choice value="우현 10도" alias="10" />
+        <Choice value="우현 30도" alias="30" />
+        <Choice value="우현 60도" alias="60" />
+      </Choices>
+    </View>
+    <View style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+      <Text name="speedActionText" value="속력 운용 *" style="width: 110px; font-weight: bold;" />
+      <Choices name="speedAction" toName="speedActionText" showInline="true" required="true">
+        <Choice value="감속" alias="SLOW_DOWN" />
+        <Choice value="속력 유지" alias="MAINTAIN_SPEED" />
+        <Choice value="증속" alias="SPEED_UP" />
+      </Choices>
+    </View>
+    <View style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+      <Text name="vesselContactSignalText" value="타선 교신 및 음향신호 여부 *" style="width: 110px; font-weight: bold;" />
+      <Choices name="vesselContactSignal" toName="vesselContactSignalText" showInline="true" required="true">
+        <Choice value="교신 시도 필요함" alias="CONSIDER_VHF" />
+        <Choice value="5회 이상 단음 음향신호" alias="DOUBT_OR_DANGER_SIGNAL" />
+        <Choice value="필요없음" alias="NO_NEED" />
+      </Choices>
+    </View>
+    <View style="margin-top: 10px; margin-bottom: 2px;">
+      <Text name="adviceSummaryText" value="조언 요약 *" style="font-weight: bold; margin-bottom: 4px;" />
+      <TextArea name="adviceSummary" toName="adviceSummaryText" placeholder="..." rows="3" required="true" />
+    </View>
+  </View>
+    </View>
+  </View>
+</View>
