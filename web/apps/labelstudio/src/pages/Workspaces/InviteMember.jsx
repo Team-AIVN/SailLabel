@@ -52,9 +52,28 @@ export const InviteMember = ({ workspaceId, projects = [] }) => {
     }
   };
 
-  const copy = () => {
-    navigator.clipboard?.writeText(link);
-    toast.show({ message: "복사됐습니다" });
+  const copy = async () => {
+    // navigator.clipboard is only available in secure contexts (https/localhost); on a
+    // plain-http deployment it's undefined, so fall back to execCommand and only claim
+    // success when a copy actually happened.
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = link;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (!ok) throw new Error("execCommand copy failed");
+      }
+      toast.show({ message: "복사됐습니다" });
+    } catch {
+      toast.show({ message: "복사에 실패했습니다. 링크를 직접 선택해 복사하세요.", type: "error" });
+    }
   };
 
   return (

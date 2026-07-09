@@ -105,12 +105,20 @@ export const WorkspacesPage = () => (
 WorkspacesPage.title = "Workspaces";
 WorkspacesPage.path = "/workspaces";
 WorkspacesPage.exact = true;
+// Guard the detail route too — otherwise a user without workspace access could open
+// /workspaces/<id> directly (a "direct-URL hole") even though the menu is hidden.
+const GuardedWorkspaceDetail = (props) => (
+  <WorkspaceAccessGuard>
+    <WorkspaceDetail {...props} />
+  </WorkspaceAccessGuard>
+);
+
 WorkspacesPage.routes = () => [
   {
     title: "Workspace",
     path: "/:id(\\d+)",
     exact: true,
-    component: WorkspaceDetail,
+    component: GuardedWorkspaceDetail,
   },
 ];
 

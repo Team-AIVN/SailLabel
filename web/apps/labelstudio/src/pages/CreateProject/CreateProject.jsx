@@ -327,14 +327,24 @@ export const CreateProject = ({ onClose, workspaceId = null }) => {
 
     // Persist the compensation policy for workspace projects (separate endpoint).
     if (response !== null && compensationRequired) {
-      await api.callApi("setProjectCompensationPolicy", {
+      const policyRes = await api.callApi("setProjectCompensationPolicy", {
         params: { pk: project.id },
         body: {
           currency,
           annotation_unit_price: Number.parseFloat(annotationUnitPrice),
           review_unit_price: Number.parseFloat(reviewUnitPrice),
         },
+        errorFilter: () => true,
       });
+      // Compensation is required for this project — if it didn't save, don't silently
+      // navigate to a project without a policy; surface the error and stay.
+      if (!policyRes?.$meta?.ok) {
+        setWaitingStatus(false);
+        setError(
+          policyRes?.response?.detail ?? t("createProject.compensationSaveFailed", "보상 정책 저장에 실패했습니다."),
+        );
+        return;
+      }
     }
     setWaitingStatus(false);
 
