@@ -1197,6 +1197,22 @@ class Project(ProjectMixin, FsmHistoryStateModel):
         for storage_class in get_storage_classes('import'):
             storage_objects += list(storage_class.objects.filter(project=self))
 
+        # Workspace-scope storages also resolve cloud URIs: tasks materialized from a
+        # task pool carry azure-blob:// (etc.) references but have no project storage.
+        if self.workspace_id:
+            from io_storages.azure_blob.models import AzureBlobWorkspaceImportStorage
+            from io_storages.gcs.models import GCSWorkspaceImportStorage
+            from io_storages.localfiles.models import LocalFilesWorkspaceImportStorage
+            from io_storages.s3.models import S3WorkspaceImportStorage
+
+            for storage_class in (
+                AzureBlobWorkspaceImportStorage,
+                S3WorkspaceImportStorage,
+                GCSWorkspaceImportStorage,
+                LocalFilesWorkspaceImportStorage,
+            ):
+                storage_objects += list(storage_class.objects.filter(workspace_id=self.workspace_id))
+
         return storage_objects
 
     @cached_property
