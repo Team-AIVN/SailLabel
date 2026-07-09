@@ -1,0 +1,41 @@
+name: "Setup · 프로덕션 시연 데이터 세팅 (VM)"
+
+# 수동 실행 전용. 배포용 SSH 시크릿을 재사용해 VM 컨테이너 안에서 세팅 스크립트를 돌린다.
+# 동작: 관리자/유저는 유지, 기존 Project/Workspace 정리 후 워크스페이스1+풀1(Azure sync)+프로젝트1 생성.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "프로덕션 Project/Workspace 정리 후 재세팅한다. 진행하려면 yes"
+        type: string
+        default: "no"
+        required: true
+
+jobs:
+  setup:
+    name: "Run demo setup on Azure VM"
+    if: ${{ inputs.confirm == 'yes' }}
+    runs-on: ubuntu-latest
+    concurrency: deploy-vm    # 배포와 동시 실행 방지
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run setup script on VM over SSH
+        env:
+          SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          VM_HOST: 20.200.209.213
+          VM_USER: label-sea
+        run: |
+          install -m 600 /dev/null key.pem && printf '%s\n' "$SSH_KEY" > key.pem
+          # config.xml 을 base64 로 인코딩해 컨테이너 env 로 주입 (이미지엔 scripts/ 없음)
+          B64=$(base64 < scripts/labelconfig/config.xml | tr -d '\n')
+          ssh -i key.pem -o StrictHostKeyChecking=accept-new "$VM_USER@$VM_HOST" \
+            "cd ~/label-sea && docker compose exec -T \
+               -e SETUP_CONFIRM=yes \
+               -e LABEL_CONFIG_B64=$B64 \
+               app python3 label_studio/manage.py shell" \
+            < scripts/prod_setup_demo.py
+
+      - name: Summary
+        run: echo "### 프로덕션 시연 세팅 실행 완료 ✅ — 로그의 [project] tasks:20 / predictions:20 확인" >> "$GITHUB_STEP_SUMMARY"
