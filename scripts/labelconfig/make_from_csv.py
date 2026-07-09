@@ -2,7 +2,7 @@
 
 Each dataset = <base>.csv (ship rows) + <base>.png (scene). Produces:
   data.image = azure-blob://<container>/images/<base>.png
-  data.data  = [ {구분, 위도, 경도, 길이(m), 너비(m), 속도(kn), 상대방위(°), CPA(nm), TCPA(s)} ]
+  data.data  = [ {구분, 길이(m), 폭(m), 속도(kn), 방위(°), 상대방위, 위도, 경도, CPA(NM), TCPA(sec)} ]
   predictions = one scenario-aware, config-valid prediction (filled arbitrarily)
 
 Table columns are data-driven (LS <Table> derives columns from the row-dict keys), so
@@ -48,14 +48,15 @@ def parse_rows(csv_path):
             rel_bearing = f"{(b - float(own['heading'])) % 360:.1f}"
         out.append({
             "구분": label,
+            "길이(m)": r["length"],
+            "폭(m)": r["width"],
+            "속도(kn)": f"{float(r['knot']):.1f}",
+            "방위(°)": f"{float(r['heading']):.2f}",
+            "상대방위": rel_bearing,
             "위도": f"{float(r['latitude']):.6f}",
             "경도": f"{float(r['longitude']):.6f}",
-            "길이(m)": r["length"],
-            "너비(m)": r["width"],
-            "속도(kn)": f"{float(r['knot']):.1f}",
-            "상대방위(°)": rel_bearing,
-            "CPA(nm)": f"{float(r['cpa']):.4f}",
-            "TCPA(s)": f"{float(r['tcpa']):.1f}",
+            "CPA(NM)": f"{float(r['cpa']):.4f}",
+            "TCPA(sec)": f"{float(r['tcpa']):.1f}",
         })
     return out, len(rows)
 

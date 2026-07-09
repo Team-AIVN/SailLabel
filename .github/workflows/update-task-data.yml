@@ -1,0 +1,36 @@
+name: "Setup · 데모 표 데이터 갱신 (VM, 비파괴)"
+
+# 수동 실행 전용. 워크스페이스/초대/멤버십은 그대로 두고, 데모 프로젝트 태스크의 표 data만
+# Azure tasks/ 최신 내용으로 교체한다(컬럼 순서/이름 변경 반영).
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "데모 프로젝트 표 data 갱신(비파괴). 진행하려면 yes"
+        type: string
+        default: "no"
+        required: true
+
+jobs:
+  update:
+    name: "Update demo task data on Azure VM"
+    if: ${{ inputs.confirm == 'yes' }}
+    runs-on: ubuntu-latest
+    concurrency: deploy-vm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run update script on VM over SSH
+        env:
+          SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          VM_HOST: 20.200.209.213
+          VM_USER: label-sea
+        run: |
+          install -m 600 /dev/null key.pem && printf '%s\n' "$SSH_KEY" > key.pem
+          ssh -i key.pem -o StrictHostKeyChecking=accept-new "$VM_USER@$VM_HOST" \
+            "cd ~/label-sea && docker compose exec -T -e UPDATE_CONFIRM=yes app python3 label_studio/manage.py shell" \
+            < scripts/prod_update_task_data.py
+
+      - name: Summary
+        run: echo "### 데모 표 데이터 갱신 완료 ✅ — 로그의 '적용된 컬럼 순서' 확인" >> "$GITHUB_STEP_SUMMARY"
