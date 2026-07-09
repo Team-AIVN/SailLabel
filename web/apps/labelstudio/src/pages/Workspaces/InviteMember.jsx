@@ -8,7 +8,7 @@ const WS_ROLES = [
   { value: "member", label: "멤버 (배정 대기)" },
   { value: "workspace_manager", label: "워크스페이스 관리자" },
 ];
-const PROJECT_ROLES = [
+export const PROJECT_ROLES = [
   { value: "project_manager", label: "PM (프로젝트 관리자)" },
   { value: "annotator", label: "라벨러" },
   { value: "reviewer", label: "검수자" },

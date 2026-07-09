@@ -10,14 +10,14 @@ import { cn } from "../../utils/bem";
 import { workspacePermissions } from "../../utils/permissions";
 import { CreateProject } from "../CreateProject/CreateProject";
 import { Compensation } from "./Compensation";
-import { InviteMember } from "./InviteMember";
+import { InviteMember, PROJECT_ROLES } from "./InviteMember";
 import { StorageSettings } from "../Settings/StorageSettings/StorageSettings";
 import { TaskPools } from "./TaskPools";
 import { WorkspaceImportPage } from "./WorkspaceImport";
 import { WorkspaceStorageSources } from "./WorkspaceStorageSources";
 import "./WorkspaceDetail.prefix.css";
 
-const TABS = ["projects", "datasets", "taskpools", "users", "compensation", "storage"];
+const TABS = ["projects", "users", "taskpools", "storage", "compensation", "datasets"];
 const TAB_LABEL_KEY = {
   projects: "workspaces.detail.projects",
   datasets: "workspaces.detail.dataset",
@@ -89,6 +89,11 @@ export const WorkspaceDetail = () => {
   const [showNewProject, setShowNewProject] = useState(false);
   const [inviteUser, setInviteUser] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
+  // Optional project placement when adding an existing member (mirrors the invite flow).
+  const [inviteProjectId, setInviteProjectId] = useState("");
+  const [inviteProjectRole, setInviteProjectRole] = useState("annotator");
+  // Per-project role assignments of workspace members: [{id, user, role, projectId, projectTitle}]
+  const [assignments, setAssignments] = useState([]);
   const [showImport, setShowImport] = useState(false);
   const [importUploading, setImportUploading] = useState(false);
 
@@ -150,6 +155,18 @@ export const WorkspaceDetail = () => {
     }
   }, [api, id]);
 
+  // Members' per-project role assignments (fetched across all workspace projects).
+  const loadAssignments = useCallback(async () => {
+    const results = await Promise.all(
+      projects.map(async (p) => {
+        const res = await api.callApi("projectMembers", { params: { pk: p.id }, errorFilter: () => true });
+        const rows = res?.$meta?.ok ? listOf(res) : [];
+        return rows.map((r) => ({ ...r, projectId: p.id, projectTitle: p.title }));
+      }),
+    );
+    setAssignments(results.flat());
+  }, [api, projects]);
+
   const labelTypeOptions = useMemo(() => {
     const set = new Set(projects.map((p) => p.label_type).filter(Boolean));
     return Array.from(set);
@@ -178,15 +195,41 @@ export const WorkspaceDetail = () => {
       body: { user: Number(inviteUser), role: inviteRole },
     });
     if (res?.id) {
+      // Optional: also place the member into a project with a project role.
+      if (inviteProjectId) {
+        const pm = await api.callApi("createProjectMember", {
+          params: { pk: Number(inviteProjectId) },
+          body: { user: Number(inviteUser), role: inviteProjectRole },
+          errorFilter: () => true,
+        });
+        if (!pm?.$meta?.ok) {
+          toast.show({ message: pm?.response?.detail ?? "프로젝트 배정에 실패했습니다.", type: "error" });
+        }
+      }
       toast.show({ message: t("workspaces.members.added") });
       setInviteUser("");
       setInviteRole("member");
+      setInviteProjectId("");
+      setInviteProjectRole("annotator");
       loadUsers();
       loadSummary();
+      loadAssignments();
     } else {
       toast.show({ message: res?.detail ?? t("workspaces.members.addFailed"), type: "error" });
     }
-  }, [api, id, inviteUser, inviteRole, toast, t, loadUsers, loadSummary]);
+  }, [
+    api,
+    id,
+    inviteUser,
+    inviteRole,
+    inviteProjectId,
+    inviteProjectRole,
+    toast,
+    t,
+    loadUsers,
+    loadSummary,
+    loadAssignments,
+  ]);
 
   const changeRole = useCallback(
     async (member, role) => {
@@ -227,6 +270,34 @@ export const WorkspaceDetail = () => {
   useEffect(() => {
     if (activeTab === "users") loadOrgMembers();
   }, [activeTab, loadOrgMembers]);
+
+  useEffect(() => {
+    if (activeTab === "users") loadAssignments();
+  }, [activeTab, loadAssignments]);
+
+  const assignmentsByUser = useMemo(() => {
+    const map = new Map();
+    assignments.forEach((a) => map.set(a.user, [...(map.get(a.user) ?? []), a]));
+    return map;
+  }, [assignments]);
+
+  const changeAssignmentRole = useCallback(
+    async (a, role) => {
+      // POST upserts the (user, project) role.
+      await api.callApi("createProjectMember", { params: { pk: a.projectId }, body: { user: a.user, role } });
+      loadAssignments();
+    },
+    [api, loadAssignments],
+  );
+
+  const removeAssignment = useCallback(
+    async (a) => {
+      if (!window.confirm(`'${a.projectTitle}' 프로젝트 배정을 해제할까요?`)) return;
+      await api.callApi("deleteProjectMember", { params: { pk: a.projectId, memberPk: a.id } });
+      loadAssignments();
+    },
+    [api, loadAssignments],
+  );
 
   if (loading && !summary) {
     return (
@@ -278,9 +349,6 @@ export const WorkspaceDetail = () => {
         <div className={root.elem("quick-actions").toClassName()}>
           <Button size="small" onClick={() => openQuickAction("project")}>
             {t("workspaces.dashboard.newProject", "New Project")}
-          </Button>
-          <Button size="small" look="outlined" onClick={() => openQuickAction("dataset")}>
-            {t("workspaces.dashboard.newDataset", "New Dataset")}
           </Button>
           <Button size="small" look="outlined" onClick={() => openQuickAction("user")}>
             {t("workspaces.dashboard.inviteUser", "Invite User")}
@@ -437,6 +505,10 @@ export const WorkspaceDetail = () => {
           {/* Datasets tab */}
           {activeTab === "datasets" && (
             <section className={root.elem("panel").toClassName()}>
+              <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--color-neutral-content-subtler)" }}>
+                내 컴퓨터의 파일을 직접 올리는 곳입니다. Azure에 있는 데이터는 [클라우드 스토리지] 탭에서 폴더를 연결해
+                가져오세요.
+              </p>
               <div className={root.elem("toolbar").toClassName()}>
                 <input
                   className={root.elem("search").toClassName()}
@@ -495,7 +567,9 @@ export const WorkspaceDetail = () => {
               <div style={{ marginBottom: 8 }}>
                 <span style={{ fontWeight: 600 }}>프로젝트별 스토리지</span>
                 <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--color-neutral-content-subtler)" }}>
-                  작업집합을 거치지 않고 특정 프로젝트에 태스크를 직접 생성/내보내기하는 스토리지입니다.
+                  주 용도는 <b>라벨 결과 자동 내보내기(Export)</b>입니다 — 프로젝트를 선택하고 Target Storage에 Azure를
+                  연결하면 라벨러가 제출할 때마다 결과 JSON이 export 폴더로 저장됩니다. (데이터 가져오기는 위의 폴더
+                  연결을 사용하세요)
                 </p>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
@@ -558,6 +632,23 @@ export const WorkspaceDetail = () => {
                         </option>
                       ))}
                     </select>
+                    <select value={inviteProjectId} onChange={(e) => setInviteProjectId(e.target.value)}>
+                      <option value="">프로젝트 배정 없음</option>
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title}
+                        </option>
+                      ))}
+                    </select>
+                    {inviteProjectId && (
+                      <select value={inviteProjectRole} onChange={(e) => setInviteProjectRole(e.target.value)}>
+                        {PROJECT_ROLES.map((r) => (
+                          <option key={r.value} value={r.value}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <Button size="small" onClick={inviteMember} disabled={!inviteUser}>
                       {t("workspaces.members.add")}
                     </Button>
@@ -580,29 +671,67 @@ export const WorkspaceDetail = () => {
                   <tr>
                     <th>{t("workspaces.members.user")}</th>
                     <th>{t("workspaces.members.role")}</th>
+                    <th>프로젝트 배정</th>
                     <th aria-label="actions" />
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((m) => (
-                    <tr key={m.id}>
-                      <td>{userLabel(m.user_detail)}</td>
-                      <td>
-                        <select value={m.role} onChange={(e) => changeRole(m, e.target.value)}>
-                          {WORKSPACE_ROLES.map((r) => (
-                            <option key={r} value={r}>
-                              {t(`workspaces.roles.${r}`, r)}
-                            </option>
+                  {users.map((m) => {
+                    const memberAssignments = assignmentsByUser.get(m.user_detail?.id ?? m.user) ?? [];
+                    return (
+                      <tr key={m.id}>
+                        <td>{userLabel(m.user_detail)}</td>
+                        <td>
+                          <select value={m.role} onChange={(e) => changeRole(m, e.target.value)}>
+                            {WORKSPACE_ROLES.map((r) => (
+                              <option key={r} value={r}>
+                                {t(`workspaces.roles.${r}`, r)}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          {memberAssignments.length === 0 && (
+                            <span style={{ fontSize: 12, color: "var(--color-neutral-content-subtler)" }}>—</span>
+                          )}
+                          {memberAssignments.map((a) => (
+                            <span
+                              key={`${a.projectId}-${a.id}`}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 10 }}
+                            >
+                              <span style={{ fontSize: 12 }}>{a.projectTitle}:</span>
+                              <select value={a.role} onChange={(e) => changeAssignmentRole(a, e.target.value)}>
+                                {PROJECT_ROLES.map((r) => (
+                                  <option key={r.value} value={r.value}>
+                                    {r.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => removeAssignment(a)}
+                                title="배정 해제"
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  color: "var(--color-neutral-content-subtler)",
+                                  padding: 0,
+                                }}
+                              >
+                                ✕
+                              </button>
+                            </span>
                           ))}
-                        </select>
-                      </td>
-                      <td>
-                        <Button look="outlined" size="small" variant="negative" onClick={() => removeMember(m)}>
-                          {t("common.remove", "Remove")}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td>
+                          <Button look="outlined" size="small" variant="negative" onClick={() => removeMember(m)}>
+                            {t("common.remove", "Remove")}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </section>
