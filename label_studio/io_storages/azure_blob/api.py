@@ -436,7 +436,10 @@ class AzureBlobWorkspaceStorageBrowseAPI(generics.GenericAPIView):
         if not is_workspace_manager(request.user, workspace):
             raise PermissionDenied('Only a workspace manager can browse storage folders.')
 
-        container_name = request.query_params.get('container') or get_env('AZURE_BLOB_DEFAULT_CONTAINER')
+        # Container is fixed server-side to the deployment default — never trust a
+        # client-supplied container, or a manager could browse arbitrary containers
+        # using the shared server credentials (cross-tenant leak).
+        container_name = get_env('AZURE_BLOB_DEFAULT_CONTAINER')
         if not container_name:
             return Response(
                 status=status.HTTP_400_BAD_REQUEST,

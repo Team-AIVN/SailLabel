@@ -67,10 +67,47 @@ class CompensationTests(APITestCase):
     def _task(self, project=None):
         return Task.objects.create(project=project or self.project, data={'text': 'x'})
 
-    def _annotate(self, task, user):
+    def _annotate(self, task, user, was_cancelled=False):
         return Annotation.objects.create(
-            task=task, project=task.project, completed_by=user, result=[], status=Annotation.Status.COMPLETED
+            task=task, project=task.project, completed_by=user, result=[],
+            status=Annotation.Status.COMPLETED, was_cancelled=was_cancelled,
         )
+
+    def test_skipped_annotation_earns_nothing(self):
+        # A task with only a skip (was_cancelled) annotation must not pay the skipper.
+        task = self._task()
+        self._annotate(task, self.annotator, was_cancelled=True)
+        task.review_status = Task.ReviewStatus.NOT_SELECTED
+        task.save(update_fields=['review_status'])
+        ann = compute_member_compensation(self.workspace, self.annotator)['projects']
+        assert ann == []  # skip-only task: nothing qualifies
+
+    def test_skip_then_relabel_credits_relabeler(self):
+        # A skips, B relabels and it is accepted -> credit goes to B, not the earlier-id skipper.
+        stranger = UserFactory()
+        _join_org(stranger, self.org)
+        WorkspaceMember.objects.create(user=stranger, workspace=self.workspace, role=WorkspaceMember.Role.MEMBER)
+        task = self._task()
+        self._annotate(task, self.annotator, was_cancelled=True)  # lower id skip
+        real = self._annotate(task, stranger)  # higher id real work
+        review_services.accept(real, self.reviewer)
+        a = compute_member_compensation(self.workspace, self.annotator)['projects']
+        b = compute_member_compensation(self.workspace, stranger)['projects'][0]
+        assert a == []  # skipper earns nothing
+        assert b['qualified_annotation_count'] == 1
+
+    def test_payment_currency_must_match_policy(self):
+        # setUp policy currency is USD; a EUR payment must be rejected.
+        self.client.force_authenticate(user=self.manager)
+        resp = self.client.post(
+            f'/api/workspaces/{self.workspace.id}/payments/',
+            {'user': self.annotator.id, 'currency': 'EUR', 'amount': '1.0', 'project': self.project.id},
+            format='json',
+        )
+        assert resp.status_code == 400
+        # no payment was recorded
+        from compensation.models import PaymentRecord
+        assert not PaymentRecord.objects.filter(project=self.project).exists()
 
     # --- core derivation ---
 

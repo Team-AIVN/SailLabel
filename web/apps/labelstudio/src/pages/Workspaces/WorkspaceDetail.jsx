@@ -89,6 +89,7 @@ export const WorkspaceDetail = () => {
   const [showNewProject, setShowNewProject] = useState(false);
   const [inviteUser, setInviteUser] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
+  const [inviteBusy, setInviteBusy] = useState(false);
   // Optional project placement when adding an existing member (mirrors the invite flow).
   const [inviteProjectId, setInviteProjectId] = useState("");
   const [inviteProjectRole, setInviteProjectRole] = useState("annotator");
@@ -189,33 +190,38 @@ export const WorkspaceDetail = () => {
   }, [loadDatasets, loadSummary]);
 
   const inviteMember = useCallback(async () => {
-    if (!inviteUser) return;
-    const res = await api.callApi("createWorkspaceMember", {
-      params: { pk: id },
-      body: { user: Number(inviteUser), role: inviteRole },
-    });
-    if (res?.id) {
-      // Optional: also place the member into a project with a project role.
-      if (inviteProjectId) {
-        const pm = await api.callApi("createProjectMember", {
-          params: { pk: Number(inviteProjectId) },
-          body: { user: Number(inviteUser), role: inviteProjectRole },
-          errorFilter: () => true,
-        });
-        if (!pm?.$meta?.ok) {
-          toast.show({ message: pm?.response?.detail ?? "프로젝트 배정에 실패했습니다.", type: "error" });
+    if (!inviteUser || inviteBusy) return; // guard against double-submit
+    setInviteBusy(true);
+    try {
+      const res = await api.callApi("createWorkspaceMember", {
+        params: { pk: id },
+        body: { user: Number(inviteUser), role: inviteRole },
+      });
+      if (res?.id) {
+        // Optional: also place the member into a project with a project role.
+        if (inviteProjectId) {
+          const pm = await api.callApi("createProjectMember", {
+            params: { pk: Number(inviteProjectId) },
+            body: { user: Number(inviteUser), role: inviteProjectRole },
+            errorFilter: () => true,
+          });
+          if (!pm?.$meta?.ok) {
+            toast.show({ message: pm?.response?.detail ?? "프로젝트 배정에 실패했습니다.", type: "error" });
+          }
         }
+        toast.show({ message: t("workspaces.members.added") });
+        setInviteUser("");
+        setInviteRole("member");
+        setInviteProjectId("");
+        setInviteProjectRole("annotator");
+        loadUsers();
+        loadSummary();
+        loadAssignments();
+      } else {
+        toast.show({ message: res?.detail ?? t("workspaces.members.addFailed"), type: "error" });
       }
-      toast.show({ message: t("workspaces.members.added") });
-      setInviteUser("");
-      setInviteRole("member");
-      setInviteProjectId("");
-      setInviteProjectRole("annotator");
-      loadUsers();
-      loadSummary();
-      loadAssignments();
-    } else {
-      toast.show({ message: res?.detail ?? t("workspaces.members.addFailed"), type: "error" });
+    } finally {
+      setInviteBusy(false);
     }
   }, [
     api,
@@ -224,6 +230,7 @@ export const WorkspaceDetail = () => {
     inviteRole,
     inviteProjectId,
     inviteProjectRole,
+    inviteBusy,
     toast,
     t,
     loadUsers,
@@ -233,7 +240,17 @@ export const WorkspaceDetail = () => {
 
   const changeRole = useCallback(
     async (member, role) => {
-      await api.callApi("updateWorkspaceMember", { params: { pk: id, memberPk: member.id }, body: { role } });
+      const res = await api.callApi("updateWorkspaceMember", {
+        params: { pk: id, memberPk: member.id },
+        body: { role },
+        errorFilter: () => true,
+      });
+      // callApi returns null on error, so check $meta.ok before claiming success.
+      if (!res?.$meta?.ok) {
+        toast.show({ message: res?.response?.detail ?? t("workspaces.members.addFailed"), type: "error" });
+        loadUsers();
+        return;
+      }
       toast.show({ message: t("workspaces.members.roleUpdated") });
       loadUsers();
     },
@@ -242,7 +259,15 @@ export const WorkspaceDetail = () => {
 
   const removeMember = useCallback(
     async (member) => {
-      await api.callApi("deleteWorkspaceMember", { params: { pk: id, memberPk: member.id } });
+      if (!window.confirm(`'${userLabel(member.user_detail)}' 님을 워크스페이스에서 제거할까요?`)) return;
+      const res = await api.callApi("deleteWorkspaceMember", {
+        params: { pk: id, memberPk: member.id },
+        errorFilter: () => true,
+      });
+      if (!res?.$meta?.ok) {
+        toast.show({ message: res?.response?.detail ?? t("workspaces.members.addFailed"), type: "error" });
+        return;
+      }
       toast.show({ message: t("workspaces.members.removed") });
       loadUsers();
       loadSummary();
@@ -255,14 +280,11 @@ export const WorkspaceDetail = () => {
       if (action === "project") {
         setTab("projects");
         setShowNewProject(true);
-      } else if (action === "dataset") {
-        setTab("datasets");
-        openImport();
       } else if (action === "user") {
         setTab("users");
       }
     },
-    [setTab, loadOrgMembers, openImport],
+    [setTab],
   );
 
   // Load the org member pool whenever the Members tab is shown, so the add-member
@@ -284,10 +306,17 @@ export const WorkspaceDetail = () => {
   const changeAssignmentRole = useCallback(
     async (a, role) => {
       // POST upserts the (user, project) role.
-      await api.callApi("createProjectMember", { params: { pk: a.projectId }, body: { user: a.user, role } });
+      const res = await api.callApi("createProjectMember", {
+        params: { pk: a.projectId },
+        body: { user: a.user, role },
+        errorFilter: () => true,
+      });
+      if (!res?.$meta?.ok) {
+        toast.show({ message: res?.response?.detail ?? "역할 변경에 실패했습니다.", type: "error" });
+      }
       loadAssignments();
     },
-    [api, loadAssignments],
+    [api, toast, loadAssignments],
   );
 
   const removeAssignment = useCallback(
@@ -516,9 +545,11 @@ export const WorkspaceDetail = () => {
                   value={datasetSearch}
                   onChange={(e) => setDatasetSearch(e.target.value)}
                 />
-                <Button size="small" onClick={openImport}>
-                  {t("workspaces.dashboard.newDataset", "New Dataset")}
-                </Button>
+                {perms.canManage && (
+                  <Button size="small" onClick={openImport}>
+                    {t("workspaces.dashboard.newDataset", "New Dataset")}
+                  </Button>
+                )}
               </div>
               <table className={root.elem("table").toClassName()}>
                 <thead>
@@ -649,7 +680,7 @@ export const WorkspaceDetail = () => {
                         ))}
                       </select>
                     )}
-                    <Button size="small" onClick={inviteMember} disabled={!inviteUser}>
+                    <Button size="small" onClick={inviteMember} disabled={!inviteUser} waiting={inviteBusy}>
                       {t("workspaces.members.add")}
                     </Button>
                   </div>
@@ -682,13 +713,17 @@ export const WorkspaceDetail = () => {
                       <tr key={m.id}>
                         <td>{userLabel(m.user_detail)}</td>
                         <td>
-                          <select value={m.role} onChange={(e) => changeRole(m, e.target.value)}>
-                            {WORKSPACE_ROLES.map((r) => (
-                              <option key={r} value={r}>
-                                {t(`workspaces.roles.${r}`, r)}
-                              </option>
-                            ))}
-                          </select>
+                          {perms.canManage ? (
+                            <select value={m.role} onChange={(e) => changeRole(m, e.target.value)}>
+                              {WORKSPACE_ROLES.map((r) => (
+                                <option key={r} value={r}>
+                                  {t(`workspaces.roles.${r}`, r)}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span>{t(`workspaces.roles.${m.role}`, m.role)}</span>
+                          )}
                         </td>
                         <td>
                           {memberAssignments.length === 0 && (
@@ -700,34 +735,44 @@ export const WorkspaceDetail = () => {
                               style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 10 }}
                             >
                               <span style={{ fontSize: 12 }}>{a.projectTitle}:</span>
-                              <select value={a.role} onChange={(e) => changeAssignmentRole(a, e.target.value)}>
-                                {PROJECT_ROLES.map((r) => (
-                                  <option key={r.value} value={r.value}>
-                                    {r.label}
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => removeAssignment(a)}
-                                title="배정 해제"
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  color: "var(--color-neutral-content-subtler)",
-                                  padding: 0,
-                                }}
-                              >
-                                ✕
-                              </button>
+                              {perms.canManage ? (
+                                <>
+                                  <select value={a.role} onChange={(e) => changeAssignmentRole(a, e.target.value)}>
+                                    {PROJECT_ROLES.map((r) => (
+                                      <option key={r.value} value={r.value}>
+                                        {r.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeAssignment(a)}
+                                    title="배정 해제"
+                                    style={{
+                                      background: "none",
+                                      border: "none",
+                                      cursor: "pointer",
+                                      color: "var(--color-neutral-content-subtler)",
+                                      padding: 0,
+                                    }}
+                                  >
+                                    ✕
+                                  </button>
+                                </>
+                              ) : (
+                                <span style={{ fontSize: 12 }}>
+                                  {PROJECT_ROLES.find((r) => r.value === a.role)?.label ?? a.role}
+                                </span>
+                              )}
                             </span>
                           ))}
                         </td>
                         <td>
-                          <Button look="outlined" size="small" variant="negative" onClick={() => removeMember(m)}>
-                            {t("common.remove", "Remove")}
-                          </Button>
+                          {perms.canManage && (
+                            <Button look="outlined" size="small" variant="negative" onClick={() => removeMember(m)}>
+                              {t("common.remove", "Remove")}
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     );

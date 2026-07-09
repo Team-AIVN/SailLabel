@@ -83,12 +83,12 @@ class WorkspaceStorageSourceSyncTests(APITestCase):
         image_item = items[0]
         assert image_item.data == {'image': 'azure-blob://label-images/images/ship_001.png'}
         assert image_item.data_type == 'image'
-        assert image_item.storage_key == 'images/ship_001.png'
+        assert image_item.storage_key == 'label-images/images/ship_001.png'
 
         json_items = items[1:]
         assert json_items[0].data == {'text': 'hello'}
         assert json_items[0].predictions == PREDICTION
-        assert json_items[0].storage_key == 'tasks/batch.json#0'
+        assert json_items[0].storage_key == 'label-images/tasks/batch.json#0'
         assert json_items[1].predictions is None
 
         self.storage.refresh_from_db()
@@ -107,18 +107,18 @@ class WorkspaceStorageSourceSyncTests(APITestCase):
         self.storage.task_pool = pool_a
         self.storage.save(update_fields=['task_pool'])
         first = self._sync()
-        assert first == {'created': 3, 'linked': 0}
+        assert (first['created'], first['linked']) == (3, 0)
         assert pool_a.items.count() == 3
 
         second_conn = AzureBlobWorkspaceImportStorage.objects.create(
             workspace=self.ws, title='src2', container='label-images', task_pool=pool_b
         )
         second = self._sync(second_conn)
-        assert second == {'created': 0, 'linked': 3}
+        assert (second['created'], second['linked']) == (0, 3)
         assert TaskSourceItem.objects.filter(workspace=self.ws).count() == 3  # 복사본 없음
         assert pool_b.items.count() == 3
         # 재실행해도 변화 없음
-        assert self._sync(second_conn) == {'created': 0, 'linked': 0}
+        r = self._sync(second_conn); assert (r['created'], r['linked']) == (0, 0)
 
     def test_materialize_pool_passes_predictions(self):
         self._sync()

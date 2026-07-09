@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, useToast } from "@humansignal/ui";
 import { ToggleItems } from "../../components";
@@ -62,6 +62,13 @@ export const CreateWorkspace = ({ opened, onClose, onCreated }) => {
   const [description, setDescription] = useState("");
   const [error, setError] = useState(null);
   const [waiting, setWaiting] = useState(false);
+
+  // Clear a previous save error when the title changes, so a failed attempt (e.g. a
+  // duplicate-name 400) doesn't leave the Save button permanently disabled.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset only when title changes
+  useEffect(() => {
+    if (error) setError(null);
+  }, [title]);
 
   const { workspace, setWorkspace } = useDraftWorkspace(opened);
   const { uploading, fileIds, pageProps } = useWorkspaceImport();

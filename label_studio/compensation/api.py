@@ -19,7 +19,6 @@ from users.constants import ProjectRole
 from users.rules import is_project_manager_of, is_super_admin
 from workspaces.models import Workspace
 from workspaces.rules import is_workspace_manager, is_workspace_member
-from workspaces.taskpools_api import _get_workspace
 
 from .models import PaymentRecord, ProjectCompensationPolicy
 from .serializers import PaymentRecordSerializer, ProjectCompensationPolicySerializer
@@ -137,7 +136,10 @@ class WorkspaceCompensationAPI(generics.GenericAPIView):
         allowed = _allowed_project_ids(request.user, workspace)
         project_id = request.query_params.get('project')
         if project_id:
-            project_id = int(project_id)
+            try:
+                project_id = int(project_id)
+            except (TypeError, ValueError):
+                raise ValidationError({'project': 'project must be an integer id.'})
             if project_id not in allowed:
                 raise PermissionDenied('You do not have access to this project.')
         return Response(
@@ -198,6 +200,13 @@ class PaymentRecordListCreateAPI(generics.ListCreateAPIView):
         user = serializer.validated_data.get('user')
         if user is None or not is_workspace_member(user, workspace):
             raise ValidationError({'user': 'Payee must be a member of this workspace.'})
+        # Payment currency must match the project's settlement currency, otherwise the
+        # amount would be added to a different-currency balance and corrupt the status.
+        policy = getattr(project, 'compensation_policy', None)
+        if policy is not None and serializer.validated_data.get('currency') != policy.currency:
+            raise ValidationError(
+                {'currency': f'Payment currency must match the project settlement currency ({policy.currency}).'}
+            )
         serializer.save(workspace=workspace, created_by=self.request.user)
 
 

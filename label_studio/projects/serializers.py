@@ -346,6 +346,15 @@ class ProjectSerializer(FlexFieldsModelSerializer):
             raise serializers.ValidationError('review_ratio must be between 0 and 1.')
         return value
 
+    def validate_review_strategy(self, value):
+        # CUSTOM_RULE has no implementation (selects nothing); accepting it would silently
+        # behave like NONE. Reject it until a real rule engine exists.
+        from projects.models import Project
+
+        if value == Project.ReviewStrategy.CUSTOM_RULE:
+            raise serializers.ValidationError('CUSTOM_RULE review strategy is not implemented yet.')
+        return value
+
     def validate_task_pool(self, value):
         # A project may only use a task pool from its own organization's workspace.
         if value is None:

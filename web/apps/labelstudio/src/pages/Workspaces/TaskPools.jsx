@@ -64,6 +64,7 @@ export const TaskPools = ({ workspaceId }) => {
   const [poolDetail, setPoolDetail] = useState(null);
   const [poolSelected, setPoolSelected] = useState(() => new Set());
   const [newPoolTitle, setNewPoolTitle] = useState("");
+  const [creatingPool, setCreatingPool] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // 항목 추가 피커
@@ -196,17 +197,22 @@ export const TaskPools = ({ workspaceId }) => {
 
   const createPool = useCallback(async () => {
     const title = newPoolTitle.trim();
-    if (!title) return;
-    const res = await api.callApi("createTaskPool", { params: { pk: workspaceId }, body: { title } });
-    if (res?.id) {
-      setNewPoolTitle("");
-      await loadPools();
-      setSelectedPoolId(res.id);
-      toast.show({ message: t("taskpools.created", "작업집합을 만들었습니다") });
-    } else {
-      toast.show({ message: res?.detail ?? t("taskpools.actionFailed", "실패했습니다"), type: "error" });
+    if (!title || creatingPool) return; // guard against double-submit creating duplicates
+    setCreatingPool(true);
+    try {
+      const res = await api.callApi("createTaskPool", { params: { pk: workspaceId }, body: { title } });
+      if (res?.id) {
+        setNewPoolTitle("");
+        await loadPools();
+        setSelectedPoolId(res.id);
+        toast.show({ message: t("taskpools.created", "작업집합을 만들었습니다") });
+      } else {
+        toast.show({ message: res?.detail ?? t("taskpools.actionFailed", "실패했습니다"), type: "error" });
+      }
+    } finally {
+      setCreatingPool(false);
     }
-  }, [api, workspaceId, newPoolTitle, loadPools, toast, t]);
+  }, [api, workspaceId, newPoolTitle, creatingPool, loadPools, toast, t]);
 
   const renamePool = useCallback(async () => {
     if (!poolDetail) return;
@@ -293,7 +299,7 @@ export const TaskPools = ({ workspaceId }) => {
               onChange={(e) => setNewPoolTitle(e.target.value)}
               style={{ width: 180 }}
             />
-            <Button size="small" onClick={createPool} disabled={!newPoolTitle.trim()}>
+            <Button size="small" onClick={createPool} disabled={!newPoolTitle.trim()} waiting={creatingPool}>
               {t("taskpools.create", "만들기")}
             </Button>
           </div>

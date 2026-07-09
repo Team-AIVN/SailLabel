@@ -118,6 +118,10 @@ class BaseWhoAmIUserSerializer(BaseUserSerializer):
         )
 
     def get_permissions(self, user) -> list[str]:
+        # NOTE: not a role-based capability list — it enumerates every permission name.
+        # RBAC is enforced on the backend and gated on the frontend via the role flags
+        # below (has_workspace_access / has_project_access / can_create_workspace) and
+        # utils/permissions.ts. Do NOT use this list for authorization decisions.
         return [perm for _, perm in all_permissions]
 
     def get_is_super_admin(self, user) -> bool:

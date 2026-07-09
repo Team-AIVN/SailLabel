@@ -10,7 +10,11 @@ a role, as soon as they sign up via the invite link. Permissions:
 
 from __future__ import annotations
 
+from datetime import timedelta
+
+from core.utils.params import get_env
 from django.urls import reverse
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from organizations.models import Invitation
 from projects.models import Project
@@ -61,6 +65,11 @@ class InvitationCreateAPI(generics.CreateAPIView):
 
         role = self._resolve_role(user, workspace, project, role)
 
+        # Bound the link's lifetime so a leaked invite can't be used forever.
+        # Configurable via INVITE_LINK_TTL_DAYS (default 14).
+        ttl_days = int(get_env('INVITE_LINK_TTL_DAYS', 14))
+        expires_at = timezone.now() + timedelta(days=ttl_days) if ttl_days > 0 else None
+
         invitation = Invitation.objects.create(
             email=email,
             organization=org,
@@ -68,6 +77,7 @@ class InvitationCreateAPI(generics.CreateAPIView):
             project=project,
             role=role,
             created_by=user,
+            expires_at=expires_at,
         )
         link = request.build_absolute_uri(reverse('user-signup')) + f'?invite={invitation.token}'
         return Response({'token': invitation.token, 'link': link, 'role': role}, status=status.HTTP_201_CREATED)

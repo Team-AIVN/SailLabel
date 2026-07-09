@@ -160,6 +160,12 @@ class WorkspaceMember(models.Model):
             models.UniqueConstraint(fields=['user', 'workspace'], name='uniq_workspace_member'),
         ]
 
+    def has_permission(self, user):
+        # Object-level check used by DRF (core.api_permissions). Delegates to the workspace,
+        # like TaskPool/WorkspaceFileUpload; row mutations are further gated by manager checks
+        # in the member detail view's perform_update/perform_destroy.
+        return self.workspace.has_permission(user)
+
 
 def _workspace_upload_path(instance, filename):
     workspace = str(instance.workspace_id)

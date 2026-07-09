@@ -340,6 +340,8 @@ class WorkspaceImportStorageSyncAPI(generics.GenericAPIView):
         data['created_items'] = result['created']
         # pre-existing items (imported by another connection) newly added to this pool
         data['linked_items'] = result['linked']
+        data['skipped_errors'] = result.get('errors', 0)
+        data['truncated'] = result.get('truncated', False)
         return Response(data)
 
 

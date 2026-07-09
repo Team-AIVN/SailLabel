@@ -23,6 +23,8 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from users.rules import can_create_workspace
 
+from organizations.models import OrganizationMember
+
 from .models import Workspace, WorkspaceFileUpload, WorkspaceMember
 from .rules import is_workspace_manager, is_workspace_member
 from .serializers import (
@@ -72,8 +74,15 @@ class WorkspaceListAPI(generics.ListCreateAPIView):
     )
 
     def get_queryset(self):
+        from django.db.models import Count, Q
+
         org = _active_org_or_400(self.request.user)
-        return Workspace.objects.filter(organization=org).order_by('-created_at')
+        # Annotate the active project count so the serializer doesn't COUNT per row.
+        return (
+            Workspace.objects.filter(organization=org)
+            .annotate(active_project_count=Count('projects', filter=Q(projects__deleted_at__isnull=True)))
+            .order_by('-created_at')
+        )
 
     @transaction.atomic
     def perform_create(self, serializer):
@@ -117,7 +126,14 @@ class WorkspaceDetailAPI(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         org = _active_org_or_400(self.request.user)
-        return Workspace.objects.filter(organization=org)
+        qs = Workspace.objects.filter(organization=org)
+        # Non-members must not read a workspace they don't belong to (spec: 비소속 = ❌).
+        # Super admins see all org workspaces; everyone else only their memberships.
+        from users.rules import is_super_admin
+
+        if is_super_admin.test(self.request.user):
+            return qs
+        return qs.filter(members__user=self.request.user, members__deleted_at__isnull=True).distinct()
 
     def _require_manager(self, workspace):
         if not is_workspace_manager(self.request.user, workspace):
@@ -191,7 +207,24 @@ class WorkspaceMembersAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView):
         workspace = self._get_workspace()
         if not is_workspace_manager(self.request.user, workspace):
             raise PermissionDenied('Only a workspace manager can invite members.')
-        member = serializer.save(workspace=workspace)
+        # The invitee must belong to this workspace's organization — otherwise a manager
+        # could add users from other orgs (and leak their name/email in the member list).
+        invitee = serializer.validated_data.get('user')
+        if invitee is not None and not OrganizationMember.objects.filter(
+            user=invitee, organization=workspace.organization
+        ).exists():
+            raise ValidationError({'user': 'User must be a member of this organization.'})
+        # Re-adding a previously removed member: revive the soft-deleted row instead of
+        # inserting a duplicate (the (user, workspace) uniqueness is unconditional).
+        existing = WorkspaceMember.objects.filter(workspace=workspace, user=invitee).first() if invitee else None
+        if existing is not None:
+            existing.deleted_at = None
+            existing.role = serializer.validated_data.get('role', existing.role)
+            existing.save(update_fields=['deleted_at', 'role', 'updated_at'])
+            serializer.instance = existing
+            member = existing
+        else:
+            member = serializer.save(workspace=workspace)
         record_role_change(
             action=AuditAction.ROLE_GRANTED,
             actor=self.request.user,
@@ -354,10 +387,6 @@ class WorkspaceSummaryAPI(_WorkspaceScopedMixin, generics.RetrieveAPIView):
         return self._get_workspace()
 
 
-@method_decorator(
-    name='get',
-    decorator=extend_schema(tags=['Workspaces'], summary='List workspace file uploads'),
-)
 def _save_workspace_upload(workspace, user, fileobj, materialize=True):
     """Create a WorkspaceFileUpload, sanitizing SVG content first.
 
@@ -459,7 +488,7 @@ class WorkspaceFileUploadsAPI(_WorkspaceScopedMixin, generics.ListCreateAPIView)
                 ids = _json.loads(query)
             except Exception:
                 raise ValidationError('ids must be a JSON-encoded integer array')
-            if not isinstance(ids, list):
+            if not isinstance(ids, list) or not all(isinstance(i, int) for i in ids):
                 raise ValidationError('ids must be a JSON-encoded integer array')
             qs = qs.filter(id__in=ids)
         return qs
@@ -645,7 +674,18 @@ class WorkspaceUploadedFileResponse(generics.RetrieveAPIView):
 
         if file_upload is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        if not file_upload.has_permission(request.user):
+        # WorkspaceMixin.has_permission is an OSS no-op (always True), so enforce access
+        # here: the file's workspace must be in the caller's active org and they must be
+        # a member (or super admin). Otherwise any authenticated user could fetch any
+        # workspace upload by path — a cross-org data leak.
+        from users.rules import is_super_admin
+
+        workspace = file_upload.workspace
+        org_id = getattr(request.user, 'active_organization_id', None)
+        allowed = is_super_admin.test(request.user) or (
+            workspace.organization_id == org_id and is_workspace_member(request.user, workspace)
+        )
+        if not allowed:
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         stored = file_upload.file

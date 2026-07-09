@@ -63,12 +63,16 @@ def user_signup(request):
     invitation = None
     if invite_token:
         # Reusable link: look up by token only (not "unaccepted"), so multiple people
-        # can sign up through the same invite.
+        # can sign up through the same invite — but skip revoked/expired links.
         invitation = Invitation.objects.filter(token=invite_token).first()
+        if invitation is not None and not invitation.is_usable:
+            invitation = None
 
     # make a new user
     if request.method == 'POST':
-        organization = Organization.objects.first()
+        # Place the user in the invitation's organization when signing up via an invite,
+        # so multi-org deployments don't misfile everyone into the first organization.
+        organization = (invitation.organization if invitation is not None else None) or Organization.objects.first()
         if invitation is None:
             if settings.DISABLE_SIGNUP_WITHOUT_LINK is True:
                 if not (token and organization and token == organization.token):

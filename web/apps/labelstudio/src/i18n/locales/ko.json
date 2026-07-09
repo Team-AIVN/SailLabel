@@ -394,6 +394,8 @@
   "assign": {
     "workspaceMembers": "워크스페이스 멤버",
     "search": "검색",
+    "workers": "작업자",
+    "dragHere": "여기로 드래그",
     "annotators": "라벨러",
     "reviewers": "검수자",
     "annotator": "라벨러",

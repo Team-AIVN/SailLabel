@@ -51,6 +51,21 @@ def apply_review_selection(annotation):
     Returns True if the annotation was selected (task.review_status set to PENDING).
     """
     project = annotation.project
+    # If the task was already reviewed (accepted/rejected/fixed) or is awaiting review,
+    # a new revision must go back to the reviewer regardless of the sampling strategy —
+    # otherwise RANDOM_SAMPLING could roll NOT_SELECTED and let unreviewed rework settle
+    # (and get paid). Only truly first-time selection uses the strategy.
+    reviewed_states = {
+        Task.ReviewStatus.PENDING,
+        Task.ReviewStatus.ACCEPTED,
+        Task.ReviewStatus.REJECTED,
+        Task.ReviewStatus.FIXED_AND_ACCEPTED,
+    }
+    current = Task.objects.filter(pk=annotation.task_id).values_list('review_status', flat=True).first()
+    if current in reviewed_states:
+        Task.objects.filter(pk=annotation.task_id).update(review_status=Task.ReviewStatus.PENDING)
+        return True
+
     strategy = project.review_strategy
     select = False
     if strategy == Project.ReviewStrategy.FULL_REVIEW:
@@ -145,6 +160,9 @@ def _record_review(annotation, reviewer, decision, comment='', stage=1):
 
 @transaction.atomic
 def accept(annotation, reviewer, comment='', stage=1):
+    # Lock the task so two reviewers can't accept/reject the same task concurrently and
+    # leave contradictory rows / a decision racing a labeler edit.
+    Task.objects.select_for_update().filter(pk=annotation.task_id).first()
     review = _record_review(annotation, reviewer, Review.Decision.ACCEPT, comment=comment, stage=stage)
     Annotation.objects.filter(pk=annotation.pk).update(status=Annotation.Status.APPROVED)
     Task.objects.filter(pk=annotation.task_id).update(review_status=Task.ReviewStatus.ACCEPTED)
@@ -153,6 +171,7 @@ def accept(annotation, reviewer, comment='', stage=1):
 
 @transaction.atomic
 def reject(annotation, reviewer, comment='', stage=1):
+    Task.objects.select_for_update().filter(pk=annotation.task_id).first()
     review = _record_review(annotation, reviewer, Review.Decision.REJECT, comment=comment, stage=stage)
     # Mark the current revision as needing rework and return the task to the
     # annotator's queue (is_labeled=False makes it eligible for next-task again).

@@ -179,7 +179,13 @@ def get_not_solved_tasks_qs(
     assigned_flag: Union[bool, None],
     queue_info: str,
 ) -> Tuple[QuerySet[Task], List[int], str, bool]:
-    user_solved_tasks_array = user.annotations.filter(project=project, task__isnull=False)
+    # A rejected revision (REWORK_REQUIRED) is NOT "solved" — the labeler still owes rework,
+    # so it stays in their queue instead of being permanently filtered out.
+    from tasks.models import Annotation
+
+    user_solved_tasks_array = user.annotations.filter(project=project, task__isnull=False).exclude(
+        status=Annotation.Status.REWORK_REQUIRED
+    )
     user_solved_tasks_array = user_solved_tasks_array.distinct().values_list('task__pk', flat=True)
     not_solved_tasks = prepared_tasks.exclude(pk__in=user_solved_tasks_array)
 

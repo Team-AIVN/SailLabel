@@ -394,6 +394,8 @@
   "assign": {
     "workspaceMembers": "Workspace members",
     "search": "Search",
+    "workers": "Worker",
+    "dragHere": "Drag here",
     "annotators": "Labelers",
     "reviewers": "Reviewers",
     "annotator": "Labeler",
