@@ -275,7 +275,6 @@
       "personalInfo": "Personal Info",
       "hotkeys": "Hotkeys",
       "hotkeysDescription": "Customize your keyboard shortcuts to speed up your workflow. Click on any hotkey below to assign a new key combination that works best for you.",
-      "emailPreferences": "Email Preferences",
       "membershipInfo": "Membership Info",
       "personalAccessToken": "Personal Access Token",
       "legacyToken": "Legacy Token",
@@ -290,10 +289,6 @@
       "deleteAvatar": "Delete",
       "errorUpdatingAvatar": "Error updating avatar",
       "errorUpdatingUser": "Error updating user"
-    },
-    "email": {
-      "subscribeGeneric": "Subscribe for news and tips",
-      "subscribeHumanSignal": "Subscribe to HumanSignal news and tips from Heidi"
     },
     "membership": {
       "userId": "User ID",

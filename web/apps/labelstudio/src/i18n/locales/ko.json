@@ -275,7 +275,6 @@
       "personalInfo": "개인 정보",
       "hotkeys": "단축키",
       "hotkeysDescription": "작업 속도를 높이기 위해 키보드 단축키를 원하는 대로 설정할 수 있습니다. 아래 단축키를 클릭해 새 키 조합을 지정하세요.",
-      "emailPreferences": "이메일 설정",
       "membershipInfo": "멤버십 정보",
       "personalAccessToken": "개인 액세스 토큰",
       "legacyToken": "레거시 토큰",
@@ -290,10 +289,6 @@
       "deleteAvatar": "삭제",
       "errorUpdatingAvatar": "프로필 사진을 업데이트하지 못했습니다",
       "errorUpdatingUser": "사용자 정보를 업데이트하지 못했습니다"
-    },
-    "email": {
-      "subscribeGeneric": "뉴스 및 팁 구독",
-      "subscribeHumanSignal": "HumanSignal의 Heidi가 보내는 뉴스와 팁 구독"
     },
     "membership": {
       "userId": "사용자 ID",

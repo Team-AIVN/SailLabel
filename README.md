@@ -54,6 +54,101 @@ React frontend under `web/`). After installing backend dependencies (Poetry)
 and building the frontend (`yarn ls:build`), run the server and open
 `http://localhost:8080`.
 
+- [Run locally for development](#run-locally-for-development)
+- [Run with Docker](#run-with-docker)
+- [Run with Docker Compose (LabelSea + Nginx + PostgreSQL)](#run-with-docker-compose)
+- [Run with Docker Compose + MinIO](#run-with-docker-compose--minio)
+- [Deploy in a cloud instance](#deploy-in-a-cloud-instance)
+
+### Run locally for development
+
+```bash
+# Install all package dependencies
+pip install poetry
+poetry install
+
+# Activate venv
+source .venv/bin/activate
+
+# Run database migrations
+python label_studio/manage.py migrate
+python label_studio/manage.py collectstatic
+
+# Start the server in development mode at http://localhost:8080
+python label_studio/manage.py runserver
+```
+
+For information about building and updating the frontend, see
+[`web/README.md`](web/README.md).
+
+### Run with Docker
+
+LabelSea is not published as a prebuilt image, so build the image locally
+from the repository root and run it in a container. It will be available at
+`http://localhost:8080`.
+
+```bash
+docker build -t labelsea:latest .
+docker run -it -p 8080:8080 -v $(pwd)/mydata:/label-studio/data labelsea:latest
+```
+
+All generated assets — including the SQLite3 database storage
+`label_studio.sqlite3` and uploaded files — are kept in the `./mydata`
+directory.
+
+You can override the default launch command by appending new arguments:
+
+```bash
+docker run -it -p 8080:8080 -v $(pwd)/mydata:/label-studio/data labelsea:latest label-studio --log-level DEBUG
+```
+
+### Run with Docker Compose
+
+The Docker Compose script provides a production-ready stack consisting of the
+following components:
+
+- LabelSea
+- [Nginx](https://www.nginx.com/) — proxy web server used to serve various
+  static data, including uploaded audio, images, etc.
+- [PostgreSQL](https://www.postgresql.org/) — production-ready database that
+  replaces the less performant SQLite3.
+
+The compose file builds the image from the local source (`build: .`), so it
+always runs this fork's code. To start using the app from `http://localhost`,
+run this command:
+
+```bash
+docker-compose up
+```
+
+### Run with Docker Compose + MinIO
+
+You can also run LabelSea with an additional [MinIO](https://min.io/) server
+for local S3 storage. This is particularly useful when you want to test
+S3-storage behavior on your local system:
+
+```bash
+# Add sudo on Linux if you are not a member of the docker group
+docker compose -f docker-compose.yml -f docker-compose.minio.yml up -d
+```
+
+If you do not have a static IP address, you must create an entry in your hosts
+file so that both LabelSea and your browser can access the MinIO server.
+
+### Deploy in a cloud instance
+
+The repository ships with deployment configurations inherited from Label
+Studio for the following cloud platforms:
+
+- **Heroku** — [`heroku.yml`](heroku.yml) and
+  [`Dockerfile.heroku`](Dockerfile.heroku) (with persistent PostgreSQL).
+- **Microsoft Azure** — [`azuredeploy.json`](azuredeploy.json) ARM template
+  and [`azuredeploy.parameters.json`](azuredeploy.parameters.json).
+- **Google Cloud Run** — [`Dockerfile.cloudrun`](Dockerfile.cloudrun).
+
+For platform-specific instructions, refer to the upstream Label Studio
+deployment guide: <https://labelstud.io/guide/install>.
+
 ## License
 
 LabelSea is licensed under the **Apache License, Version 2.0** — the same

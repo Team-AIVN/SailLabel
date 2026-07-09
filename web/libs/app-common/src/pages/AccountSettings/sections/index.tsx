@@ -1,5 +1,4 @@
 import { PersonalInfo } from "./PersonalInfo";
-import { EmailPreferences } from "./EmailPreferences";
 import { PersonalAccessToken, PersonalAccessTokenDescription } from "./PersonalAccessToken";
 import { MembershipInfo } from "./MembershipInfo";
 import { HotkeysManager } from "./Hotkeys";
@@ -43,11 +42,6 @@ export const accountSettingsSections = (
       id: "hotkeys",
       component: HotkeysManager,
       description: () => <>{t("accountSettings.sections.hotkeysDescription")}</>,
-    },
-    {
-      title: t("accountSettings.sections.emailPreferences"),
-      id: "email-preferences",
-      component: EmailPreferences,
     },
     {
       title: t("accountSettings.sections.membershipInfo"),
