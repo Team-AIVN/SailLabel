@@ -87,6 +87,7 @@ export const API_CONFIG = {
     deleteWorkspaceStorage: "DELETE:/storages/:provider/workspace/:pk",
     assignWorkspaceStorageToProject: "POST:/storages/:provider/workspace/:pk/assign",
     syncWorkspaceStorage: "POST:/storages/:provider/workspace/:pk/sync",
+    browseWorkspaceStorage: "/storages/azure/workspace/browse",
 
     // Presigning
     presignUrlForTask: "/../tasks/:taskID/presign",
