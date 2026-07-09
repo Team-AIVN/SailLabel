@@ -303,7 +303,15 @@ class Task(TaskMixin, FsmHistoryStateModel):
             if rejected_q:
                 q &= rejected_q
 
-        return q | Q(ground_truth=True)
+        exclude = q | Q(ground_truth=True)
+        # A user's own rejected revision (needs rework) must not count as a completed
+        # annotation locking the task, or an overlap=1 task could never be re-served to
+        # them for the rework that reject() intends.
+        if user is not None:
+            from tasks.models import Annotation
+
+            exclude = exclude | (Q(status=Annotation.Status.REWORK_REQUIRED) & Q(completed_by=user))
+        return exclude
 
     def has_lock(self, user=None):
         """
