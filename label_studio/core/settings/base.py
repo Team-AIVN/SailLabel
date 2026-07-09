@@ -815,6 +815,26 @@ if get_env('STORAGE_TYPE') == 'gcs':
 CSRF_TRUSTED_ORIGINS = get_env('CSRF_TRUSTED_ORIGINS', [])
 if CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS = CSRF_TRUSTED_ORIGINS.split(',')
+else:
+    CSRF_TRUSTED_ORIGINS = []
+
+# Behind an HTTPS reverse proxy (e.g. Caddy/nginx terminating TLS) the app receives
+# plain http, so Django would otherwise treat the public https Origin as untrusted and
+# reject signup/login POSTs with a CSRF failure. Derive the trusted origin and proxy
+# awareness from LABEL_STUDIO_HOST so no extra env wiring is needed on the host.
+if HOSTNAME:
+    from urllib.parse import urlparse as _urlparse
+
+    _host = _urlparse(HOSTNAME)
+    if _host.scheme and _host.netloc:
+        _origin = f'{_host.scheme}://{_host.netloc}'
+        if _origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(_origin)
+        if _host.scheme == 'https':
+            # Trust the proxy's forwarded scheme/host so request.is_secure() and
+            # build_absolute_uri() (used for invite links) reflect the real https origin.
+            SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+            USE_X_FORWARDED_HOST = True
 
 # Custom S3 endpoints on these domains will get detailed error reporting
 S3_TRUSTED_STORAGE_DOMAINS = get_env_list(
