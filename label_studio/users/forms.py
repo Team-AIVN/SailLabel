@@ -12,6 +12,9 @@ from users.models import User
 EMAIL_MAX_LENGTH = 256
 USERNAME_MAX_LENGTH = 30
 DISPLAY_NAME_LENGTH = 100
+# 회원가입 시 받는 본명. User.first_name 컬럼(max_length=256)에 저장한다.
+NAME_MIN_LENGTH = 2
+NAME_MAX_LENGTH = 256
 USERNAME_LENGTH_ERR = f'Please enter a username {USERNAME_MAX_LENGTH} characters or fewer in length'
 DISPLAY_NAME_LENGTH_ERR = f'Please enter a display name {DISPLAY_NAME_LENGTH} characters or fewer in length'
 INVALID_USER_ERROR = "The email and password you entered don't match."
@@ -63,10 +66,23 @@ class LoginForm(forms.Form):
 
 class UserSignupForm(forms.Form):
     email = forms.EmailField(label='Work Email', error_messages={'required': 'Invalid email'})
+    # 본명. 정산·작업 내역에서 이메일과 함께 사람을 식별하는 안전장치라 필수.
+    # `User.first_name` 한 칸에 전체 이름을 넣는다 — `get_full_name()` 이 first+last 를
+    # 공백으로 잇기 때문에 한글 이름을 성/이름으로 쪼개면 "홍 길동" 처럼 벌어진다.
+    name = forms.CharField(
+        max_length=NAME_MAX_LENGTH,
+        error_messages={'required': '이름을 입력해 주세요'},
+    )
     password = forms.CharField(widget=forms.TextInput(attrs={'type': 'password'}))
     allow_newsletters = forms.BooleanField(required=False)
     how_find_us = forms.CharField(required=False)
     elaborate = forms.CharField(required=False)
+
+    def clean_name(self):
+        name = (self.cleaned_data.get('name') or '').strip()
+        if len(name) < NAME_MIN_LENGTH:
+            raise forms.ValidationError(f'이름은 {NAME_MIN_LENGTH}자 이상이어야 합니다')
+        return name
 
     def clean_password(self):
         password = self.cleaned_data.get('password')
@@ -105,7 +121,11 @@ class UserSignupForm(forms.Form):
         if 'elaborate' in cleaned and how_find_us == FOUND_US_ELABORATE:
             cleaned['elaborate']
 
-        user = User.objects.create_user(email, password, allow_newsletters=allow_newsletters)
+        # 이름은 first_name 에만 넣는다. `get_full_name()` 이 first + ' ' + last 라서,
+        # 정산·작업 내역·아바타 이니셜이 별도 수정 없이 본명을 그대로 쓴다.
+        user = User.objects.create_user(
+            email, password, allow_newsletters=allow_newsletters, first_name=cleaned['name']
+        )
         return user
 
 
