@@ -152,6 +152,11 @@
     }
   }
 
+  &__pay-error {
+    font-size: 12px;
+    color: var(--color-negative-content);
+  }
+
   &__pay-label {
     font-size: 12px;
     color: var(--color-neutral-content-subtler);
