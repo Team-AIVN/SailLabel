@@ -843,7 +843,9 @@ class ExportStorage(Storage, ProjectStorageMixin):
             # export task with annotations
             # TODO: we have to rewrite save_all_annotations, because this func will be called for each annotation
             # TODO: instead of each task, however, we have to call it only once per task
-            expand = ['annotations.reviews', 'annotations.completed_by']
+            # `predictions` expanded too: without it the serializer emits bare PKs, and the
+            # exported file no longer matches the task JSON we imported (data + predictions).
+            expand = ['annotations.reviews', 'annotations.completed_by', 'predictions']
             context = {'project': self.project}
             return ExportDataSerializer(annotation.task, context=context, expand=expand).data
         else:
