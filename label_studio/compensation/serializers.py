@@ -18,6 +18,14 @@ class ProjectCompensationPolicySerializer(serializers.ModelSerializer):
             'updated_at',
         )
         read_only_fields = ('id', 'project', 'created_at', 'updated_at')
+        # Every pricing field has a model default, so an empty payload would otherwise
+        # validate and silently create a "USD, 0.00" policy — money quietly set to zero.
+        # Required on create; a partial update (existing policy) bypasses this.
+        extra_kwargs = {
+            'currency': {'required': True},
+            'annotation_unit_price': {'required': True},
+            'review_unit_price': {'required': True},
+        }
 
     def validate_annotation_unit_price(self, value):
         if value is not None and value < 0:
