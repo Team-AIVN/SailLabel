@@ -144,6 +144,58 @@ class ActivityTimelineTests(APITestCase):
         assert '주간 → 석간' in entries[1]['comment']
         assert entries[2]['reviewer']['id'] == self.reviewer.id  # 검수자1 승인
 
+    def test_labeler_can_open_activity_of_a_teammates_task(self):
+        """The status column's activity link must work for a task you did not annotate."""
+        Annotation.objects.create(
+            task=self.task,
+            project=self.project,
+            completed_by=self.labeler1,
+            result=_result('주간'),
+            status=Annotation.Status.COMPLETED,
+        )
+        # 라벨러2 is a project member but has annotated nothing here.
+        self.client.force_authenticate(self.labeler2)
+
+        progress = self.client.get(f'/api/projects/{self.project.pk}/review/progress')
+        assert progress.status_code == 200
+
+        tasks = self.client.get(f'/api/projects/{self.project.pk}/review/tasks?task={self.task.pk}')
+        assert tasks.status_code == 200
+        rows = tasks.json()
+        rows = rows.get('results', rows) if isinstance(rows, dict) else rows
+        assert len(rows) == 1
+        assert [e['decision'] for e in rows[0]['reviews']] == ['SUBMITTED']
+
+    def test_labeler_still_sees_only_own_tasks_without_deep_link(self):
+        """Widening is scoped to the ?task= deep link — the project-wide list is unchanged."""
+        Annotation.objects.create(
+            task=self.task,
+            project=self.project,
+            completed_by=self.labeler1,
+            result=_result('주간'),
+            status=Annotation.Status.COMPLETED,
+        )
+        self.client.force_authenticate(self.labeler2)
+        tasks = self.client.get(f'/api/projects/{self.project.pk}/review/tasks')
+        rows = tasks.json()
+        rows = rows.get('results', rows) if isinstance(rows, dict) else rows
+        assert rows == []
+
+    def test_non_member_is_still_denied(self):
+        """A user in the org but not on the project cannot read its activity."""
+        outsider = UserFactory()
+        _join_org(outsider, self.org)
+        Annotation.objects.create(
+            task=self.task, project=self.project, completed_by=self.labeler1, result=_result('주간')
+        )
+        self.client.force_authenticate(outsider)
+
+        assert self.client.get(f'/api/projects/{self.project.pk}/review/progress').status_code == 403
+        tasks = self.client.get(f'/api/projects/{self.project.pk}/review/tasks?task={self.task.pk}')
+        rows = tasks.json()
+        rows = rows.get('results', rows) if isinstance(rows, dict) else rows
+        assert rows == []
+
     def test_submitted_entry_is_derived_for_old_annotations(self):
         """No stored row for the submission, so pre-existing annotations still show it."""
         Annotation.objects.create(
