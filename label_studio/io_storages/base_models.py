@@ -884,6 +884,10 @@ class ExportStorage(Storage, ProjectStorageMixin):
                     futures.append(executor.submit(self.save_annotation, annotation))
 
                 for future in concurrent.futures.as_completed(futures):
+                    # Surface upload errors. Without this the exception stays parked in the
+                    # future, the counter still advances, and a sync where every single
+                    # upload failed finishes as COMPLETED with a full count.
+                    future.result()
                     annotation_exported += 1
                     self.info_update_progress(last_sync_count=annotation_exported, total_annotations=total_annotations)
 
