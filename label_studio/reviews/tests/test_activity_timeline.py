@@ -196,6 +196,42 @@ class ActivityTimelineTests(APITestCase):
         rows = rows.get('results', rows) if isinstance(rows, dict) else rows
         assert rows == []
 
+    def test_labeler_edit_does_not_fill_reviewed_by_columns(self):
+        """A labeler's edit is an activity entry, not a review — the DM's 검수자/검수됨 stay empty."""
+        from data_manager.managers import annotate_reviewed_at, annotate_reviewed_by
+
+        def dm_row():
+            qs = annotate_reviewed_by(annotate_reviewed_at(Task.objects.filter(pk=self.task.pk)))
+            return qs.values('reviewed_by', 'reviewed_at').first()
+
+        annotation = Annotation.objects.create(
+            task=self.task,
+            project=self.project,
+            completed_by=self.labeler1,
+            result=_result('주간'),
+            status=Annotation.Status.COMPLETED,
+        )
+        CurrentContext.set('user', self.labeler2)
+        annotation.result = _result('석간')
+        annotation.save()
+        CurrentContext.set('user', None)
+
+        row = dm_row()
+        assert row['reviewed_by'] is None, f'labeler edit leaked into 검수자: {row}'
+        assert row['reviewed_at'] is None
+
+        # A real review decision does fill them.
+        services.accept(annotation, self.reviewer)
+        row = dm_row()
+        assert row['reviewed_by'] == self.reviewer.id
+        assert row['reviewed_at'] is not None
+
+        # ...and a later labeler edit must not overwrite the reviewer with themselves.
+        CurrentContext.set('user', self.labeler2)
+        annotation.result = _result('주간')
+        annotation.save()
+        assert dm_row()['reviewed_by'] == self.reviewer.id
+
     def test_submitted_entry_is_derived_for_old_annotations(self):
         """No stored row for the submission, so pre-existing annotations still show it."""
         Annotation.objects.create(
