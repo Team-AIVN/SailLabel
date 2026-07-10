@@ -40,6 +40,7 @@ if not (container and account and key):
 
 backfill = os.environ.get('BACKFILL') == 'yes'
 created = updated = kept = 0
+failed = []
 
 for project in Project.objects.filter(workspace__isnull=False).order_by('id'):
     prefix = azure_export_prefix(project)
@@ -62,8 +63,23 @@ for project in Project.objects.filter(workspace__isnull=False).order_by('id'):
 
     if backfill:
         n = project.annotations.count()
-        storage.save_all_annotations()
-        print(f'  [백필] project={project.id} annotations={n} -> {container}/{prefix}/<task id>.json')
+        # sync() 를 쓴다 — save_all_annotations() 를 직접 부르면 상태가 QUEUED 가 아니라서
+        # info_set_in_progress() 가 ValueError 를 낸다. sync() 는 UI 의 "Sync Storage" 버튼과
+        # 같은 경로(info_set_queued -> save_all_annotations)이고, VM 에 redis 가 없으므로
+        # 동기 실행된다.
+        storage.sync()
+        storage.refresh_from_db()
+        # sync() 는 예외를 storage_background_failure 로 삼키므로 상태로 성공 여부를 판정한다.
+        ok = storage.status == storage.Status.COMPLETED
+        if not ok:
+            failed.append(project.id)
+        mark = '백필' if ok else '백필실패'
+        print(
+            f'  [{mark}] project={project.id} annotations={n} status={storage.status} '
+            f'synced={storage.last_sync_count} -> {container}/{prefix}/<task id>.json'
+        )
 
 print(f'[export storage] 생성 {created} / 경로변경 {updated} / 유지 {kept} / 백필={backfill}')
+if failed:
+    raise SystemExit(f'[실패] 백필이 완료되지 않은 프로젝트: {failed} — 위 status/로그 확인')
 print('DONE')
