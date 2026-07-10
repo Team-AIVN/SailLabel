@@ -51,3 +51,75 @@ def test_save_annotation_writes_task_json():
     assert [p['model_version'] for p in payload['predictions']] == ['gpt-5.5']
     assert payload['predictions'][0]['result'] == RESULT
     assert [a['result'] for a in payload['annotations']] == [RESULT]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_sync_backfills_all_annotations():
+    """`sync()` is the only supported bulk entry point — it queues, then exports.
+
+    Calling `save_all_annotations()` directly raises
+    `Storage status (initialized) must be QUEUED`, so `scripts/prod_setup_export_storage.py`
+    must go through `sync()` (same path as the UI's "Sync Storage" button).
+    Needs transaction=True: the export runs in worker threads that open their own
+    connections and would not see uncommitted rows.
+    """
+    org = OrganizationFactory()
+    ws = Workspace.objects.create(organization=org, title='테스트', created_by=org.created_by)
+    project = ProjectFactory(
+        organization=org, created_by=org.created_by, workspace=ws, title='선박 탐색 시연', label_config=TEXT_CONFIG
+    )
+
+    keys = []
+    blob = MagicMock()
+    container = MagicMock()
+    container.get_blob_client.side_effect = lambda key: (keys.append(key), blob)[1]
+
+    with patch.object(AzureBlobExportStorage, 'get_container', return_value=container):
+        storage = AzureBlobExportStorage.objects.create(
+            project=project, title='결과', container='label-images', prefix='export/테스트/선박 탐색 시연'
+        )
+        tasks = [Task.objects.create(project=project, data={'text': f't{i}'}) for i in range(3)]
+        for task in tasks:
+            Annotation.objects.create(task=task, project=project, result=RESULT)
+        keys.clear()  # drop the per-submit uploads; we only care about what sync() writes
+
+        storage.sync()
+        storage.refresh_from_db()
+
+    assert storage.status == storage.Status.COMPLETED
+    assert storage.last_sync_count == 3
+    assert sorted(keys) == sorted(f'export/테스트/선박 탐색 시연/{t.id}.json' for t in tasks)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_failed_upload_does_not_report_completed():
+    """A sync where uploads raise must land on FAILED, not COMPLETED.
+
+    `save_annotations` runs uploads in a thread pool; if the futures are never resolved
+    the exceptions stay parked and the counter still advances, so a totally failed sync
+    reports "COMPLETED, 3 annotations". Ops scripts key off that status.
+    """
+    org = OrganizationFactory()
+    ws = Workspace.objects.create(organization=org, title='테스트', created_by=org.created_by)
+    project = ProjectFactory(
+        organization=org, created_by=org.created_by, workspace=ws, title='선박 탐색 시연', label_config=TEXT_CONFIG
+    )
+
+    blob = MagicMock()
+    blob.upload_blob.side_effect = RuntimeError('azure is down')
+    container = MagicMock()
+    container.get_blob_client.return_value = blob
+
+    with patch.object(AzureBlobExportStorage, 'get_container', return_value=container):
+        storage = AzureBlobExportStorage.objects.create(
+            project=project, title='결과', container='label-images', prefix='export/테스트/선박 탐색 시연'
+        )
+        task = Task.objects.create(project=project, data={'text': 't'})
+        # The per-submit export hook raises too, so the annotation is created out-of-band.
+        with patch.object(AzureBlobExportStorage, 'save_annotation'):
+            Annotation.objects.create(task=task, project=project, result=RESULT)
+
+        storage.sync()
+        storage.refresh_from_db()
+
+    assert storage.status == storage.Status.FAILED
