@@ -71,6 +71,46 @@ class WorkspaceStorageSourceSyncTests(APITestCase):
         ):
             return (storage or self.storage).scan_and_create_source_items()
 
+    def test_resync_refreshes_changed_blob(self):
+        """블롭 내용이 바뀌면 재동기화가 기존 항목을 갱신해야 한다.
+
+        항목은 파일 단위로 dedup 되므로, 갱신하지 않으면 옛 payload 가 영원히 남고
+        이후 이 작업집합으로 만든 모든 프로젝트가 낡은 데이터를 복사받는다.
+        """
+        self._sync()
+        item = TaskSourceItem.objects.get(storage_key='label-images/tasks/batch.json#0')
+        assert item.data == {'text': 'hello'}
+        assert item.predictions == PREDICTION
+
+        # Azure 의 같은 파일이 새 형식으로 덮어써진 상황.
+        new_data = {'text': 'hello', 'data_csv': '구분,길이(m)\n자선,93\n'}
+        new_predictions = [{**PREDICTION[0], 'model_version': 'gpt-5.5'}]
+
+        def iter_keys(self):
+            yield 'tasks/batch.json'
+
+        def get_data(self, key):
+            return [StorageObject(key=key, row_index=0, task_data={'data': new_data, 'predictions': new_predictions})]
+
+        with (
+            patch.object(AzureBlobWorkspaceImportStorage, 'iter_keys', iter_keys),
+            patch.object(AzureBlobWorkspaceImportStorage, 'get_data', get_data),
+        ):
+            result = self.storage.scan_and_create_source_items()
+
+        assert result['created'] == 0  # 새 파일 없음
+        assert result['refreshed'] == 1
+        item.refresh_from_db()
+        assert item.data == new_data
+        assert item.predictions == new_predictions
+
+        # 내용이 그대로면 다시 갱신하지 않는다.
+        with (
+            patch.object(AzureBlobWorkspaceImportStorage, 'iter_keys', iter_keys),
+            patch.object(AzureBlobWorkspaceImportStorage, 'get_data', get_data),
+        ):
+            assert self.storage.scan_and_create_source_items()['refreshed'] == 0
+
     def test_scan_creates_source_items(self):
         created = self._sync()['created']
         assert created == 3
