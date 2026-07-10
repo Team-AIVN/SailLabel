@@ -751,7 +751,11 @@ APP_WEBSERVER = get_env('APP_WEBSERVER', 'django')
 
 BATCH_JOB_RETRY_TIMEOUT = int(get_env('BATCH_JOB_RETRY_TIMEOUT', 60))
 
-FUTURE_SAVE_TASK_TO_STORAGE = get_bool_env('FUTURE_SAVE_TASK_TO_STORAGE', default=False)
+# LabelSea: export storage writes whole tasks (`<task id>.json` holding data +
+# predictions + annotations), not one opaque blob per annotation. That keeps the
+# exported files in the same shape as the task JSON we import from Azure, so a
+# round-trip is possible. Upstream defaults this to False.
+FUTURE_SAVE_TASK_TO_STORAGE = get_bool_env('FUTURE_SAVE_TASK_TO_STORAGE', default=True)
 FUTURE_SAVE_TASK_TO_STORAGE_JSON_EXT = get_bool_env('FUTURE_SAVE_TASK_TO_STORAGE_JSON_EXT', default=True)
 STORAGE_IN_PROGRESS_TIMER = float(get_env('STORAGE_IN_PROGRESS_TIMER', 5.0))
 STORAGE_EXPORT_CHUNK_SIZE = int(get_env('STORAGE_EXPORT_CHUNK_SIZE', 100))

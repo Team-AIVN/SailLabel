@@ -1,0 +1,45 @@
+name: "Setup · 결과 저장 스토리지 연결 (VM, 비파괴)"
+
+# 수동 실행 전용. 프로젝트마다 Azure 결과 저장 스토리지를 만들거나 경로를
+# export/<워크스페이스명>/<프로젝트명> 으로 다시 맞춘다. 아무것도 지우지 않는다.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "결과 저장 스토리지 연결/경로 갱신(비파괴). 진행하려면 yes"
+        type: string
+        default: "no"
+        required: true
+      backfill:
+        description: "이미 제출된 어노테이션도 Azure 로 일괄 업로드하려면 yes"
+        type: string
+        default: "no"
+        required: false
+
+jobs:
+  setup:
+    name: "Attach azure export storage on Azure VM"
+    if: ${{ inputs.confirm == 'yes' }}
+    runs-on: ubuntu-latest
+    concurrency: deploy-vm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run setup script on VM over SSH
+        env:
+          SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          VM_HOST: 20.200.209.213
+          VM_USER: label-sea
+          BACKFILL: ${{ inputs.backfill }}
+        run: |
+          install -m 600 /dev/null key.pem && printf '%s\n' "$SSH_KEY" > key.pem
+          ssh -i key.pem -o StrictHostKeyChecking=accept-new "$VM_USER@$VM_HOST" \
+            "cd ~/label-sea && docker compose exec -T \
+               -e EXPORT_SETUP_CONFIRM=yes \
+               -e BACKFILL=$BACKFILL \
+               app python3 label_studio/manage.py shell" \
+            < scripts/prod_setup_export_storage.py
+
+      - name: Summary
+        run: echo "### 결과 저장 스토리지 연결 완료 ✅ — 로그의 '[export storage]' 줄 확인" >> "$GITHUB_STEP_SUMMARY"

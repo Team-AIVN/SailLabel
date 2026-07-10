@@ -142,12 +142,31 @@ class WorkspaceStorageSourceSyncTests(APITestCase):
         }
         with patch('core.utils.params.get_env', side_effect=lambda k, *a, **kw: env.get(k)):
             project = ProjectFactory(
-                organization=self.org, created_by=self.owner, workspace=self.ws, label_config=TEXT_CONFIG
+                organization=self.org,
+                created_by=self.owner,
+                workspace=self.ws,
+                title='선박 탐색 시연',
+                label_config=TEXT_CONFIG,
             )
         st = project.io_storages_azureblobexportstorages.first()
         assert st is not None
         assert st.container == 'label-images'
-        assert st.prefix == f'export/{project.pk}'
+        assert st.prefix == f'export/{self.ws.title}/선박 탐색 시연'
+
+    def test_export_prefix_sanitizes_titles(self):
+        """제목의 슬래시는 폴더를 쪼개지 않도록 치환하고, 빈 제목은 id로 대체한다."""
+        from workspaces.signals import _blob_segment, azure_export_prefix
+
+        assert _blob_segment('a/b\\c', 1) == 'a_b_c'
+        assert _blob_segment('  두 칸   띄움  ', 1) == '두 칸 띄움'
+        assert _blob_segment('trailing. ', 1) == 'trailing'
+        assert _blob_segment('   ', 42) == '42'
+
+        ws = Workspace.objects.create(organization=self.org, title='a/b', created_by=self.owner)
+        project = ProjectFactory(
+            organization=self.org, created_by=self.owner, workspace=ws, title='p/q', label_config=TEXT_CONFIG
+        )
+        assert azure_export_prefix(project) == 'export/a_b/p_q'
 
     def test_project_without_env_gets_no_export_storage(self):
         with patch('core.utils.params.get_env', side_effect=lambda k, *a, **kw: None):
