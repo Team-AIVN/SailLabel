@@ -60,16 +60,23 @@ def azure_export_prefix(project):
 
 
 @receiver(post_save, sender=Project)
-def attach_azure_export_storage(sender, instance, created, **kwargs):
-    """Auto-attach an Azure export storage to new workspace projects.
+def attach_azure_export_storage(sender, instance, **kwargs):
+    """Auto-attach an Azure export storage once a project is published into a workspace.
 
     When the deployment has default Azure credentials (AZURE_BLOB_ACCOUNT_NAME/KEY and
     AZURE_BLOB_DEFAULT_CONTAINER), every submitted annotation is then pushed to
     `export/<workspace>/<project>/` automatically (see export_annotation_to_azure_storages),
     and the storage's Sync bulk-pushes everything when work is done. No-op when the
     env is not configured, so setups without Azure are unaffected.
+
+    Deliberately not gated on `created`: the UI creates a draft project first
+    (`is_draft=True`, no workspace — see `useDraftProject.js`) and only attaches the
+    workspace on the publishing PATCH, so a create-only hook never fires for it. Same
+    return-early shape as `materialize_task_pool_on_project` above: it runs on every
+    project save and bails immediately unless the project is published, in a workspace,
+    and has no storage yet.
     """
-    if not created or not instance.workspace_id:
+    if not instance.workspace_id or instance.is_draft:
         return
     try:
         from core.utils.params import get_env
