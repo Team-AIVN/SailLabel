@@ -334,6 +334,8 @@ class AzureBlobWorkspaceImportStorage(WorkspaceStorageMixin, AzureBlobImportStor
         # container is a distinct item (was: bare path -> silent skip / mis-link).
         container = str(self.container)
         items, existing_ids_for_pool, errors = [], [], 0
+        # storage_key -> (data, predictions) for blobs whose content changed since import.
+        refreshed_payloads = {}
         for key in self.iter_keys():
             if regex and not regex.match(key):
                 continue
@@ -348,16 +350,20 @@ class AzureBlobWorkspaceImportStorage(WorkspaceStorageMixin, AzureBlobImportStor
             for obj in objs:
                 base_key = obj.key if obj.row_index is None else f'{obj.key}#{obj.row_index}'
                 storage_key = f'{container}/{base_key}'
-                if storage_key in existing:
-                    if existing[storage_key] is not None:
-                        existing_ids_for_pool.append(existing[storage_key])
-                    continue
                 raw = obj.task_data or {}
                 data, predictions = raw, None
                 # Full task format ({"data": {...}, "predictions": [...]}) vs flat data dict.
                 if isinstance(raw, dict) and isinstance(raw.get('data'), dict):
                     data = raw['data']
                     predictions = raw.get('predictions') or None
+                if storage_key in existing:
+                    if existing[storage_key] is not None:
+                        existing_ids_for_pool.append(existing[storage_key])
+                        # Re-syncing must pick up an edited blob: the item is deduped by
+                        # file, so without this the old payload sticks forever and every
+                        # project later built from this pool inherits stale data.
+                        refreshed_payloads[storage_key] = (data, predictions)
+                    continue
                 items.append(
                     TaskSourceItem(
                         dataset=None,
@@ -378,6 +384,26 @@ class AzureBlobWorkspaceImportStorage(WorkspaceStorageMixin, AzureBlobImportStor
 
         created = TaskSourceItem.objects.bulk_create(items)
 
+        # Bring already-imported items up to date with their blob's current content.
+        # Only touches rows whose payload actually changed. Projects already materialized
+        # from this pool hold their own copies and are not affected.
+        refreshed = 0
+        if refreshed_payloads:
+            stale = []
+            for item in TaskSourceItem.objects.filter(
+                workspace=self.workspace, storage_key__in=list(refreshed_payloads)
+            ):
+                data, predictions = refreshed_payloads[item.storage_key]
+                if item.data == data and item.predictions == predictions:
+                    continue
+                item.data = data
+                item.predictions = predictions
+                item.data_type = _infer_item_type(data, 'json')
+                stale.append(item)
+            if stale:
+                TaskSourceItem.objects.bulk_update(stale, ['data', 'predictions', 'data_type'])
+            refreshed = len(stale)
+
         linked = 0
         if self.task_pool_id:
             already_in_pool = set(
@@ -397,7 +423,13 @@ class AzureBlobWorkspaceImportStorage(WorkspaceStorageMixin, AzureBlobImportStor
         self.last_sync_count = len(items)
         self.save(update_fields=['last_sync', 'last_sync_count'])
         # `truncated` signals that max_items was hit and more blobs remain for a re-sync.
-        return {'created': len(items), 'linked': linked, 'errors': errors, 'truncated': len(items) >= max_items}
+        return {
+            'created': len(items),
+            'linked': linked,
+            'refreshed': refreshed,
+            'errors': errors,
+            'truncated': len(items) >= max_items,
+        }
 
     class Meta:
         abstract = False

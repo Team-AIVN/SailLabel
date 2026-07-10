@@ -1,0 +1,39 @@
+name: "Setup · Azure 최신 JSON 재반영 (VM, 비파괴)"
+
+# 수동 실행 전용. Azure tasks/*.json 최신 내용을 작업집합 항목(TaskSourceItem)과
+# 프로젝트 태스크에 다시 반영한다. 기본은 dry-run — confirm=yes 여야 실제로 바꾼다.
+# 어노테이션/검수 이력/워크스페이스/초대/멤버십은 건드리지 않는다.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "실제로 갱신하려면 yes (비우면 dry-run: 현재 상태만 출력)"
+        type: string
+        default: "no"
+        required: false
+
+jobs:
+  refresh:
+    name: "Refresh task data from Azure on VM"
+    runs-on: ubuntu-latest
+    concurrency: deploy-vm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run refresh script on VM over SSH
+        env:
+          SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          VM_HOST: 20.200.209.213
+          VM_USER: label-sea
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          install -m 600 /dev/null key.pem && printf '%s\n' "$SSH_KEY" > key.pem
+          ssh -i key.pem -o StrictHostKeyChecking=accept-new "$VM_USER@$VM_HOST" \
+            "cd ~/label-sea && docker compose exec -T \
+               -e REFRESH_CONFIRM=$CONFIRM \
+               app python3 label_studio/manage.py shell" \
+            < scripts/prod_refresh_from_azure.py
+
+      - name: Summary
+        run: echo "### Azure 재반영 완료 — 로그의 '[작업집합 항목]' / '[프로젝트 N]' 줄 확인" >> "$GITHUB_STEP_SUMMARY"
