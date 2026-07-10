@@ -150,6 +150,7 @@
       "createProject": "Create Project",
       "inviteMembers": "Invite Members"
     },
+    "recentWorkspaces": "Recent Workspaces",
     "recentProjects": "Recent Projects",
     "viewAll": "View All",
     "loadError": "Can't load projects",
