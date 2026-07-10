@@ -21,7 +21,7 @@ independently — a labeler is never gated on a reviewer's decision, and vice ve
 from collections import defaultdict
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Min
+from django.db.models import Min, Sum
 from reviews.models import Review
 from tasks.models import Annotation, Task
 
@@ -100,6 +100,10 @@ def _money(d: Decimal) -> float:
     return float(Decimal(d).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
 
+# Public alias — the API formats balances in error messages with this.
+money = _money
+
+
 def _status_for(earned: Decimal, paid: Decimal) -> str:
     if paid <= 0:
         return 'UNPAID'
@@ -122,6 +126,28 @@ def _user_label(user):
         return None
     name = (user.get_full_name() or '').strip() if hasattr(user, 'get_full_name') else ''
     return name or getattr(user, 'email', None) or getattr(user, 'username', None) or f'User {user.pk}'
+
+
+def earnings_for(project, user) -> Decimal:
+    """What `user` has earned on `project` so far. Zero without a pricing policy."""
+    policy = getattr(project, 'compensation_policy', None)
+    if policy is None:
+        return Decimal('0')
+    counts = qualified_counts_for_project(project).get(user.pk)
+    if not counts:
+        return Decimal('0')
+    return policy.annotation_unit_price * counts['annotation'] + policy.review_unit_price * counts['review']
+
+
+def paid_for(project, user) -> Decimal:
+    """Sum of payments already recorded to `user` on `project`."""
+    total = PaymentRecord.objects.filter(project=project, user=user).aggregate(total=Sum('amount'))['total']
+    return total or Decimal('0')
+
+
+def remaining_for(project, user) -> Decimal:
+    """Unpaid balance. Can go negative if past over-payments were recorded."""
+    return earnings_for(project, user) - paid_for(project, user)
 
 
 def _policies_by_project(workspace):

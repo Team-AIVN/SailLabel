@@ -123,11 +123,32 @@ export const Compensation = ({ workspaceId }) => {
     loadPayments(selected);
   }, [selected, loadPayments]);
 
+  // 선택된 (프로젝트, 멤버) 의 남은 잔액. 서버도 초과 지급을 거부하지만, 여기서 미리
+  // 막아 관리자가 저장을 눌러본 뒤에야 실패를 알게 되는 일이 없도록 한다.
+  const selectedRemaining = useMemo(() => {
+    if (!selected) return null;
+    const row = rows.find((r) => r.project_id === selected.projectId && r.member_id === selected.memberId);
+    return row ? Number(row.remaining_balance) : null;
+  }, [rows, selected]);
+
+  const payAmountNum = Number.parseFloat(payAmount);
+  const payExceedsRemaining =
+    selectedRemaining !== null && Number.isFinite(payAmountNum) && payAmountNum > selectedRemaining;
+
   const recordPayment = useCallback(async () => {
     if (!selected) return;
     const amount = Number.parseFloat(payAmount);
     if (!(amount > 0)) {
       toast.show({ message: t("compensation.amountInvalid", "Enter an amount greater than 0"), type: "error" });
+      return;
+    }
+    if (selectedRemaining !== null && amount > selectedRemaining) {
+      toast.show({
+        message: t("compensation.amountExceedsRemaining", "지급액이 잔액({{remaining}})을 초과합니다", {
+          remaining: fmtMoney(selectedRemaining, selected.currency),
+        }),
+        type: "error",
+      });
       return;
     }
     const res = await api.callApi("createWorkspacePayment", {
@@ -139,16 +160,20 @@ export const Compensation = ({ workspaceId }) => {
         amount,
         memo: payMemo,
       },
+      errorFilter: () => true,
     });
-    if (res && !res.error) {
+    if (res?.$meta?.ok) {
       toast.show({ message: t("compensation.paymentRecorded", "Payment recorded") });
       setPayAmount("");
       setPayMemo("");
       await Promise.all([loadRows(), loadPayments(selected)]);
     } else {
-      toast.show({ message: res?.detail ?? t("compensation.actionFailed", "Action failed"), type: "error" });
+      // DRF 는 필드별 에러를 { amount: ["..."] } 로 준다.
+      const body = res?.response ?? {};
+      const detail = body.amount?.[0] ?? body.detail;
+      toast.show({ message: detail ?? t("compensation.actionFailed", "Action failed"), type: "error" });
     }
-  }, [api, workspaceId, selected, payAmount, payMemo, toast, t, loadRows, loadPayments]);
+  }, [api, workspaceId, selected, selectedRemaining, payAmount, payMemo, toast, t, loadRows, loadPayments]);
 
   const deletePayment = useCallback(
     async (paymentId) => {
@@ -346,6 +371,7 @@ export const Compensation = ({ workspaceId }) => {
                 <input
                   type="number"
                   min="0"
+                  max={selectedRemaining ?? undefined}
                   step="0.01"
                   placeholder="0.00"
                   value={payAmount}
@@ -356,9 +382,16 @@ export const Compensation = ({ workspaceId }) => {
                   value={payMemo}
                   onChange={(e) => setPayMemo(e.target.value)}
                 />
-                <Button size="small" onClick={recordPayment} disabled={!(Number.parseFloat(payAmount) > 0)}>
+                <Button size="small" onClick={recordPayment} disabled={!(payAmountNum > 0) || payExceedsRemaining}>
                   {t("compensation.record", "Record")}
                 </Button>
+                {payExceedsRemaining && (
+                  <span className={root.elem("pay-error").toClassName()}>
+                    {t("compensation.amountExceedsRemaining", "지급액이 잔액({{remaining}})을 초과합니다", {
+                      remaining: fmtMoney(selectedRemaining, selected.currency),
+                    })}
+                  </span>
+                )}
               </div>
             </section>
           );

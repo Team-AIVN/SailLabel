@@ -9,6 +9,7 @@ import logging
 
 from core.permissions import ViewClassPermission, all_permissions
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema
 from projects.models import Project, ProjectMember
@@ -22,7 +23,13 @@ from workspaces.rules import is_workspace_manager, is_workspace_member
 
 from .models import PaymentRecord, ProjectCompensationPolicy
 from .serializers import PaymentRecordSerializer, ProjectCompensationPolicySerializer
-from .services import compensation_projects, compute_member_compensation, compute_project_compensation
+from .services import (
+    compensation_projects,
+    compute_member_compensation,
+    compute_project_compensation,
+    money,
+    remaining_for,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +214,24 @@ class PaymentRecordListCreateAPI(generics.ListCreateAPIView):
             raise ValidationError(
                 {'currency': f'Payment currency must match the project settlement currency ({policy.currency}).'}
             )
-        serializer.save(workspace=workspace, created_by=self.request.user)
+
+        # A payment may never exceed what the worker has actually earned on this project.
+        # Locking the project row serialises concurrent payments, so two managers cannot
+        # each pass the check against the same stale balance and together overpay.
+        with transaction.atomic():
+            Project.objects.select_for_update().filter(pk=project.pk).first()
+            remaining = remaining_for(project, user)
+            amount = serializer.validated_data['amount']
+            if amount > remaining:
+                raise ValidationError(
+                    {
+                        'amount': (
+                            f'지급액이 잔액을 초과합니다. 남은 잔액: {money(remaining)} '
+                            f'{policy.currency if policy else ""}'.strip()
+                        )
+                    }
+                )
+            serializer.save(workspace=workspace, created_by=self.request.user)
 
 
 @method_decorator(name='delete', decorator=extend_schema(tags=['Compensation'], summary='Delete a payment record'))
