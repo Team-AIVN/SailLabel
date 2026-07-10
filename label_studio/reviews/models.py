@@ -17,9 +17,14 @@ class Review(models.Model):
         ACCEPT = 'ACCEPT', _('Accept')
         REJECT = 'REJECT', _('Reject')
         FIX_AND_ACCEPT = 'FIX_AND_ACCEPT', _('Fix and accept')
-        # Logged (not a reviewer action) when a labeler edits a reviewed revision,
-        # sending the task back to pending — shown in the review timeline.
+        # Logged (not a reviewer action) when a labeler edits an annotation — shown in
+        # the activity timeline. `reviewer` then holds the labeler who made the edit.
         RESUBMITTED = 'RESUBMITTED', _('Resubmitted after edit')
+
+    # Decisions an actual reviewer made. Anything reading "who reviewed this / when" must
+    # filter on these — a labeler's RESUBMITTED edit is an activity entry, not a review,
+    # and would otherwise show the labeler in the Data Manager's "reviewer" column.
+    REVIEWER_DECISIONS = (Decision.ACCEPT, Decision.REJECT, Decision.FIX_AND_ACCEPT)
 
     annotation = models.ForeignKey(
         'tasks.Annotation',

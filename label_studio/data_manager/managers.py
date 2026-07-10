@@ -565,10 +565,18 @@ def base_annotate_completed_at(queryset: TaskQuerySet) -> TaskQuerySet:
 
 
 def newest_review_subquery(field: str) -> Subquery:
-    """Subquery for a field of the most recent Review across all of a task's annotations."""
+    """Subquery for a field of the most recent *review decision* on a task.
+
+    Restricted to `REVIEWER_DECISIONS`: the Review table also stores labeler edits
+    (`RESUBMITTED`) for the activity timeline, and counting those here would fill the
+    "reviewed at / reviewed by" columns with the labeler who edited the annotation.
+    """
     from reviews.models import Review
 
-    newest_reviews = Review.objects.filter(annotation__task=OuterRef('pk')).order_by('-created_at', '-id')[:1]
+    newest_reviews = (
+        Review.objects.filter(annotation__task=OuterRef('pk'), decision__in=Review.REVIEWER_DECISIONS)
+        .order_by('-created_at', '-id')[:1]
+    )
     return Subquery(newest_reviews.values(field))
 
 
