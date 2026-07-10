@@ -9,12 +9,22 @@ import { ProjectRoleGuard } from "../../components/RoleGuard/RoleGuard";
 import "./Review.prefix.css";
 
 const REVIEW_STATUSES = ["NOT_SELECTED", "PENDING", "ACCEPTED", "REJECTED", "FIXED_AND_ACCEPTED"];
-// Each review decision maps to the badge status used for its pill color/label.
+// Each timeline entry maps to the badge status used for its pill colour.
 const DECISION_STATUS = {
+  SUBMITTED: "PENDING", // labeler submitted -> awaiting review
+  RESUBMITTED: "PENDING", // labeler edited -> back to pending
   ACCEPT: "ACCEPTED",
   REJECT: "REJECTED",
   FIX_AND_ACCEPT: "FIXED_AND_ACCEPTED",
-  RESUBMITTED: "PENDING", // labeler edited -> back to pending
+};
+// ...and to the action it describes. Submit and edit both sit at "pending", so the
+// status alone can't tell them apart — the timeline labels the action itself.
+const DECISION_LABEL = {
+  SUBMITTED: ["review.action.submitted", "제출"],
+  RESUBMITTED: ["review.action.edited", "수정"],
+  ACCEPT: ["review.action.accepted", "승인"],
+  REJECT: ["review.action.rejected", "반려"],
+  FIX_AND_ACCEPT: ["review.action.fixedAndAccepted", "수정 후 승인"],
 };
 const fmtTime = (value) => {
   const date = new Date(value);
@@ -138,7 +148,7 @@ const ReviewPageInner = () => {
   return (
     <div className={root.toClassName()}>
       <header className={root.elem("header").toClassName()}>
-        <h1>{t("review.title", "Review")}</h1>
+        <h1>{t("review.title", "작업 내역")}</h1>
         {progress && (
           <div className={root.elem("stats").toClassName()}>
             <div className={root.elem("stat").toClassName()}>
@@ -180,10 +190,10 @@ const ReviewPageInner = () => {
             <th>{t("review.col.taskId", "Task ID")}</th>
             <th>{t("review.col.version", "Version")}</th>
             <th>{t("review.col.annotator", "Labeler")}</th>
-            <th>{t("review.col.decision", "Decision")}</th>
-            <th>{t("review.col.reviewer", "Reviewer")}</th>
-            <th>{t("review.col.comments", "Comment")}</th>
-            <th>{t("review.col.time", "Time")}</th>
+            <th>{t("review.col.decision", "작업")}</th>
+            <th>{t("review.col.reviewer", "수행자")}</th>
+            <th>{t("review.col.comments", "변경 내용")}</th>
+            <th>{t("review.col.time", "시간")}</th>
           </tr>
         </thead>
         <tbody>
@@ -196,7 +206,7 @@ const ReviewPageInner = () => {
               <td>{userLabel(r.annotator)}</td>
               <td>
                 <span className={root.elem("badge").mod({ status: DECISION_STATUS[r.decision] }).toClassName()}>
-                  {statusLabel(DECISION_STATUS[r.decision] ?? r.decision)}
+                  {DECISION_LABEL[r.decision] ? t(...DECISION_LABEL[r.decision]) : r.decision}
                 </span>
               </td>
               <td>{userLabel(r.reviewer)}</td>
@@ -206,7 +216,9 @@ const ReviewPageInner = () => {
           ))}
         </tbody>
       </table>
-      {reviewRows.length === 0 && <p className={root.elem("muted").toClassName()}>{t("review.empty", "No reviews.")}</p>}
+      {reviewRows.length === 0 && (
+        <p className={root.elem("muted").toClassName()}>{t("review.empty", "No reviews.")}</p>
+      )}
     </div>
   );
 };

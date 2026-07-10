@@ -53,7 +53,7 @@ export const ReviewsCell = (cell) => {
       ) : null}
       {reviews.length > 0 && href ? (
         <a href={href} onClick={stop} data-testid="dm-reviews-link" style={{ fontSize: 12 }}>
-          {i18next.t("dm.viewMore", "더보기")} ({reviews.length})
+          {i18next.t("dm.activityLog", "이력")} ({reviews.length})
         </a>
       ) : null}
     </div>

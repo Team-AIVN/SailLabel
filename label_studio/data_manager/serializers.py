@@ -586,28 +586,39 @@ class DataManagerTaskSerializer(TaskSerializer):
 
     @staticmethod
     def get_reviews(obj):
-        # All review records for the task (across annotation revisions), oldest stage first,
-        # so the Data Manager cell can link to each review version.
-        from reviews.models import Review
-
-        reviews = (
-            Review.objects.filter(annotation__task=obj)
-            .select_related('annotation')
-            .order_by('stage', 'created_at', 'id')
-        )
+        # The task's activity timeline: each annotation's submission, plus every review
+        # record (edits, accepts, rejects) across revisions, oldest first. Reads from the
+        # prefetched `annotations__reviews` (see DataManagerTaskSerializer.prefetch).
+        entries = []
+        for ann in obj.annotations.all():
+            # Submissions are derived from the annotation rather than stored as rows, so
+            # annotations created before the activity log existed still show up.
+            if not ann.was_cancelled:
+                entries.append(
+                    {
+                        'id': f'submit-{ann.id}',
+                        'stage': 0,
+                        'decision': 'SUBMITTED',
+                        'created_at': ann.created_at,
+                        'annotation_id': ann.id,
+                        'annotation_version': getattr(ann, 'version', None),
+                    }
+                )
+            entries.extend(
+                {
+                    'id': r.id,
+                    'stage': r.stage,
+                    'decision': r.decision,
+                    'created_at': r.created_at,
+                    'annotation_id': r.annotation_id,
+                    'annotation_version': getattr(ann, 'version', None),
+                }
+                for r in ann.reviews.all()
+            )
         # The Data Manager cell only needs the count and the task's current status
-        # (rendered as a badge); per-review comment/reviewer live on the Review page.
-        return [
-            {
-                'id': r.id,
-                'stage': r.stage,
-                'decision': r.decision,
-                'created_at': r.created_at,
-                'annotation_id': r.annotation_id,
-                'annotation_version': getattr(r.annotation, 'version', None),
-            }
-            for r in reviews
-        ]
+        # (rendered as a badge); per-entry comment/actor live on the activity page.
+        entries.sort(key=lambda e: (e['created_at'], str(e['id'])))
+        return entries
 
     def get_annotations_ids(self, task):
         return self._pretty_results(task, 'annotations_ids', unique=True)
