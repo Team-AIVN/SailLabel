@@ -296,3 +296,44 @@ class CompensationTests(APITestCase):
         assert self._counts(self.reviewer)['review'] == 1
         assert self._counts(self.annotator)['annotation'] == 1  # 여전히 1건
         assert self._counts(self.annotator)['review'] == 0  # 라벨러에게 검수 크레딧은 없음
+
+    # --- 단가 정책 저장 ---------------------------------------------------------
+
+    def test_empty_put_no_longer_creates_a_silent_zero_policy(self):
+        """빈 본문 PUT 은 400. 모델 기본값(USD, 0) 으로 조용히 정책이 생기면 안 된다.
+
+        프론트의 api-proxy 가 PUT 에 Content-Type 을 안 붙여 body 를 통째로 누락시켰고,
+        서버는 그걸 받아 'USD / 0원' 정책을 만들어 버렸다 (프로덕션에서 실제로 발생).
+        """
+        project = ProjectFactory(
+            organization=self.org, created_by=self.manager, workspace=self.workspace, label_config=CONFIG
+        )
+        self.client.force_authenticate(self.manager)
+        resp = self.client.put(f'/api/projects/{project.pk}/compensation-policy/', {}, format='json')
+        assert resp.status_code == 400, resp.content
+        assert not hasattr(project, 'compensation_policy') or project.compensation_policy is None
+
+    def test_put_saves_currency_and_prices_then_allows_partial_edit(self):
+        project = ProjectFactory(
+            organization=self.org, created_by=self.manager, workspace=self.workspace, label_config=CONFIG
+        )
+        self.client.force_authenticate(self.manager)
+
+        created = self.client.put(
+            f'/api/projects/{project.pk}/compensation-policy/',
+            {'currency': 'KRW', 'annotation_unit_price': 100, 'review_unit_price': 50},
+            format='json',
+        )
+        assert created.status_code == 200, created.content
+        assert created.json()['currency'] == 'KRW'
+        assert Decimal(created.json()['annotation_unit_price']) == Decimal('100')
+
+        # 생성 이후 단가 수정(부분 갱신)도 가능해야 한다 — 보상 화면의 '단가 저장'.
+        updated = self.client.put(
+            f'/api/projects/{project.pk}/compensation-policy/',
+            {'annotation_unit_price': 250},
+            format='json',
+        )
+        assert updated.status_code == 200, updated.content
+        assert Decimal(updated.json()['annotation_unit_price']) == Decimal('250')
+        assert updated.json()['currency'] == 'KRW'  # 기존 통화 유지
