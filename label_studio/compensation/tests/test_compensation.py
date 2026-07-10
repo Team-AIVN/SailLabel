@@ -254,3 +254,45 @@ class CompensationTests(APITestCase):
             format='json',
         )
         assert resp.status_code == 400
+
+    # --- 라벨링 보상은 검수와 분리: 제출 즉시 지급 -----------------------------
+
+    def _counts(self, user):
+        from compensation.services import qualified_counts_for_project
+
+        return qualified_counts_for_project(self.project).get(user.id, {'annotation': 0, 'review': 0})
+
+    def test_annotation_paid_on_submit_while_pending_review(self):
+        """FULL_REVIEW 프로젝트라 제출 직후 상태는 PENDING — 그래도 라벨러는 즉시 지급 대상."""
+        task = self._task()
+        self._annotate(task, self.annotator)
+        task.refresh_from_db()
+        assert task.review_status == Task.ReviewStatus.PENDING
+
+        assert self._counts(self.annotator)['annotation'] == 1
+        # 검수는 아직 아무도 안 했으므로 리뷰 크레딧은 0.
+        assert self._counts(self.reviewer)['review'] == 0
+
+    def test_annotation_paid_even_when_rejected(self):
+        """반려돼도 라벨링 크레딧은 유지되고, 재작업이 중복 지급을 만들지 않는다."""
+        task = self._task()
+        annotation = self._annotate(task, self.annotator)
+        review_services.reject(annotation, self.reviewer, comment='다시')
+        assert self._counts(self.annotator)['annotation'] == 1
+        assert self._counts(self.reviewer)['review'] == 0  # 반려만으론 검수 보상 없음
+
+        # 라벨러가 고쳐서 다시 제출해도 여전히 1건.
+        annotation.result = [{'from_name': 'c', 'to_name': 't', 'type': 'choices', 'value': {'choices': ['a']}}]
+        annotation.save()
+        assert self._counts(self.annotator)['annotation'] == 1
+
+    def test_review_credit_still_requires_acceptance(self):
+        """검수 보상은 승인(또는 수정 후 승인)이 있어야만 잡힌다 — 라벨링과 별개."""
+        task = self._task()
+        annotation = self._annotate(task, self.annotator)
+        assert self._counts(self.reviewer)['review'] == 0
+
+        review_services.accept(annotation, self.reviewer)
+        assert self._counts(self.reviewer)['review'] == 1
+        assert self._counts(self.annotator)['annotation'] == 1  # 여전히 1건
+        assert self._counts(self.annotator)['review'] == 0  # 라벨러에게 검수 크레딧은 없음

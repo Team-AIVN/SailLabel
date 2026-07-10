@@ -130,8 +130,12 @@ class UserSignupForm(forms.Form):
 
 
 class UserProfileForm(forms.ModelForm):
-    """This form is used in profile account pages"""
+    """This form is used in profile account pages.
+
+    `last_name` / `phone` 은 노출하지 않는다 — 본명은 `first_name` 한 칸에 담고
+    전화번호는 쓰지 않는다. DB 컬럼은 남겨 두되 이 폼으로는 수정할 수 없다.
+    """
 
     class Meta:
         model = User
-        fields = ('first_name', 'last_name', 'phone', 'allow_newsletters')
+        fields = ('first_name', 'allow_newsletters')
