@@ -337,3 +337,51 @@ class CompensationTests(APITestCase):
         assert updated.status_code == 200, updated.content
         assert Decimal(updated.json()['annotation_unit_price']) == Decimal('250')
         assert updated.json()['currency'] == 'KRW'  # 기존 통화 유지
+
+    # --- 초과 지급 차단 -----------------------------------------------------------
+
+    def _pay(self, project, user, amount, currency='USD'):
+        return self.client.post(
+            f'/api/workspaces/{self.workspace.pk}/payments/',
+            {'project': project.pk, 'user': user.pk, 'currency': currency, 'amount': amount},
+            format='json',
+        )
+
+    def _earn_two_annotations(self):
+        """단가 0.05 x 2건 = 0.10 적립."""
+        for _ in range(2):
+            task = self._task()
+            self._annotate(task, self.annotator)
+
+    def test_payment_cannot_exceed_earnings(self):
+        self._earn_two_annotations()
+        self.client.force_authenticate(self.manager)
+
+        over = self._pay(self.project, self.annotator, '0.11')
+        assert over.status_code == 400, over.content
+        assert '잔액' in str(over.content, 'utf-8')
+        assert PaymentRecord.objects.count() == 0
+
+    def test_payment_up_to_the_balance_is_allowed(self):
+        self._earn_two_annotations()
+        self.client.force_authenticate(self.manager)
+
+        exact = self._pay(self.project, self.annotator, '0.10')
+        assert exact.status_code == 201, exact.content
+        assert PaymentRecord.objects.count() == 1
+
+    def test_second_payment_is_capped_by_what_remains(self):
+        self._earn_two_annotations()
+        self.client.force_authenticate(self.manager)
+
+        assert self._pay(self.project, self.annotator, '0.06').status_code == 201
+        # 남은 잔액 0.04 — 0.05 는 거부, 0.04 는 허용
+        assert self._pay(self.project, self.annotator, '0.05').status_code == 400
+        assert self._pay(self.project, self.annotator, '0.04').status_code == 201
+        assert PaymentRecord.objects.count() == 2
+
+    def test_payment_rejected_when_nothing_earned(self):
+        """작업이 없으면 적립액 0 — 어떤 금액도 지급할 수 없다."""
+        self.client.force_authenticate(self.manager)
+        assert self._pay(self.project, self.annotator, '0.01').status_code == 400
+        assert PaymentRecord.objects.count() == 0
