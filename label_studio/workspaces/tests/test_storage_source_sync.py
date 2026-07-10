@@ -168,6 +168,40 @@ class WorkspaceStorageSourceSyncTests(APITestCase):
         )
         assert azure_export_prefix(project) == 'export/a_b/p_q'
 
+    def test_draft_project_attaches_export_storage_on_publish(self):
+        """UI 흐름 재현: 워크스페이스 없는 draft 로 만든 뒤, 발행 PATCH 때 스토리지가 붙는다."""
+        env = {
+            'AZURE_BLOB_DEFAULT_CONTAINER': 'label-images',
+            'AZURE_BLOB_ACCOUNT_NAME': 'acc',
+            'AZURE_BLOB_ACCOUNT_KEY': 'key',
+        }
+        with patch('core.utils.params.get_env', side_effect=lambda k, *a, **kw: env.get(k)):
+            # useDraftProject.js: POST /projects {title, is_draft: true} — 워크스페이스 없음
+            project = ProjectFactory(
+                organization=self.org,
+                created_by=self.owner,
+                workspace=None,
+                is_draft=True,
+                title='New Project #1',
+                label_config=TEXT_CONFIG,
+            )
+            assert not project.io_storages_azureblobexportstorages.exists()
+
+            # CreateProject.jsx onCreate: PATCH {workspace, is_draft: false, ...}
+            project.workspace = self.ws
+            project.title = '테스트 프로젝트'
+            project.is_draft = False
+            project.save()
+
+        st = project.io_storages_azureblobexportstorages.first()
+        assert st is not None
+        assert st.prefix == f'export/{self.ws.title}/테스트 프로젝트'
+
+        # 이후 저장이 중복 스토리지를 만들지 않는다
+        with patch('core.utils.params.get_env', side_effect=lambda k, *a, **kw: env.get(k)):
+            project.save()
+        assert project.io_storages_azureblobexportstorages.count() == 1
+
     def test_project_without_env_gets_no_export_storage(self):
         with patch('core.utils.params.get_env', side_effect=lambda k, *a, **kw: None):
             project = ProjectFactory(
