@@ -6,10 +6,12 @@ status, the annotation revision chain, and :class:`reviews.models.Review`). Qual
 counts cannot be edited by anyone — there is no field for them; they are recomputed
 every read, so the dashboard is always reproducible and auditable.
 
-Qualification rules (a "data item" is a Task):
-* Annotation is compensable once per task whose final ``review_status`` is one of
-  ACCEPTED / FIXED_AND_ACCEPTED / NOT_SELECTED. Credit goes to the ORIGINAL annotator
-  (root of the revision chain) — reviewer fixes never transfer annotation credit, and
+Qualification rules (a "data item" is a Task). Annotation and review are counted
+independently — a labeler is never gated on a reviewer's decision, and vice versa:
+
+* Annotation is compensable as soon as a task carries real (non-skipped) work,
+  whatever its ``review_status``. Credit goes to the ORIGINAL annotator (root of the
+  revision chain) — reviewer fixes never transfer annotation credit, and
   rejection/rework cycles never add extra credit (still one task = one annotation).
 * Review is compensable once per task whose final ``review_status`` is ACCEPTED or
   FIXED_AND_ACCEPTED. Credit goes to the reviewer of the latest terminal review.
@@ -25,12 +27,8 @@ from tasks.models import Annotation, Task
 
 from .models import PaymentRecord, ProjectCompensationPolicy
 
-# Final task states that make the (single) annotation for a data item compensable.
-ANNOTATION_QUALIFIED_STATUSES = (
-    Task.ReviewStatus.ACCEPTED,
-    Task.ReviewStatus.FIXED_AND_ACCEPTED,
-    Task.ReviewStatus.NOT_SELECTED,
-)
+# Annotation compensation has no review_status gate: submitting real work earns the
+# credit immediately. Review compensation is tracked separately, below.
 # Final task states that make a review compensable (the item was actually reviewed).
 REVIEW_QUALIFIED_STATUSES = (
     Task.ReviewStatus.ACCEPTED,
@@ -50,30 +48,21 @@ def qualified_counts_for_project(project):
     """
     counts = defaultdict(lambda: {'annotation': 0, 'review': 0})
 
-    # --- Qualified annotations: one per qualified task, to the original annotator. ---
-    # No current_annotation filter: NONE-strategy projects never set it, yet their
-    # NOT_SELECTED tasks are still compensable. The root-annotation lookup below
-    # naturally excludes tasks that have no annotation at all (unworked tasks).
-    ann_task_ids = list(
-        Task.objects.filter(
-            project=project,
-            review_status__in=ANNOTATION_QUALIFIED_STATUSES,
-        ).values_list('id', flat=True)
+    # --- Qualified annotations: one per worked task, to the original annotator. ---
+    # No review_status filter: labeling is paid on submission, independently of whether a
+    # reviewer has looked at it (or ever will). A pending or rejected task still earns its
+    # single annotation credit — rework never adds a second one.
+    #
+    # Root annotation per task = lowest-id NON-cancelled annotation = the original
+    # annotator's real work. Excluding was_cancelled means a skipped task with no real
+    # annotation earns nothing, and a skip-then-relabel credits the relabeler (not
+    # whoever skipped first with a lower id). Tasks with no annotation never appear.
+    roots = (
+        Annotation.objects.filter(project=project, was_cancelled=False).values('task_id').annotate(root_id=Min('id'))
     )
-    if ann_task_ids:
-        # Root annotation per task = lowest-id NON-cancelled annotation = the original
-        # annotator's real work. Excluding was_cancelled skips means a skipped task with
-        # no real annotation earns nothing, and a skip-then-relabel credits the relabeler
-        # (not whoever skipped first with a lower id).
-        roots = (
-            Annotation.objects.filter(task_id__in=ann_task_ids, was_cancelled=False)
-            .values('task_id')
-            .annotate(root_id=Min('id'))
-        )
-        root_ids = [r['root_id'] for r in roots]
-        for completed_by_id in Annotation.objects.filter(id__in=root_ids).values_list(
-            'completed_by_id', flat=True
-        ):
+    root_ids = [r['root_id'] for r in roots]
+    if root_ids:
+        for completed_by_id in Annotation.objects.filter(id__in=root_ids).values_list('completed_by_id', flat=True):
             if completed_by_id is not None:
                 counts[completed_by_id]['annotation'] += 1
 
