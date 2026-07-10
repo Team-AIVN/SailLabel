@@ -20,6 +20,9 @@ export const visitedIdsAtom = atom((get) => {
 
 export const PROJECTS_TO_SHOW = 10;
 
+/** Workspaces are only listed for managers, so a short list is enough. */
+export const WORKSPACES_TO_SHOW = 5;
+
 /**
  * Atom to store the raw projects data from the API.
  * This is set by the HomePage component after fetching.

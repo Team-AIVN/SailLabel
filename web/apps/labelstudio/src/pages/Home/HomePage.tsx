@@ -18,6 +18,7 @@ import {
   projectsDataAtom,
   sortedProjectsAtom,
   visitedIdsAtom,
+  WORKSPACES_TO_SHOW,
 } from "./atoms";
 
 const resourceLinks = [
@@ -65,6 +66,19 @@ export const HomePage: Page = () => {
     },
   });
 
+  // Workspaces are a management-only surface, so only fetch them for super admins /
+  // workspace managers. Everyone else never sees the card.
+  const { data: workspacesData } = useQuery({
+    queryKey: ["workspaces", "recent"],
+    async queryFn() {
+      // Unlike `projects`, the workspaces endpoint sets no `pagination_class`, so it
+      // answers with a bare array (newest first). Keep the paginated shape as a fallback.
+      const response = await api.callApi<APIWorkspace[] | { results: APIWorkspace[] }>("workspaces");
+      return Array.isArray(response) ? response : (response?.results ?? []);
+    },
+    enabled: canCreateWorkspace,
+  });
+
   // Fetch visited projects specifically by their IDs
   const { data: visitedProjectsData } = useQuery({
     queryKey: ["visited-projects", { ids: visitedIds }],
@@ -95,6 +109,8 @@ export const HomePage: Page = () => {
       setProjectsData(uniqueProjects);
     }
   }, [data?.results, visitedProjectsData?.results, setProjectsData]);
+
+  const workspaces = (workspacesData ?? []).slice(0, WORKSPACES_TO_SHOW);
 
   const handleActions = (action: Action) => {
     return () => {
@@ -140,6 +156,25 @@ export const HomePage: Page = () => {
               );
             })}
           </div>
+
+          {canCreateWorkspace && workspaces.length > 0 && (
+            <SimpleCard
+              title={
+                <>
+                  {t("home.recentWorkspaces")}{" "}
+                  <a href="/workspaces" className="text-lg font-normal hover:underline">
+                    {t("home.viewAll")}
+                  </a>
+                </>
+              }
+            >
+              <div className="flex flex-col gap-1">
+                {workspaces.map((workspace) => (
+                  <WorkspaceSimpleCard key={workspace.id} workspace={workspace} />
+                ))}
+              </div>
+            </SimpleCard>
+          )}
 
           <SimpleCard
             title={
@@ -228,6 +263,32 @@ export const HomePage: Page = () => {
 HomePage.title = "Home";
 HomePage.path = "/";
 HomePage.exact = true;
+
+function WorkspaceSimpleCard({ workspace }: { workspace: APIWorkspace }) {
+  const { t } = useTranslation();
+
+  return (
+    <Link
+      to={`/workspaces/${workspace.id}`}
+      className="block even:bg-neutral-surface rounded-sm overflow-hidden"
+      data-external
+    >
+      <div className="grid grid-cols-[minmax(0,1fr)_150px] p-2 py-3 items-center border-l-[3px] border-l-primary-border">
+        <div className="flex flex-col gap-1">
+          <Tooltip title={workspace.title}>
+            <span className="text-neutral-content truncate">{workspace.title}</span>
+          </Tooltip>
+          {workspace.description && (
+            <div className="text-neutral-content-subtler text-sm truncate">{workspace.description}</div>
+          )}
+        </div>
+        <div className="text-neutral-content-subtler text-sm text-right">
+          {t("workspaces.card.projectCount", { count: workspace.project_count ?? 0 })}
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 function ProjectSimpleCard({ project }: { project: APIProject }) {
   const { t } = useTranslation();
