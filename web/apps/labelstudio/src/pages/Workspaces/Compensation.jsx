@@ -43,6 +43,10 @@ export const Compensation = ({ workspaceId }) => {
   const [payments, setPayments] = useState([]);
   const [payAmount, setPayAmount] = useState("");
   const [payMemo, setPayMemo] = useState("");
+  // 단가 편집: 프로젝트를 하나 고른 경우에만 노출한다. 생성 이후 단가를 고칠 화면이
+  // 없어서, 잘못 저장된 정책을 되돌릴 방법이 없었다.
+  const [policy, setPolicy] = useState(null); // {currency, annotation_unit_price, review_unit_price}
+  const [savingPolicy, setSavingPolicy] = useState(false);
 
   const loadRows = useCallback(async () => {
     setLoading(true);
@@ -68,9 +72,53 @@ export const Compensation = ({ workspaceId }) => {
     [api, workspaceId],
   );
 
+  const loadPolicy = useCallback(async () => {
+    if (!projectFilter) {
+      setPolicy(null);
+      return;
+    }
+    const res = await api.callApi("projectCompensationPolicy", {
+      params: { pk: projectFilter },
+      errorFilter: () => true,
+    });
+    setPolicy(
+      res?.$meta?.ok === false
+        ? { currency: "KRW", annotation_unit_price: "0", review_unit_price: "0" }
+        : {
+            currency: res.currency,
+            annotation_unit_price: String(res.annotation_unit_price),
+            review_unit_price: String(res.review_unit_price),
+          },
+    );
+  }, [api, projectFilter]);
+
+  const savePolicy = useCallback(async () => {
+    if (!projectFilter || !policy) return;
+    setSavingPolicy(true);
+    const res = await api.callApi("setProjectCompensationPolicy", {
+      params: { pk: projectFilter },
+      body: {
+        currency: policy.currency,
+        annotation_unit_price: Number.parseFloat(policy.annotation_unit_price || "0"),
+        review_unit_price: Number.parseFloat(policy.review_unit_price || "0"),
+      },
+      errorFilter: () => true,
+    });
+    setSavingPolicy(false);
+    if (!res?.$meta?.ok) {
+      toast?.show({ message: t("compensation.policySaveFailed", "단가 저장에 실패했습니다."), type: "error" });
+      return;
+    }
+    toast?.show({ message: t("compensation.policySaved", "단가를 저장했습니다.") });
+    await Promise.all([loadRows(), loadPolicy()]);
+  }, [api, projectFilter, policy, toast, t, loadRows, loadPolicy]);
+
   useEffect(() => {
     loadRows();
   }, [loadRows]);
+  useEffect(() => {
+    loadPolicy();
+  }, [loadPolicy]);
   useEffect(() => {
     loadPayments(selected);
   }, [selected, loadPayments]);
@@ -130,6 +178,43 @@ export const Compensation = ({ workspaceId }) => {
             ))}
           </select>
         </label>
+        {projectFilter && policy && (
+          <div className={root.elem("policy").toClassName()}>
+            <label>
+              {t("compensation.currency", "통화")}:{" "}
+              <select value={policy.currency} onChange={(e) => setPolicy({ ...policy, currency: e.target.value })}>
+                {["KRW", "USD", "EUR", "JPY"].map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t("compensation.annotationUnitPrice", "어노테이션 단가")}:{" "}
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={policy.annotation_unit_price}
+                onChange={(e) => setPolicy({ ...policy, annotation_unit_price: e.target.value })}
+              />
+            </label>
+            <label>
+              {t("compensation.reviewUnitPrice", "검수 단가")}:{" "}
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={policy.review_unit_price}
+                onChange={(e) => setPolicy({ ...policy, review_unit_price: e.target.value })}
+              />
+            </label>
+            <Button size="small" waiting={savingPolicy} onClick={savePolicy}>
+              {t("compensation.savePolicy", "단가 저장")}
+            </Button>
+          </div>
+        )}
       </div>
 
       <table className={root.elem("table").toClassName()}>
