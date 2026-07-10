@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Applications/Google Chrome.app/Contents/MacOS/Google Chrome *)",
+      "Bash(poetry run python scripts/audit/*)",
+      "Bash(DJANGO_DB=sqlite poetry run python scripts/audit/*)"
+    ]
+  }
+}

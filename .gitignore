@@ -86,3 +86,7 @@ web/libs/editor/tests/coverage
 web/coverage-chunks
 .cache
 deploy/keycloak/sail-label.json
+
+# 팀 공유 Claude Code 설정(감사 도구 실행 허용 등)은 커밋한다
+!.claude/
+!.claude/settings.json
