@@ -17,13 +17,16 @@ DISPLAY_NAME_LENGTH_ERR = f'Please enter a display name {DISPLAY_NAME_LENGTH} ch
 INVALID_USER_ERROR = "The email and password you entered don't match."
 
 FOUND_US_ELABORATE = 'Other'
+# (code, stored value, 화면 표시). 저장 값은 영어 그대로 둔다 — 이 문자열이 그대로
+# `how_find_us` 에 저장되고 `FOUND_US_ELABORATE` 비교에도 쓰이므로, 번역하면 기존
+# 데이터와 "기타 선택 시 상세 입력" 분기가 함께 깨진다.
 FOUND_US_OPTIONS = (
-    ('Gi', 'Github'),
-    ('Em', 'Email or newsletter'),
-    ('Se', 'Search engine'),
-    ('Fr', 'Friend or coworker'),
-    ('Ad', 'Ad'),
-    ('Ot', FOUND_US_ELABORATE),
+    ('Gi', 'Github', 'GitHub'),
+    ('Em', 'Email or newsletter', '이메일 또는 뉴스레터'),
+    ('Se', 'Search engine', '검색 엔진'),
+    ('Fr', 'Friend or coworker', '지인 또는 동료'),
+    ('Ad', 'Ad', '광고'),
+    ('Ot', FOUND_US_ELABORATE, '기타'),
 )
 
 logger = logging.getLogger(__name__)

@@ -179,7 +179,9 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
     if (isReview) {
       const customRejectButtons = toArray(customButtons.get("reject"));
       const hasCustomReject = customRejectButtons.length > 0;
-      const originalRejectButton = RejectButtonDefinition;
+      // Localize at render time: RejectButtonDefinition is a module-level literal, so a
+      // t() call in it would run before i18n is initialized.
+      const originalRejectButton = { ...RejectButtonDefinition, title: i18next.t("editor.reject") };
 
       // @todo implement reuse of internal buttons later (they are set as strings)
       const rejectButtons: CustomButtonType[] = hasCustomReject
@@ -245,7 +247,13 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
       // only clickable when the annotation is complete (instead of erroring on click).
       let hasUnmetRequired = false;
       annotation.traverseTree?.((node: any) => {
-        if (node?.required && !node.perregion && !node.peritem && node.isVisible !== false && node.holdsState === false) {
+        if (
+          node?.required &&
+          !node.perregion &&
+          !node.peritem &&
+          node.isVisible !== false &&
+          node.holdsState === false
+        ) {
           hasUnmetRequired = true;
         }
       });
@@ -318,7 +326,7 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
                   }}
                   data-testid="bottombar-submit-button"
                 >
-                  Submit
+                  {i18next.t("editor.submit")}
                 </Button>
                 {useExitOption ? (
                   <Dropdown.Trigger

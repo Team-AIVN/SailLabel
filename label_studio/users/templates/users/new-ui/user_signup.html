@@ -15,14 +15,14 @@
 
 {% block user_content %}
   <div class="form-wrapper">
-    <h2>Sign Up</h2>
+    <h2>회원가입</h2>
     <form id="signup-form"
         action="{% url 'user-signup' %}?next={{ next }}{% if token %}&token={{ token }}{% endif %}{% if invite %}&invite={{ invite }}{% endif %}"
         method="post"
     >
     {% csrf_token %}
       <div class="input-wrapper">
-        <label>Email Address</label>
+        <label>이메일 주소</label>
         <input type="text" class="lsf-input-ls" name="email" id="email" value="{{ user_form.data.email }}">
         {% if user_form.errors.email %}
           <ul class="field_errors">
@@ -33,7 +33,7 @@
         {% endif %}
         </div>
       <div class="input-wrapper">
-        <label>Password</label>
+        <label>비밀번호</label>
         <input type="password" class="lsf-input-ls" name="password" id="password">
         {% if user_form.errors.password %}
           <ul class="field_errors">
@@ -44,16 +44,16 @@
         {% endif %}
       </div>
       <div class="input-wrapper">
-        <label>How did you hear about LabelSea?</label>
+        <label>LabelSea를 어떻게 알게 되셨나요?</label>
         <select class="lsf-select-ls" name="how_find_us" id="how_find_us">
-          <option disabled value="" {% if not form.data.how_find_us %}selected{% endif %}>Select an option</option>
+          <option disabled value="" {% if not form.data.how_find_us %}selected{% endif %}>선택해 주세요</option>
           {% for choice in found_us_options %}
-            <option value="{{ choice.1 }}" {% if choice.1 == user_form.data.how_find_us %}selected{% endif %}>{{ choice.1 }}</option>
+            <option value="{{ choice.1 }}" {% if choice.1 == user_form.data.how_find_us %}selected{% endif %}>{{ choice.2 }}</option>
           {% endfor %}
         </select>
       </div>
       <div class="input-wrapper" id="elaborateContainer" {% if user_form.data.how_find_us != elaborate %}style="display:none;"{% endif %}> 
-        <label>Please elaborate</label>
+        <label>자세히 알려주세요</label>
         <input class="lsf-input-ls" name="elaborate" id="elaborate" {% if user_form.data.how_find_us == elaborate %}value="{{ user_form.data.elaborate }}"{% endif %}>
         </select>
       </div>
@@ -63,7 +63,7 @@
                 type="checkbox" style="width: auto" {% if user_form.data.allow_newsletters == 'false' %}{% else %}checked="checked{% endif %}"
                 onchange="document.getElementById('allow_newsletters').value=document.getElementById('allow_newsletters_visual').checked">
         <label for="allow_newsletters_visual" style="display: inline-block; cursor: pointer;">
-          Get the latest news from Heidi
+          최신 소식 받아보기
           <img src="{{ settings.HOSTNAME }}{% static 'images/heidi.png' %}" alt="Heidi"
               width="25" style="position: absolute; right: -2.5em; top: -.25rem;">
         </label>
@@ -76,12 +76,12 @@
           </p>
         {% endfor %}
       {% endif %}
-      <p><button type="submit" aria-label="Create Account" class="lsf-button-ls lsf-button-ls_look_primary">Create Account</button></p>
+      <p><button type="submit" aria-label="회원가입" class="lsf-button-ls lsf-button-ls_look_primary">계정 만들기</button></p>
     </form>
   </div>
   <div class="text-wrapper">
-    <p class="">Already have an account?</p>
-    <a href="{% url 'user-login' %}{% querystring %}">Log in</a>
+    <p class="">이미 계정이 있으신가요?</p>
+    <a href="{% url 'user-login' %}{% querystring %}">로그인</a>
   </div>
   <script>
     document.querySelector("#how_find_us").addEventListener('change', function(e) {
