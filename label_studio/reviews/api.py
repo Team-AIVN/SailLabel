@@ -10,7 +10,13 @@ from rest_framework import generics, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from tasks.models import Annotation, Task
-from users.rules import is_project_manager_of, is_reviewer_of, is_super_admin, is_workspace_manager_of
+from users.rules import (
+    is_project_manager_of,
+    is_project_member_of,
+    is_reviewer_of,
+    is_super_admin,
+    is_workspace_manager_of,
+)
 
 from . import services
 from .models import Review
@@ -47,9 +53,16 @@ def _is_review_manager(user, project):
     )
 
 
-def _review_task_queryset(user, project):
+def _review_task_queryset(user, project, task_id=None):
     """Reviewers/managers see all tasks; a labeler sees only tasks they annotated
-    (so they can review the decisions/reasons on their own work)."""
+    (so they can review the decisions/reasons on their own work).
+
+    Exception: a single task addressed by ``?task=<id>`` — the activity-log deep link from
+    the Data Manager's status column — is visible to any project member. They can already
+    open that task and see every annotation and its author in the editor's "view all" tab,
+    so the timeline exposes nothing new, and without this the link dead-ends on an empty
+    table for a labeler who did not annotate that particular task.
+    """
     base = (
         Task.objects.filter(project=project)
         .select_related('current_annotation', 'current_annotation__completed_by')
@@ -59,6 +72,8 @@ def _review_task_queryset(user, project):
     )
     if _is_review_manager(user, project):
         return base
+    if task_id and is_project_member_of.test(user, project):
+        return base.filter(id=task_id)
     return base.filter(annotations__completed_by=user).distinct()
 
 
@@ -103,15 +118,15 @@ class ReviewTasksAPI(generics.ListAPIView):
 
     def get_queryset(self):
         project = _project_in_active_org_or_404(self.request, self.kwargs['pk'])
-        qs = _review_task_queryset(self.request.user, project)
+        # Focus a single task (used by the Data Manager status column's activity link).
+        task_id = self.request.query_params.get('task')
+        qs = _review_task_queryset(self.request.user, project, task_id=task_id)
         review_status = self.request.query_params.get('review_status')
         if review_status:
             valid = {c for c, _ in Task.ReviewStatus.choices}
             if review_status not in valid:
                 raise ValidationError(f'invalid review_status; one of {sorted(valid)}')
             qs = qs.filter(review_status=review_status)
-        # Focus a single task (used by the Data Manager "Reviews" column deep-link).
-        task_id = self.request.query_params.get('task')
         if task_id:
             qs = qs.filter(id=task_id)
         return qs.order_by('id')
@@ -127,9 +142,13 @@ class ReviewProgressAPI(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         project = _project_in_active_org_or_404(request, self.kwargs['pk'])
-        # Managers see full progress; a labeler may view it for a project they work on.
+        # Managers see full progress; so does anyone assigned to the project. Membership is
+        # enough — a labeler who opens a teammate's task from the status column has not
+        # annotated anything yet, and 403-ing them broke the activity page. Annotating
+        # without a membership row still counts, as it did before.
         if not (
             _is_review_manager(request.user, project)
+            or is_project_member_of.test(request.user, project)
             or Task.objects.filter(project=project, annotations__completed_by=request.user).exists()
         ):
             raise PermissionDenied('You do not have access to this project.')
