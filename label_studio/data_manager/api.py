@@ -348,6 +348,8 @@ class TaskListAPI(generics.ListCreateAPIView):
             'annotations',
             'predictions',
             'annotations__completed_by',
+            # activity timeline column (`reviews`) — without this it costs a query per task
+            'annotations__reviews',
             'project',
             'io_storages_azureblobimportstoragelink',
             'io_storages_gcsimportstoragelink',

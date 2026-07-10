@@ -313,12 +313,19 @@
     }
   },
   "review": {
-    "title": "리뷰",
+    "title": "작업 내역",
     "annotationProgress": "어노테이션 진행률",
     "reviewProgress": "리뷰 진행률",
     "reviewed": "검수 완료",
     "allStatuses": "전체 리뷰 상태",
     "empty": "태스크가 없습니다.",
+    "action": {
+      "submitted": "제출",
+      "edited": "수정",
+      "accepted": "승인",
+      "rejected": "반려",
+      "fixedAndAccepted": "수정 후 승인"
+    },
     "status": {
       "NOT_SELECTED": "미선정",
       "PENDING": "대기",
@@ -331,7 +338,10 @@
       "version": "버전",
       "annotator": "라벨러",
       "reviewStatus": "리뷰 상태",
-      "reviewer": "리뷰어"
+      "reviewer": "수행자",
+      "decision": "작업",
+      "comments": "변경 내용",
+      "time": "시간"
     }
   },
   "taskpools": {
@@ -425,7 +435,8 @@
       "REJECTED": "거절",
       "FIXED_AND_ACCEPTED": "수정+승인"
     },
-    "viewMore": "더보기"
+    "viewMore": "더보기",
+    "activityLog": "이력"
   },
   "dmcol": {
     "completed_at": "완료",
@@ -435,7 +446,7 @@
     "annotators": "작업자",
     "reviewed_at": "검수됨",
     "reviewed_by": "검수자",
-    "reviews": "검수",
+    "reviews": "상태",
     "avg_lead_time": "소요 시간",
     "created_at": "생성일",
     "updated_at": "수정일",

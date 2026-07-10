@@ -129,6 +129,51 @@ describe("Annotation model", () => {
       const { annotation } = createStoreWithAnnotation();
       expect(annotation.isReadOnly()).toBe(false);
     });
+
+    // canBeReviewed drives the Accept/Reject buttons AND the Ctrl+Enter hotkey. The Data
+    // Manager registers `acceptAnnotation` for every role, so the reviewer role must be
+    // checked here or a labeler opening someone else's annotation in Quick View gets them.
+    describe("canBeReviewed", () => {
+      const OTHER_USER = { id: 2, email: "other@example.com" };
+      const CURRENT_USER = { id: 1, email: "me@example.com" };
+
+      const setup = (interfaces) => {
+        const env = createTestEnv();
+        env.events.hasEvent = jest.fn(() => true);
+        const store = AppStore.create(
+          {
+            config: MINIMAL_CONFIG,
+            task: { id: 1, data: JSON.stringify({ text: "Hello" }) },
+            interfaces,
+            users: [CURRENT_USER, OTHER_USER],
+            user: CURRENT_USER.id,
+          },
+          env,
+        );
+        store.initializeStore({});
+        const annotation = store.annotationStore.addAnnotation({
+          result: [],
+          pk: "42",
+          user: OTHER_USER.id,
+        });
+        return annotation;
+      };
+
+      beforeEach(() => {
+        window.APP_SETTINGS = { feature_flags: { fflag_feat_all_leap_1081_reviewer_flow_updates: true } };
+      });
+      afterEach(() => {
+        window.APP_SETTINGS = undefined;
+      });
+
+      it("is true for a reviewer viewing another user's annotation", () => {
+        expect(setup(["basic", "annotations:view-all", "review"]).canBeReviewed).toBe(true);
+      });
+
+      it("is false for a labeler viewing another user's annotation", () => {
+        expect(setup(["basic", "annotations:view-all"]).canBeReviewed).toBe(false);
+      });
+    });
   });
 
   describe("actions", () => {

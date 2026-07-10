@@ -313,12 +313,19 @@
     }
   },
   "review": {
-    "title": "Review",
+    "title": "Activity",
     "annotationProgress": "Annotation progress",
     "reviewProgress": "Review progress",
     "reviewed": "Reviewed",
     "allStatuses": "All review statuses",
     "empty": "No tasks.",
+    "action": {
+      "submitted": "Submitted",
+      "edited": "Edited",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "fixedAndAccepted": "Fixed & accepted"
+    },
     "status": {
       "NOT_SELECTED": "Not selected",
       "PENDING": "Pending",
@@ -331,7 +338,10 @@
       "version": "Version",
       "annotator": "Labeler",
       "reviewStatus": "Review status",
-      "reviewer": "Reviewer"
+      "reviewer": "Actor",
+      "decision": "Action",
+      "comments": "Changes",
+      "time": "Time"
     }
   },
   "taskpools": {
@@ -425,7 +435,8 @@
       "REJECTED": "Rejected",
       "FIXED_AND_ACCEPTED": "Fixed & accepted"
     },
-    "viewMore": "View more"
+    "viewMore": "View more",
+    "activityLog": "History"
   },
   "dmcol": {
     "completed_at": "Completed",
@@ -435,7 +446,7 @@
     "annotators": "Annotated by",
     "reviewed_at": "Reviewed",
     "reviewed_by": "Reviewed by",
-    "reviews": "Reviews",
+    "reviews": "Status",
     "avg_lead_time": "Lead Time",
     "created_at": "Created at",
     "updated_at": "Updated at",

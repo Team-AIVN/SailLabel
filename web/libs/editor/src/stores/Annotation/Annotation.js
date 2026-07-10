@@ -397,6 +397,11 @@ const _Annotation = types
 
       return (
         isFF(FF_REVIEWER_FLOW) &&
+        // caller must actually hold the reviewer role. `acceptAnnotation` is registered
+        // by the Data Manager for everyone, so without this a labeler opening someone
+        // else's annotation in Quick View gets Accept/Reject (and Ctrl+Enter accepts).
+        // The backend rejects them with 403, so the buttons were only ever dead ends.
+        store.hasInterface("review") &&
         // not a current user — we can only review others' annotations
         self.user?.email &&
         store.user?.email !== self.user?.email &&

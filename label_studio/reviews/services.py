@@ -93,22 +93,61 @@ def on_annotation_created(annotation):
         apply_review_selection(annotation)
 
 
-def on_annotation_updated(annotation):
-    """A labeler edited an already-reviewed annotation.
+def _acting_user():
+    """The user behind the current request, or None outside a request (scripts, jobs)."""
+    from core.current_request import CurrentContext
 
-    Editing an accepted or rejected revision invalidates that decision, so the revision
-    is put back to COMPLETED and re-run through review selection (returning it to the
-    reviewer's queue). Reviewer-authored revisions are new annotations (create path),
-    so they are not affected here.
+    user = CurrentContext.get_user()
+    if user is None or not getattr(user, 'is_authenticated', False):
+        return None
+    return user
+
+
+def record_edit(annotation, previous_result, actor=None):
+    """Log an edit of an existing annotation as its own timeline entry.
+
+    ``reviewer`` doubles as "who performed this action" — for an edit that is the
+    labeler, not a reviewer. The comment is the same field-level diff the reviewer's
+    Fix+Accept produces, so the activity log reads uniformly.
+    """
+    try:
+        parsed = annotation.project.get_parsed_config()
+    except Exception:
+        parsed = None
+    summary = build_fix_summary(previous_result, annotation.result, parsed, prefix='[수정]')
+    return Review.objects.create(
+        annotation=annotation,
+        project=annotation.project,
+        reviewer=actor,
+        decision=Review.Decision.RESUBMITTED,
+        comment=summary,
+        stage=1,
+    )
+
+
+def on_annotation_updated(annotation):
+    """A labeler edited an existing annotation.
+
+    Every real change is logged to the activity timeline (who, when, which fields), so
+    a second labeler correcting someone's work is as visible as a reviewer's Fix+Accept.
+
+    On top of that, editing an *already reviewed* revision invalidates that decision:
+    the revision goes back to COMPLETED and the task returns to the reviewer's queue.
+    Reviewer-authored revisions are new annotations (create path), so they are not
+    affected here.
     """
     if annotation.was_cancelled:
         return
+    # Only a real content change counts. A metadata-only / bulk save (same result) must
+    # neither undo an accepted decision nor pile up an empty timeline row — and one
+    # submit saves the annotation twice, so this also dedupes that second save.
+    previous_result = getattr(annotation, '_prev_result', None)
+    if previous_result == annotation.result:
+        return
+
+    record_edit(annotation, previous_result, actor=_acting_user())
+
     if annotation.status in (Annotation.Status.APPROVED, Annotation.Status.REWORK_REQUIRED):
-        # Only release the review when the labeler actually changed the result. A
-        # metadata-only / bulk save (same result) must not undo an accepted decision.
-        prev = getattr(annotation, '_prev_result', None)
-        if prev == annotation.result:
-            return
         Annotation.objects.filter(pk=annotation.pk).update(status=Annotation.Status.COMPLETED)
         annotation.status = Annotation.Status.COMPLETED
         # Edited revision goes back to the reviewer's queue regardless of the project's
@@ -117,18 +156,6 @@ def on_annotation_updated(annotation):
             review_status=Task.ReviewStatus.PENDING,
             is_labeled=True,
         )
-        # Log the edit as a timeline event (task went back to pending), unless the last
-        # event was already a resubmit — so repeated edits don't pile up rows.
-        last = Review.objects.filter(annotation=annotation).order_by('-created_at', '-id').first()
-        if not (last and last.decision == Review.Decision.RESUBMITTED):
-            Review.objects.create(
-                annotation=annotation,
-                project=annotation.project,
-                reviewer=None,
-                decision=Review.Decision.RESUBMITTED,
-                comment='',
-                stage=1,
-            )
 
 
 # --- review actions ----------------------------------------------------------
@@ -217,11 +244,13 @@ def _result_field_map(result, parsed_config=None):
     return out
 
 
-def build_fix_summary(original, corrected, parsed_config=None):
-    """Readable field-level summary of what the reviewer changed (old -> new).
+def build_fix_summary(original, corrected, parsed_config=None, prefix='[수정 후 승인]'):
+    """Readable field-level summary of what an editor changed (old -> new).
 
     When the project's parsed config is supplied, field names and choice values are
     shown with their human labels (e.g. "권고 조종 방향: 좌현 변침 → 우현 변침").
+    ``prefix`` names the action, so the same diff serves a reviewer's Fix+Accept and a
+    labeler's plain edit.
     """
     before = _result_field_map(original, parsed_config)
     after = _result_field_map(corrected, parsed_config)
@@ -233,8 +262,8 @@ def build_fix_summary(original, corrected, parsed_config=None):
         if b != a:
             lines.append(f'{_field_label(parsed_config, k)}: {b or "(없음)"} → {a or "(없음)"}')
     if not lines:
-        return '[수정 후 승인] 변경 없음'
-    return '[수정 후 승인]\n' + '\n'.join(lines)
+        return f'{prefix} 변경 없음'
+    return f'{prefix}\n' + '\n'.join(lines)
 
 
 @transaction.atomic

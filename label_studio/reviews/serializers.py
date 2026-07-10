@@ -48,22 +48,37 @@ class ReviewCandidateSerializer(serializers.Serializer):
         return UserSimpleSerializer(user).data if user else None
 
     def get_reviews(self, task):
-        # Every review decision on the task (across revisions), newest first, so the
-        # Review page can list each decision as its own row. Reads from the prefetched
+        # The task's activity timeline (across revisions), newest first: one row per
+        # submission, edit and review decision. Reads from the prefetched
         # annotations/reviews (no per-task query).
-        rows = [(r, ann.version) for ann in task.annotations.all() for r in ann.reviews.all()]
-        rows.sort(key=lambda pair: (pair[0].created_at, pair[0].id), reverse=True)
-        return [
-            {
-                'id': r.id,
-                'decision': r.decision,
-                'comment': r.comment or '',
-                'reviewer': UserSimpleSerializer(r.reviewer).data if r.reviewer else None,
-                'created_at': r.created_at,
-                'annotation_version': version,
-            }
-            for r, version in rows
-        ]
+        entries = []
+        for ann in task.annotations.all():
+            if not ann.was_cancelled:
+                # Submissions are derived, not stored, so annotations that predate the
+                # activity log still appear. `reviewer` is "who did this" — the labeler.
+                entries.append(
+                    {
+                        'id': f'submit-{ann.id}',
+                        'decision': 'SUBMITTED',
+                        'comment': '',
+                        'reviewer': UserSimpleSerializer(ann.completed_by).data if ann.completed_by else None,
+                        'created_at': ann.created_at,
+                        'annotation_version': ann.version,
+                    }
+                )
+            for r in ann.reviews.all():
+                entries.append(
+                    {
+                        'id': r.id,
+                        'decision': r.decision,
+                        'comment': r.comment or '',
+                        'reviewer': UserSimpleSerializer(r.reviewer).data if r.reviewer else None,
+                        'created_at': r.created_at,
+                        'annotation_version': ann.version,
+                    }
+                )
+        entries.sort(key=lambda e: (e['created_at'], str(e['id'])), reverse=True)
+        return entries
 
 
 class ReviewProgressSerializer(serializers.Serializer):
