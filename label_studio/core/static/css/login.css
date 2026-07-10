@@ -245,6 +245,14 @@ body {
   margin-top: .25rem;
 }
 
+.login_page_new_ui .field_hint {
+  margin: .25rem 0 0;
+  text-align: left;
+  font-size: .8125rem;
+  line-height: 16px;
+  color: var(--color-neutral-content-subtler);
+}
+
 .auto-generated form {
   width: 100%;
 }
