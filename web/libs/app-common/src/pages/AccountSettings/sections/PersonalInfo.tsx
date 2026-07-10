@@ -47,8 +47,6 @@ export const PersonalInfo = () => {
   const updateUserAvatar = useAtomValue(updateUserAvatarAtom);
   const [isInProgress, setIsInProgress] = useState(false);
   const [fname, setFname] = useState(user?.first_name ?? "");
-  const [lname, setLname] = useState(user?.last_name ?? "");
-  const [phone, setPhone] = useState(user?.phone ?? "");
   const avatarRef = useRef<HTMLInputElement>();
   const fileChangeHandler: FormEventHandler<HTMLInputElement> = useCallback(
     async (e) => {
@@ -106,8 +104,6 @@ export const PersonalInfo = () => {
 
   useEffect(() => {
     setFname(user?.first_name ?? "");
-    setLname(user?.last_name ?? "");
-    setPhone(user?.phone ?? "");
   }, [user]);
 
   return (
@@ -129,6 +125,8 @@ export const PersonalInfo = () => {
             </Button>
           )}
         </div>
+        {/* 이름은 first_name 한 칸에 본명 전체를 담는다 (회원가입과 동일). 성/전화번호는
+            쓰지 않으므로 노출하지 않는다 — DB 컬럼은 그대로 두고 폼에서만 제외. */}
         <form onSubmit={userFormSubmitHandler} className={styles.sectionContent}>
           <div className={styles.flexRow}>
             <div className={styles.flex1}>
@@ -141,29 +139,10 @@ export const PersonalInfo = () => {
             </div>
             <div className={styles.flex1}>
               <Input
-                label={t("accountSettings.personalInfo.lastName")}
-                value={lname}
-                onChange={(e: React.KeyboardEvent<HTMLInputElement>) => setLname(e.currentTarget.value)}
-                name="last_name"
-              />
-            </div>
-          </div>
-          <div className={styles.flexRow}>
-            <div className={styles.flex1}>
-              <Input
                 label={t("accountSettings.personalInfo.email")}
                 type="email"
                 readOnly={true}
                 value={user?.email ?? ""}
-              />
-            </div>
-            <div className={styles.flex1}>
-              <Input
-                label={t("accountSettings.personalInfo.phone")}
-                type="phone"
-                onChange={(e: React.KeyboardEvent<HTMLInputElement>) => setPhone(e.currentTarget.value)}
-                value={phone}
-                name="phone"
               />
             </div>
           </div>
