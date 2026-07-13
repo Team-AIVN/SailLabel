@@ -23,6 +23,7 @@
   flex-direction: column;
   overflow: hidden;
   background-color: var(--color-neutral-background);
+  position: relative;
 
   &__auto-size {
     &_quick-view {
@@ -147,5 +148,39 @@
       opacity: 0.6;
       pointer-events: none;
     }
+  }
+}
+
+/* 무한 스크롤 다음 페이지 로딩 표시 (바닥 오버레이) */
+.table__loading-more {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-neutral-content-subtler);
+  background-color: color-mix(in srgb, var(--color-neutral-surface) 88%, transparent);
+  border-top: 1px solid var(--color-neutral-border);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.table__loading-more-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-neutral-border);
+  border-top-color: var(--color-primary-emphasis, #4c6ef5);
+  border-radius: 50%;
+  animation: table-loading-more-spin 0.8s linear infinite;
+}
+
+@keyframes table-loading-more-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

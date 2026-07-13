@@ -14,6 +14,8 @@ export interface AutoSizerTableProps {
   className?: string;
   children: FC<any>;
   heightAdjustment?: number;
+  /** Rows from the end at which to prefetch the next page. Higher = loads earlier. */
+  threshold?: number;
 }
 
 export const AutoSizerTable = forwardRef<VariableSizeList, AutoSizerTableProps>(
@@ -28,6 +30,7 @@ export const AutoSizerTable = forwardRef<VariableSizeList, AutoSizerTableProps>(
       className,
       children: ItemWrapper,
       heightAdjustment = 0,
+      threshold = 15,
       ...rest
     },
     ref: ForwardedRef<VariableSizeList>,
@@ -42,7 +45,7 @@ export const AutoSizerTable = forwardRef<VariableSizeList, AutoSizerTableProps>(
               itemCount={totalCount}
               loadMoreItems={loadMore}
               isItemLoaded={isItemLoaded}
-              threshold={5}
+              threshold={threshold}
               minimumBatchSize={30}
               ref={ref}
             >
