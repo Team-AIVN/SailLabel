@@ -455,6 +455,8 @@ class AzureBlobWorkspaceStorageBrowseAPI(generics.GenericAPIView):
         if path and not path.endswith('/'):
             path += '/'
         # Folders that are never import targets (image originals, annotation exports).
+        # Matched as prefixes so date/size-suffixed variants (e.g. 'images-20260713-10K')
+        # are hidden too, not just the exact names.
         hidden = {n.strip() for n in (get_env('AZURE_BLOB_BROWSE_HIDE') or 'images,export').split(',') if n.strip()}
         try:
             _, container = AZURE.get_client_and_container(container_name)
@@ -462,7 +464,7 @@ class AzureBlobWorkspaceStorageBrowseAPI(generics.GenericAPIView):
             for entry in container.walk_blobs(name_starts_with=path or None, delimiter='/'):
                 if isinstance(entry, BlobPrefix):
                     name = entry.name[len(path) :].rstrip('/')
-                    if name in hidden:
+                    if any(name == h or name.startswith(h) for h in hidden):
                         continue
                     folders.append({'name': name, 'path': entry.name})
                 else:

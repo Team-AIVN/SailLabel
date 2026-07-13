@@ -32,7 +32,9 @@ def _prefix(name):
 # `walk_blobs(name_starts_with=..., delimiter='/')` yields BlobPrefix per subfolder and
 # a blob per file at that level.
 LAYOUT = {
-    None: [_prefix('tasks/'), _prefix('images/'), _prefix('export/')],
+    # 'images-20260713-10K/' is a date/size-suffixed originals folder — must still be
+    # hidden by the 'images' prefix rule, not just an exact 'images/' match.
+    None: [_prefix('tasks/'), _prefix('images-20260713-10K/'), _prefix('export/')],
     'tasks/': [_prefix('tasks/작업1/'), _prefix('tasks/작업2/')],
     'tasks/작업1/': [MagicMock(spec=[]), MagicMock(spec=[])],
 }
