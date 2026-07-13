@@ -2,6 +2,11 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { pascalCase } from "@humansignal/core";
 import { keymap } from "./keymap";
 
+// Only these DM shortcuts share keys with editor hotkeys (shift+left/right), so only
+// they yield while the labeling panel is focused. shift+up/down (task navigation) never
+// collide and must keep working inside the editor.
+const YIELDS_TO_EDITOR = new Set<keyof typeof keymap>(["dm.close-labeling", "dm.open-labeling"]);
+
 export type Hotkey = {
   title: string;
   shortcut?: string;
@@ -41,10 +46,13 @@ export const useShortcut = (
   useHotkeys(
     shortcut,
     () => {
-      // Yield to editor (LSF) hotkeys when the labeling panel is active.
-      // The flag is set by Label.jsx when labeling starts and toggled via
-      // pointerdown tracking so clicks on the DM table re-enable DM shortcuts.
-      if (document.body.dataset.lsfLabeling === "true") return;
+      // Yield to editor (LSF) hotkeys when the labeling panel is active — but only for
+      // shortcuts that actually collide. Editor shift+arrow hotkeys are shift+left/right
+      // (TimeSeries pan, region grow), so only close/open-labeling (also shift+left/right)
+      // must yield. Task navigation is shift+up/down, which no editor hotkey uses, so it
+      // keeps working while the labeling panel is focused (no need to click outside first).
+      // The flag is set by Label.jsx when labeling starts and toggled via pointerdown.
+      if (YIELDS_TO_EDITOR.has(actionName) && document.body.dataset.lsfLabeling === "true") return;
 
       callback();
     },
