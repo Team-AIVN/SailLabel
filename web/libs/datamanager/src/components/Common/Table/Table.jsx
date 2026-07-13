@@ -474,6 +474,12 @@ export const Table = observer(
               {renderRow}
             </StickyList>
           </TableContext.Provider>
+          {view.dataStore.loading && view.dataStore.hasNextPage && (
+            <div className={tableCN.elem("loading-more").toClassName()}>
+              <span className={tableCN.elem("loading-more-spinner").toClassName()} />
+              불러오는 중…
+            </div>
+          )}
         </div>
         {contextMenu &&
           typeof document !== "undefined" &&
