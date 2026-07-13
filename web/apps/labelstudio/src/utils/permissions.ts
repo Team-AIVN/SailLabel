@@ -53,8 +53,8 @@ export function projectPermissions(role?: string | null) {
     canAssignManagers: [Role.SUPER_ADMIN, Role.WORKSPACE_MANAGER].includes(role ?? ""),
     /** Review page (accept / reject / fix). */
     canReview: [...PROJECT_MANAGER_ROLES, Role.REVIEWER].includes(role ?? ""),
-    /** Export labeled data. */
-    canExport: PROJECT_MANAGER_ROLES.includes(role ?? ""),
+    /** Export labeled data — super admins / workspace managers only, NOT PMs. */
+    canExport: [Role.SUPER_ADMIN, Role.WORKSPACE_MANAGER].includes(role ?? ""),
     /** Perform labeling in the editor. */
     canLabel: [...PROJECT_MANAGER_ROLES, Role.ANNOTATOR].includes(role ?? ""),
   };
