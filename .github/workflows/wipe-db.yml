@@ -1,0 +1,39 @@
+name: "Danger · 프로덕션 DB 초기화 (관리자만 유지)"
+
+# 수동 실행 전용. 배포용 SSH 시크릿을 재사용해 VM 컨테이너 안에서 초기화 스크립트를 돌린다.
+# 동작: 슈퍼유저(관리자)와 소속 조직만 남기고 Workspace/Project/Task/유저/보상 전부 삭제.
+#      Azure Blob(이미지/export)은 건드리지 않는다.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "관리자 계정만 남기고 프로덕션 DB 를 전부 비운다. 진행하려면 WIPE 라고 입력"
+        type: string
+        default: "no"
+        required: true
+
+jobs:
+  wipe:
+    name: "Wipe production DB on Azure VM"
+    if: ${{ inputs.confirm == 'WIPE' }}
+    runs-on: ubuntu-latest
+    concurrency: deploy-vm    # 배포/세팅과 동시 실행 방지
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run wipe script on VM over SSH
+        env:
+          SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          VM_HOST: 20.200.209.213
+          VM_USER: label-sea
+        run: |
+          install -m 600 /dev/null key.pem && printf '%s\n' "$SSH_KEY" > key.pem
+          ssh -i key.pem -o StrictHostKeyChecking=accept-new "$VM_USER@$VM_HOST" \
+            "cd ~/label-sea && docker compose exec -T \
+               -e WIPE_CONFIRM=yes \
+               app python3 label_studio/manage.py shell" \
+            < scripts/prod_wipe_db.py
+
+      - name: Summary
+        run: echo "### 프로덕션 DB 초기화 완료 ✅ — 로그의 [after] 카운트가 관리자 유저만 남았는지 확인" >> "$GITHUB_STEP_SUMMARY"
