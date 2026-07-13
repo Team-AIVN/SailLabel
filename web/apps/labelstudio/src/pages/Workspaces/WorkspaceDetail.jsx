@@ -98,6 +98,11 @@ export const WorkspaceDetail = () => {
   const [showImport, setShowImport] = useState(false);
   const [importUploading, setImportUploading] = useState(false);
 
+  // inline workspace-title rename (managers only)
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
+
   const loadSummary = useCallback(async () => {
     const res = await api.callApi("workspaceSummary", { params: { pk: id } });
     setSummary(res ?? null);
@@ -275,6 +280,34 @@ export const WorkspaceDetail = () => {
     [api, id, toast, t, loadUsers, loadSummary],
   );
 
+  const startEditTitle = useCallback(() => {
+    setTitleDraft(summary?.title ?? "");
+    setEditingTitle(true);
+  }, [summary]);
+
+  const saveTitle = useCallback(async () => {
+    const next = titleDraft.trim();
+    if (!next || next === summary?.title) {
+      setEditingTitle(false);
+      return;
+    }
+    setSavingTitle(true);
+    const res = await api.callApi("updateWorkspace", {
+      params: { pk: id },
+      body: { title: next },
+      errorFilter: () => true,
+    });
+    setSavingTitle(false);
+    // callApi returns null on error; the updated workspace has an `id` on success.
+    if (!res?.id) {
+      toast.show({ message: res?.response?.detail ?? "이름 변경에 실패했습니다.", type: "error" });
+      return;
+    }
+    toast.show({ message: "워크스페이스 이름을 변경했습니다." });
+    setEditingTitle(false);
+    loadSummary();
+  }, [api, id, titleDraft, summary, toast, loadSummary]);
+
   const openQuickAction = useCallback(
     (action) => {
       if (action === "project") {
@@ -350,7 +383,55 @@ export const WorkspaceDetail = () => {
       {/* Header */}
       <header className={root.elem("header").toClassName()}>
         <div className={root.elem("header-main").toClassName()}>
-          <h1>{summary?.title}</h1>
+          {editingTitle ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                autoFocus
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveTitle();
+                  else if (e.key === "Escape") setEditingTitle(false);
+                }}
+                style={{
+                  fontSize: 24,
+                  fontWeight: 700,
+                  padding: "2px 8px",
+                  border: "1px solid var(--color-neutral-border)",
+                  borderRadius: 6,
+                }}
+              />
+              <Button size="small" onClick={saveTitle} waiting={savingTitle}>
+                {t("common.save", "Save")}
+              </Button>
+              <Button size="small" look="outlined" onClick={() => setEditingTitle(false)}>
+                {t("common.cancel", "Cancel")}
+              </Button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h1>{summary?.title}</h1>
+              {perms.canManage && (
+                <button
+                  type="button"
+                  onClick={startEditTitle}
+                  title={t("workspaces.detail.renameTitle", "이름 변경")}
+                  aria-label={t("workspaces.detail.renameTitle", "이름 변경")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--color-neutral-content-subtler)",
+                    fontSize: 16,
+                    padding: 4,
+                    lineHeight: 1,
+                  }}
+                >
+                  ✎
+                </button>
+              )}
+            </div>
+          )}
           {summary?.description && <p>{summary.description}</p>}
         </div>
         <div className={root.elem("stats").toClassName()}>
