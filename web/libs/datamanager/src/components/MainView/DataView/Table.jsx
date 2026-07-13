@@ -404,17 +404,16 @@ export const DataView = injector(
         />
       );
 
+    // No activeElement===body guard: task navigation should work even when focus sits on
+    // the editor (e.g. right after clicking 제출/Submit). react-hotkeys-hook already
+    // suppresses these while the user is typing in a text field, so we don't hijack input.
     useShortcut("dm.focus-previous", () => {
-      if (document.activeElement !== document.body) return;
-
       const task = dataStore.focusPrev();
 
       getRoot(view).startLabeling(task);
     });
 
     useShortcut("dm.focus-next", () => {
-      if (document.activeElement !== document.body) return;
-
       const task = dataStore.focusNext();
 
       getRoot(view).startLabeling(task);
