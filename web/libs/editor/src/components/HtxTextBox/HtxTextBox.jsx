@@ -119,6 +119,9 @@ export class HtxTextBox extends React.Component {
       autoFocus: true,
       ref: this.inputRef,
       value,
+      // Open at the tag's `rows` height (min) instead of the browser default (2).
+      // updateHeight() still grows/shrinks to fit content once measured.
+      rows: rows > 1 ? rows : undefined,
       "data-testid": "htx-textbox-input",
       onBlur: () => {
         onChange(this.state.value);
