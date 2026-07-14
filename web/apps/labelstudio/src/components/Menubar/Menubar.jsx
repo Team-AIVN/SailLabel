@@ -154,6 +154,23 @@ export const Menubar = ({ enabled, defaultOpened, defaultPinned, children, onSid
             <RightContextMenu className={contextItem.mod({ right: true }).toClassName()} />
           </div>
 
+          <Button
+            variant="neutral"
+            look="outlined"
+            size="small"
+            tooltip={t("menubar.manual", "설명서")}
+            data-testid="manual-button"
+            onClick={() =>
+              window.open(
+                "https://team-aivenautics.notion.site/LabelSea-39df7aa9e73780c0af0ed8e8492a271c",
+                "_blank",
+                "noopener,noreferrer",
+              )
+            }
+          >
+            {t("menubar.manual", "설명서")}
+          </Button>
+
           <div className={menubarClass.elem("hotkeys").toClassName()}>
             <div className={menubarClass.elem("hotkeys-button").toClassName()}>
               <Button
