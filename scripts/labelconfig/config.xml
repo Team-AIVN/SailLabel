@@ -54,7 +54,7 @@
     </View>
     <View style="margin-top: 10px; margin-bottom: 2px;">
       <Text name="descriptionSummaryText" value="묘사 요약 *" style="font-weight: bold; margin-bottom: 4px;" />
-      <TextArea name="descriptionSummary" toName="descriptionSummaryText" placeholder="..." rows="3" required="true" editable="true" transcription="true" maxSubmissions="1" />
+      <TextArea name="descriptionSummary" toName="descriptionSummaryText" placeholder="..." rows="7" required="true" editable="true" transcription="true" maxSubmissions="1" />
     </View>
   </View>
       <View className="section-advice">
@@ -106,7 +106,7 @@
     </View>
     <View style="margin-top: 10px; margin-bottom: 2px;">
       <Text name="adviceSummaryText" value="조언 요약 *" style="font-weight: bold; margin-bottom: 4px;" />
-      <TextArea name="adviceSummary" toName="adviceSummaryText" placeholder="..." rows="3" required="true" editable="true" transcription="true" maxSubmissions="1" />
+      <TextArea name="adviceSummary" toName="adviceSummaryText" placeholder="..." rows="7" required="true" editable="true" transcription="true" maxSubmissions="1" />
     </View>
   </View>
     </View>
