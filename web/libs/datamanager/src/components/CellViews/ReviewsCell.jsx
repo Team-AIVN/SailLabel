@@ -11,6 +11,7 @@ const NEGATIVE = { bg: "var(--color-negative-emphasis-subtle)", fg: "var(--color
 const WARNING = { bg: "var(--color-warning-emphasis-subtle)", fg: "var(--color-warning-content)" };
 const STATUS = {
   NOT_SELECTED: { fallback: "미선정", ...NEUTRAL },
+  SUBMITTED: { fallback: "제출", ...WARNING },
   PENDING: { fallback: "대기", ...WARNING },
   ACCEPTED: { fallback: "승인", ...POSITIVE },
   REJECTED: { fallback: "거절", ...NEGATIVE },
@@ -25,7 +26,12 @@ const STATUS = {
 export const ReviewsCell = (cell) => {
   const { original: task, value } = cell;
   const reviews = Array.isArray(value) ? value : [];
-  const status = task.review_status;
+  const rawStatus = task.review_status;
+  // A submitted-but-not-yet-reviewed task has review_status NOT_SELECTED; surface it as
+  // "제출" (submitted) rather than "미선정", which reads as "nothing happened".
+  // is_labeled is LS's canonical "this task has a real submission" flag.
+  const submitted = task.is_labeled ?? (task.total_annotations ?? 0) > 0;
+  const status = (!rawStatus || rawStatus === "NOT_SELECTED") && submitted ? "SUBMITTED" : rawStatus;
 
   if (!status && reviews.length === 0) return "";
 
