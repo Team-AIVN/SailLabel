@@ -1,5 +1,5 @@
 import { Button, buttonVariant, ToastContext, ToastType } from "@humansignal/ui";
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { generatePath, useHistory } from "react-router";
 import { Link, NavLink } from "react-router-dom";
 import { Spinner } from "../../components";
@@ -19,9 +19,9 @@ import "./DataManager.prefix.css";
 
 const loadDependencies = () => [import("@humansignal/datamanager"), import("@humansignal/editor")];
 
-const initializeDataManager = async (root, props, params) => {
+const initializeDataManager = (root, props, params) => {
   if (!window.LabelStudio) throw Error("Label Studio Frontend doesn't exist on the page");
-  if (root && root.dataset.dmInitialized) return;
+  if (!root || root.dataset.dmInitialized) return;
 
   root.dataset.dmInitialized = true;
 
@@ -71,9 +71,8 @@ export const DataManagerPage = ({ ...props }) => {
   const [crashed, setCrashed] = useState(false);
   const [loading, setLoading] = useState(!window.DataManager || !window.LabelStudio);
   const dataManagerRef = useRef();
-  // Project the latest init() run is building for, so a slower run for a project
-  // we already navigated away from can bail out instead of clobbering the new one.
-  const requestedProjectRef = useRef();
+  // Distinguish separate visits to the same project as well as different projects.
+  const initGenerationRef = useRef(0);
   const projectId = project?.id;
 
   const destroyDM = useCallback(() => {
@@ -88,7 +87,8 @@ export const DataManagerPage = ({ ...props }) => {
     delete window.dataManager;
   }, []);
 
-  const init = useCallback(async () => {
+  const init = useCallback(async (generation) => {
+    if (generation !== initGenerationRef.current) return;
     if (!window.LabelStudio) return;
     if (!window.DataManager) return;
     if (!root.current) return;
@@ -97,8 +97,6 @@ export const DataManagerPage = ({ ...props }) => {
     // for a render or two. Building a DM from it would load that project's data
     // into this page, so wait until the route and the loaded project agree.
     if (String(project.id) !== String(params.id)) return;
-
-    requestedProjectRef.current = project.id;
 
     if (dataManagerRef.current) {
       // The SDK takes its projectId from the route params, so it is a string
@@ -114,22 +112,21 @@ export const DataManagerPage = ({ ...props }) => {
     });
 
     // We may have navigated to another project while this request was in flight.
-    if (requestedProjectRef.current !== project.id) return;
+    if (generation !== initGenerationRef.current || !root.current) return;
 
     const interactiveBacked = (mlBackends ?? []).find(({ is_interactive }) => is_interactive);
 
-    const dataManager = (dataManagerRef.current = await initializeDataManager(root.current, props, {
+    const dataManager = initializeDataManager(root.current, props, {
       ...params,
       project,
       autoAnnotation: isDefined(interactiveBacked),
-    }));
+    });
 
     // initializeDataManager() bails out (returning undefined) if the mount point
     // is still marked as initialized. Fail soft rather than throwing on .on().
-    if (!dataManager) {
-      dataManagerRef.current = null;
-      return;
-    }
+    if (!dataManager) return;
+
+    dataManagerRef.current = dataManager;
 
     Object.assign(window, { dataManager });
 
@@ -229,16 +226,22 @@ export const DataManagerPage = ({ ...props }) => {
     setContextProps({ dmRef: dataManager });
   }, [projectId, params.id, destroyDM]);
 
-  useEffect(() => {
-    Promise.all(dependencies)
-      .then(() => setLoading(false))
-      .then(init);
-  }, [init]);
+  useLayoutEffect(() => {
+    const generation = ++initGenerationRef.current;
 
-  useEffect(() => {
-    // destroy the data manager when the component is unmounted
-    return () => destroyDM();
-  }, []);
+    Promise.all(dependencies).then(() => {
+      if (generation !== initGenerationRef.current) return;
+      setLoading(false);
+      return init(generation);
+    });
+
+    // Invalidate at route commit, even while ProjectProvider still has old data.
+    // This also covers unmounts and dependency imports that have not resolved yet.
+    return () => {
+      initGenerationRef.current++;
+      destroyDM();
+    };
+  }, [dependencies, init, destroyDM]);
 
   return crashed ? (
     <div className={cn("crash").toClassName()}>
