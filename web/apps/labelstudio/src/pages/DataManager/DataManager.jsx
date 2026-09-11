@@ -21,7 +21,7 @@ const loadDependencies = () => [import("@humansignal/datamanager"), import("@hum
 
 const initializeDataManager = async (root, props, params) => {
   if (!window.LabelStudio) throw Error("Label Studio Frontend doesn't exist on the page");
-  if (!root && root.dataset.dmInitialized) return;
+  if (root && root.dataset.dmInitialized) return;
 
   root.dataset.dmInitialized = true;
 
@@ -71,28 +71,65 @@ export const DataManagerPage = ({ ...props }) => {
   const [crashed, setCrashed] = useState(false);
   const [loading, setLoading] = useState(!window.DataManager || !window.LabelStudio);
   const dataManagerRef = useRef();
+  // Project the latest init() run is building for, so a slower run for a project
+  // we already navigated away from can bail out instead of clobbering the new one.
+  const requestedProjectRef = useRef();
   const projectId = project?.id;
+
+  const destroyDM = useCallback(() => {
+    if (dataManagerRef.current) {
+      dataManagerRef.current.destroy();
+      dataManagerRef.current = null;
+    }
+    // The DM lives outside React and marks its mount point on first init.
+    // The marker has to go too, otherwise initializeDataManager() returns early
+    // (and returns undefined) the next time we build one on the same node.
+    if (root.current) delete root.current.dataset.dmInitialized;
+    delete window.dataManager;
+  }, []);
 
   const init = useCallback(async () => {
     if (!window.LabelStudio) return;
     if (!window.DataManager) return;
     if (!root.current) return;
     if (!project?.id) return;
-    if (dataManagerRef.current) return;
+    // Right after a route change ProjectProvider still holds the previous project
+    // for a render or two. Building a DM from it would load that project's data
+    // into this page, so wait until the route and the loaded project agree.
+    if (String(project.id) !== String(params.id)) return;
+
+    requestedProjectRef.current = project.id;
+
+    if (dataManagerRef.current) {
+      // The SDK takes its projectId from the route params, so it is a string
+      // ("5") while project.id is a number - compare numerically.
+      if (Number(dataManagerRef.current.projectId) === Number(project.id)) return;
+      // The SDK freezes projectId into its API sharedParams at construction
+      // (dm-sdk.js), so a live instance can't be re-pointed - rebuild it.
+      destroyDM();
+    }
 
     const mlBackends = await api.callApi("mlBackends", {
       params: { project: project.id },
     });
 
+    // We may have navigated to another project while this request was in flight.
+    if (requestedProjectRef.current !== project.id) return;
+
     const interactiveBacked = (mlBackends ?? []).find(({ is_interactive }) => is_interactive);
 
-    const dataManager = (dataManagerRef.current =
-      dataManagerRef.current ??
-      (await initializeDataManager(root.current, props, {
-        ...params,
-        project,
-        autoAnnotation: isDefined(interactiveBacked),
-      })));
+    const dataManager = (dataManagerRef.current = await initializeDataManager(root.current, props, {
+      ...params,
+      project,
+      autoAnnotation: isDefined(interactiveBacked),
+    }));
+
+    // initializeDataManager() bails out (returning undefined) if the mount point
+    // is still marked as initialized. Fail soft rather than throwing on .on().
+    if (!dataManager) {
+      dataManagerRef.current = null;
+      return;
+    }
 
     Object.assign(window, { dataManager });
 
@@ -190,14 +227,7 @@ export const DataManagerPage = ({ ...props }) => {
     }
 
     setContextProps({ dmRef: dataManager });
-  }, [projectId]);
-
-  const destroyDM = useCallback(() => {
-    if (dataManagerRef.current) {
-      dataManagerRef.current.destroy();
-      dataManagerRef.current = null;
-    }
-  }, []);
+  }, [projectId, params.id, destroyDM]);
 
   useEffect(() => {
     Promise.all(dependencies)
